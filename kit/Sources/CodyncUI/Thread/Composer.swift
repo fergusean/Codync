@@ -15,6 +15,7 @@ struct Composer: View {
     var onInterrupt: (() -> Void)?
     @Environment(BotStore.self) private var model
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.conversationTypography) private var typography
     @State private var draft = ""
     /// Files going out with the next message.
     @State private var files: [OutgoingFile] = []
@@ -96,6 +97,13 @@ struct Composer: View {
 
     private var fieldPadding: CGFloat { InterfaceMetrics.value(mac: 7, mobile: 10) }
     private var buttonSize: CGFloat { InterfaceMetrics.value(mac: 28, mobile: 34) }
+    private var textLineHeight: CGFloat {
+        #if os(macOS)
+        ceil(typography.pointSize * 1.25)
+        #else
+        lineHeight
+        #endif
+    }
 
     private var field: some View {
         HStack(alignment: .bottom, spacing: 8) {
@@ -154,7 +162,7 @@ struct Composer: View {
         HStack(alignment: .bottom, spacing: 8) {
             TextField(placeholder, text: $draft, axis: .vertical)
                 .lineLimit(1...8)
-                .font(InterfaceMetrics.body)
+                .font(typography.body)
                 .textFieldStyle(.plain)
                 .focused($focused)
                 .padding(.vertical, fieldPadding)
@@ -212,7 +220,7 @@ struct Composer: View {
             }
             }
             .animation(Motion.layout, value: onInterrupt != nil)
-            .padding(.bottom, max(0, (lineHeight + 2 * fieldPadding - buttonSize) / 2))
+            .padding(.bottom, max(0, (textLineHeight + 2 * fieldPadding - buttonSize) / 2))
             .animation(Motion.layout, value: isEmpty)
         }
         .padding(.leading, InterfaceMetrics.value(mac: 14, mobile: 18))

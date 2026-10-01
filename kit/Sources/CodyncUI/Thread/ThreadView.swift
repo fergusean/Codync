@@ -33,6 +33,9 @@ public struct ThreadView: View {
     @State private var routineRequest = UUID()
     @State private var isAtBottom = true
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    #if os(macOS)
+        @Environment(\.conversationTypography) private var typography
+    #endif
 
     private var bot: Bot? { model.bots[botId] }
 
@@ -151,6 +154,12 @@ public struct ThreadView: View {
                     proxy.scrollTo("bottom", anchor: .bottom)
                 }
             }
+            #if os(macOS)
+                .onChange(of: typography.pointSize) { _, _ in
+                    guard isAtBottom else { return }
+                    proxy.scrollTo("bottom", anchor: .bottom)
+                }
+            #endif
         }
         .background(Palette.background)
         .safeAreaInset(edge: .bottom) {

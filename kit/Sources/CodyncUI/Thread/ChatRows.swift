@@ -128,6 +128,7 @@ struct UserBubble: View {
     let botWorking: Bool
     var reply: (() -> Void)?
     @Environment(BotStore.self) private var model
+    @Environment(\.conversationTypography) private var typography
     @State private var hovering = false
 
     var body: some View {
@@ -155,7 +156,7 @@ struct UserBubble: View {
 
     private var text: some View {
             Text(entry.data.text ?? "")
-                .font(InterfaceMetrics.body)
+                .font(typography.body)
                 .foregroundStyle(Palette.text)
                 .textSelection(.enabled)
                 .padding(.horizontal, InterfaceMetrics.value(mac: 12, mobile: 16))
