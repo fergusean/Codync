@@ -10,6 +10,9 @@ public struct NewChatView: View {
     let group: Bool
     let close: () -> Void
     @Environment(BotStore.self) private var model
+    #if os(macOS)
+        @Environment(\.conversationTypography) private var typography
+    #endif
     @State private var query = ""
     @State private var draft = ""
     @State private var recipients: [String] = []
@@ -107,6 +110,9 @@ public struct NewChatView: View {
             HStack(alignment: .bottom, spacing: 8) {
                 TextField(placeholder, text: $draft, axis: .vertical)
                     .lineLimit(1...6)
+                    #if os(macOS)
+                        .font(typography.body)
+                    #endif
                     .textFieldStyle(.plain)
                     .padding(.vertical, 11)
                     .sendOnReturn(start)
