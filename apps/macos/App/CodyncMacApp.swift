@@ -10,6 +10,8 @@ struct CodyncMacApp: App {
     @State private var host: HostController
     @State private var account: AccountSession
     @Environment(\.openWindow) private var openWindow
+    @AppStorage(ConversationTypography.preferenceKey)
+    private var conversationFontSize = ConversationTypography.defaultSize
 
     init() {
         let account = AccountSession()
@@ -30,6 +32,7 @@ struct CodyncMacApp: App {
         // First scene: the one SwiftUI opens at launch and when the Dock icon is clicked.
         Window("Codync", id: "chat") {
             ChatWindow()
+                .environment(\.conversationTypography, ConversationTypography(pointSize: conversationFontSize))
                 .task { launch() }
                 .modalHost()
                 .environment(host)
@@ -85,6 +88,8 @@ struct MenuView: View {
     @AppStorage(SharedStore.usageIconStyleKey, store: UserDefaults(suiteName: SharedStore.appGroup))
     private var usageIconStyle = UsageIconStyle.character.rawValue
     @AppStorage(CodyncAppDelegate.showInDockKey) private var showInDock = false
+    @AppStorage(ConversationTypography.preferenceKey)
+    private var conversationFontSize = ConversationTypography.defaultSize
 
     var body: some View {
         Text(status)
@@ -112,6 +117,12 @@ struct MenuView: View {
                     if visible || window != nil { NSApp.activate() }
                     window?.makeKeyAndOrderFront(nil)
                 }
+            Picker("Text Size", selection: $conversationFontSize) {
+                ForEach(ConversationTypography.sizes, id: \.self) { size in
+                    Text(size == ConversationTypography.defaultSize ? "\(Int(size)) pt (Default)" : "\(Int(size)) pt")
+                        .tag(size)
+                }
+            }
             Toggle("Open at login", isOn: Binding(
                 get: { host.launchAtLogin },
                 set: { host.setLaunchAtLogin($0) }

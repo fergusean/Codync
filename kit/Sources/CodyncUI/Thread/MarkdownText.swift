@@ -7,6 +7,7 @@ public struct MarkdownText: View {
     let blocks: [Block]
     let streaming: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.conversationTypography) private var typography
 
     private var contentTransition: ContentTransition {
         streaming && !reduceMotion ? .interpolate : .identity
@@ -42,13 +43,13 @@ public struct MarkdownText: View {
         switch block {
         case let .paragraph(t):
             Text(Self.inline(t))
-                .font(InterfaceMetrics.body)
+                .font(typography.body)
                 .foregroundStyle(Palette.text)
                 .contentTransition(contentTransition)
                 .animation(textAnimation, value: t)
         case let .heading(t, level):
             Text(Self.inline(t))
-                .font(level == 1 ? .title3.bold() : level == 2 ? .headline : .subheadline.bold())
+                .font(typography.heading(level: level))
                 .foregroundStyle(Palette.text)
                 .contentTransition(contentTransition)
                 .animation(textAnimation, value: t)
@@ -60,10 +61,10 @@ public struct MarkdownText: View {
                     .contentTransition(contentTransition)
                     .animation(textAnimation, value: t)
             }
-            .font(InterfaceMetrics.body)
+            .font(typography.body)
         case let .quote(t):
             Text(Self.inline(t))
-                .font(InterfaceMetrics.body)
+                .font(typography.body)
                 .foregroundStyle(Palette.secondary)
                 .contentTransition(contentTransition)
                 .animation(textAnimation, value: t)
@@ -72,7 +73,7 @@ public struct MarkdownText: View {
         case let .code(t, _):
             ScrollView(.horizontal, showsIndicators: false) {
                 Text(t)
-                    .font(.system(.footnote, design: .monospaced))
+                    .font(typography.code)
                     .foregroundStyle(Palette.text)
                     .padding(10)
             }
