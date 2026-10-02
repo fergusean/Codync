@@ -35,7 +35,6 @@ public struct ThreadView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     #if os(macOS)
         @Environment(\.conversationTypography) private var typography
-        @State private var positionedInitialConversation = false
     #endif
 
     private var bot: Bot? { model.bots[botId] }
@@ -134,19 +133,6 @@ public struct ThreadView: View {
             .scrollDismissesKeyboard(.interactively)
             .conversationScrollEdges()
             .conversationBottomObserver($isAtBottom)
-            #if os(macOS)
-                .onAppear {
-                    guard !positionedInitialConversation else { return }
-                    positionedInitialConversation = true
-                    // Realize the lazy rows when a selected conversation first lays out.
-                    // The default anchor alone can leave the Mac transcript blank until a scroll.
-                    var transaction = Transaction()
-                    transaction.disablesAnimations = true
-                    withTransaction(transaction) {
-                        proxy.scrollTo("bottom", anchor: .bottom)
-                    }
-                }
-            #endif
             #if os(iOS)
                 .simultaneousGesture(TapGesture().onEnded { dismissChatKeyboard() })
             #endif
