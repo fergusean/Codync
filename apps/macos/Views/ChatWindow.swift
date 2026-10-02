@@ -10,7 +10,12 @@ struct ChatWindow: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @AppStorage("macAccountOnboardingCompleted") private var accountOnboardingCompleted = false
 
-    private var showsChat: Bool { host.state == .running || !host.accounts.computers.isEmpty }
+    private var showsChat: Bool {
+        // SSH computers attach only after connecting. Keep the roster and connection
+        // controls available while a saved remote connects or needs attention.
+        host.state == .running || !host.accounts.computers.isEmpty
+            || !host.accounts.cloudComputers.isEmpty || !host.ssh.profiles.isEmpty
+    }
 
     var body: some View {
         ZStack {
