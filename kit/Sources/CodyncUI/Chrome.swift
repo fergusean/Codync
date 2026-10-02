@@ -55,7 +55,7 @@ public struct IconButtonStyle: ButtonStyle {
 
         var body: some View {
             configuration.label
-                .font(.system(size: size / 2, weight: .medium))
+                .appFont(.system(size: size / 2, weight: .medium))
                 .foregroundStyle(selected ? Palette.onAccent : hovering ? Palette.text : Palette.secondary)
                 .frame(width: size, height: size)
                 .background(
@@ -89,7 +89,7 @@ public struct ModalHeader<Trailing: View>: View {
     public var body: some View {
         HStack(spacing: 8) {
             Text(title)
-                .font(InterfaceMetrics.body.weight(.semibold))
+                .appFont(AppFont.compactBody.weight(.semibold))
                 .foregroundStyle(Palette.text)
                 .lineLimit(1)
             Spacer(minLength: 8)
@@ -572,8 +572,8 @@ public struct TabBar<ID: Hashable>: View {
                     withAnimation(Motion.reduced(Motion.morph, reduceMotion)) { selection = tab.id }
                 } label: {
                     VStack(spacing: 3) {
-                        Image(systemName: tab.icon).font(.system(size: 18, weight: .medium))
-                        Text(tab.title).font(.caption2.weight(.medium))
+                        Image(systemName: tab.icon).appFont(.system(size: 18, weight: .medium))
+                        Text(tab.title).appFont(.caption2.weight(.medium))
                     }
                     .foregroundStyle(on ? Palette.text : Palette.secondary)
                     .frame(width: 76, height: 50)

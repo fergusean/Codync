@@ -66,16 +66,16 @@ struct AgentModelPicker: View {
             if backend != "custom", !loading {
                 if let failure {
                     Text(failure)
-                        .font(.caption)
+                        .appFont(.caption)
                         .foregroundStyle(Palette.warning)
                 } else if catalog?.models.isEmpty == true {
                     Text("This agent doesn't advertise a model list. Leave Default or enter a model ID.")
-                        .font(.caption)
+                        .appFont(.caption)
                         .foregroundStyle(Palette.secondary)
                 }
             }
             Text("Changing the model starts a new agent session. Chat history is kept.")
-                .font(.caption)
+                .appFont(.caption)
                 .foregroundStyle(Palette.secondary)
         }
         .onChange(of: backend) { _, _ in selection = nil }

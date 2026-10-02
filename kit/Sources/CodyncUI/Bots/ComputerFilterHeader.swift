@@ -78,9 +78,9 @@ public struct ComputerFilterHeader: View {
             } else {
                 Text(summary).lineLimit(1).contentTransition(.opacity)
             }
-            Image(systemName: "chevron.down").font(.system(size: 8, weight: .semibold))
+            Image(systemName: "chevron.down").appFont(.system(size: 8, weight: .semibold))
         }
-        .font(.system(size: 12, weight: .medium))
+        .appFont(.system(size: 12, weight: .medium))
         .foregroundStyle(Palette.secondary)
         .help(summary)
         .padding(.vertical, 6)

@@ -28,22 +28,22 @@ public struct BotRow: View {
             VStack(alignment: .leading, spacing: lineSpacing) {
                 HStack(alignment: .firstTextBaseline) {
                     if bot.pinned {
-                        Image(systemName: "pin.fill").font(.caption2).foregroundStyle(Palette.tertiary)
+                        Image(systemName: "pin.fill").appFont(.caption2).foregroundStyle(Palette.tertiary)
                     }
                     Text(bot.name)
-                        .font(InterfaceMetrics.body.weight(.semibold))
+                        .appFont(AppFont.compactBody.weight(.semibold))
                         .foregroundStyle(Palette.text)
                         .lineLimit(1)
                     if model.screen?.agentBot == bot.id {
                         Image(systemName: "cursorarrow.motionlines")
-                            .font(.caption)
+                            .appFont(.caption)
                             .foregroundStyle(Palette.accent)
                             .accessibilityLabel("Using the computer")
                     }
                     Spacer(minLength: 8)
                     #if os(iOS)
                     Text(RelativeTime.day(Date(milliseconds: bot.lastAt)))
-                        .font(InterfaceMetrics.secondary)
+                        .appFont(AppFont.compactSecondary)
                         .foregroundStyle(bot.unread > 0 ? Palette.text : Palette.tertiary)
                     #endif
                 }
@@ -52,7 +52,7 @@ public struct BotRow: View {
                     Spacer(minLength: 4)
                     if bot.unread > 0 {
                         Text("\(bot.unread)")
-                            .font(.caption2.bold())
+                            .appFont(.caption2.bold())
                             .foregroundStyle(Palette.onAccent)
                             .padding(.horizontal, 6)
                             .frame(minWidth: 18, minHeight: 18)
@@ -79,7 +79,7 @@ public struct BotRow: View {
             } icon: {
                 ThinkingOrb(state: .listening, size: 16, color: Palette.warning)
             }
-                .font(InterfaceMetrics.secondary)
+                .appFont(AppFont.compactSecondary)
                 .foregroundStyle(Palette.warning)
                 .lineLimit(1)
         } else if bot.isWorking {
@@ -88,16 +88,16 @@ public struct BotRow: View {
                 Text(bot.activity.isEmpty ? "Working…" : bot.activity)
                     .lineLimit(1)
             }
-            .font(InterfaceMetrics.secondary)
+            .appFont(AppFont.compactSecondary)
             .foregroundStyle(Palette.secondary)
         } else if bot.status == "error" {
             Text(bot.lastMessage ?? "Something went wrong")
-                .font(InterfaceMetrics.secondary)
+                .appFont(AppFont.compactSecondary)
                 .foregroundStyle(Palette.danger)
                 .lineLimit(1)
         } else {
             Text(bot.lastMessage ?? "\(model.backendName(bot.backend)) · \(bot.folderName)")
-                .font(InterfaceMetrics.secondary)
+                .appFont(AppFont.compactSecondary)
                 .foregroundStyle(Palette.secondary)
                 .lineLimit(1)
         }

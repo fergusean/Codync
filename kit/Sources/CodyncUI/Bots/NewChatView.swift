@@ -66,7 +66,7 @@ public struct NewChatView: View {
                 IconButton("Close", systemImage: "xmark", action: close)
                     .keyboardShortcut(.cancelAction)
             }
-            .font(.title3)
+            .appFont(.title3)
             .padding(.horizontal, 22)
             .padding(.vertical, 12)
             Rectangle().fill(Palette.border).frame(height: 0.5)
@@ -75,7 +75,7 @@ public struct NewChatView: View {
                 VStack(spacing: 2) {
                     PickRow(shortcut: 1, action: create) {
                         Image(systemName: creating ? "hourglass" : "plus")
-                            .font(.system(size: 13, weight: .medium))
+                            .appFont(.system(size: 13, weight: .medium))
                             .frame(width: 26, height: 26)
                             .background(Palette.bubbleAgent, in: Circle())
                     } label: {
@@ -266,7 +266,7 @@ private struct KeyCap: View {
 
     var body: some View {
         Text(text)
-            .font(.caption.monospaced())
+            .appFont(.caption.monospaced())
             .foregroundStyle(Palette.secondary)
             .frame(minWidth: 18, minHeight: 18)
             .background(Palette.background, in: RoundedRectangle(cornerRadius: 4))

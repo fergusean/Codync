@@ -15,7 +15,7 @@ public struct UsageLimits: View {
                 VStack(alignment: .leading, spacing: 10) {
                     HStack(spacing: 8) {
                         ProviderMascot(provider, size: 18, style: UsageIconStyle(rawValue: usageIconStyle) ?? .character)
-                        Text(provider.name).font(.system(size: 13, weight: .semibold)).foregroundStyle(Palette.text)
+                        Text(provider.name).appFont(.system(size: 13, weight: .semibold)).foregroundStyle(Palette.text)
                     }
                     ForEach(provider.windows) { window in
                         HStack(spacing: 10) {
@@ -27,7 +27,7 @@ public struct UsageLimits: View {
                             Text(window.resetDescription ?? "").foregroundStyle(Palette.secondary)
                                 .frame(width: 130, alignment: .trailing)
                         }
-                        .font(.system(size: 12))
+                        .appFont(.system(size: 12))
                         .lineLimit(1)
                         .accessibilityElement(children: .combine)
                     }

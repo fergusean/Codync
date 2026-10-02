@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Conversation text can grow on the Mac without resizing the app's controls.
+/// The Mac preference supplies one scale for conversation text and app chrome.
 public struct ConversationTypography: Sendable {
     public static let preferenceKey = "conversationFontSize"
     public static let defaultSize = 12.0
@@ -10,6 +10,14 @@ public struct ConversationTypography: Sendable {
 
     public init(pointSize: Double = ConversationTypography.defaultSize) {
         self.pointSize = pointSize.isFinite ? min(max(pointSize, 11), 18) : Self.defaultSize
+    }
+
+    public var scale: CGFloat {
+        #if os(macOS)
+        pointSize / Self.defaultSize
+        #else
+        1
+        #endif
     }
 
     var body: Font {
@@ -22,7 +30,7 @@ public struct ConversationTypography: Sendable {
 
     func heading(level: Int) -> Font {
         #if os(macOS)
-        .system(size: level == 1 ? pointSize + 3 : level == 2 ? pointSize + 1 : pointSize - 1,
+        .system(size: (level == 1 ? 15 : level == 2 ? 13 : 11) * scale,
                 weight: level == 2 ? .semibold : .bold)
         #else
         level == 1 ? .title3.bold() : level == 2 ? .headline : .subheadline.bold()
@@ -31,7 +39,7 @@ public struct ConversationTypography: Sendable {
 
     var code: Font {
         #if os(macOS)
-        .system(size: pointSize - 2, design: .monospaced)
+        .system(size: 10 * scale, design: .monospaced)
         #else
         .system(.footnote, design: .monospaced)
         #endif

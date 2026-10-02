@@ -34,6 +34,8 @@ struct CodyncMacApp: App {
                 .environment(\.conversationTypography, ConversationTypography(pointSize: conversationFontSize))
                 .task { launch() }
                 .modalHost()
+                .appFont(.body)
+                .environment(\.appFontScale, ConversationTypography(pointSize: conversationFontSize).scale)
                 .environment(host)
                 .environment(account)
                 .environment(updates)
@@ -73,6 +75,8 @@ struct CodyncMacApp: App {
                 }
             }
             .frame(width: 340)
+            .appFont(.body)
+            .environment(\.appFontScale, ConversationTypography(pointSize: conversationFontSize).scale)
             .environment(host)
         }
         .windowResizability(.contentSize)
@@ -385,7 +389,7 @@ struct PairingPanel: View {
                         .accessibilityLabel("Pairing code for \(store.hostName)")
                 }
                 Text("Scan with the Codync app or the iPhone Camera. No Tailscale or open ports needed: your iPhone connects directly on the same Wi-Fi, and through the encrypted relay anywhere else.")
-                    .font(.caption)
+                    .appFont(.caption)
                     .foregroundStyle(Palette.secondary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
@@ -393,7 +397,7 @@ struct PairingPanel: View {
                     Text(info.urls.isEmpty
                         ? "No network address found and “Reach from anywhere” is off. Connect to Wi-Fi or turn it on."
                         : "“Reach from anywhere” is off, so the iPhone only reaches \(store.hostName) on the same network.")
-                        .font(.caption)
+                        .appFont(.caption)
                         .foregroundStyle(Palette.warning)
                         .multilineTextAlignment(.center)
                         .fixedSize(horizontal: false, vertical: true)
@@ -401,7 +405,7 @@ struct PairingPanel: View {
                 HStack(spacing: 4) {
                     if let expires = info.expiresAt {
                         Text("Works once, until \(Date(milliseconds: expires).formatted(date: .omitted, time: .shortened))")
-                            .font(.caption2).foregroundStyle(Palette.tertiary)
+                            .appFont(.caption2).foregroundStyle(Palette.tertiary)
                     }
                     IconButton("New code", systemImage: "arrow.clockwise") { Task { await load() } }
                     IconButton("Copy pairing link", systemImage: "doc.on.doc") {
@@ -410,7 +414,7 @@ struct PairingPanel: View {
                     }
                 }
             } else if let error {
-                Text(error).font(.caption).foregroundStyle(Palette.danger).multilineTextAlignment(.center)
+                Text(error).appFont(.caption).foregroundStyle(Palette.danger).multilineTextAlignment(.center)
                 IconButton("Try again", systemImage: "arrow.clockwise") { Task { await load() } }
             } else {
                 Spinner(size: 20)

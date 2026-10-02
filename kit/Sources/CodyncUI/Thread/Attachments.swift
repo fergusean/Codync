@@ -129,16 +129,16 @@ struct AttachmentList: View {
     private func card(_ file: Attachment) -> some View {
         HStack(spacing: 8) {
             Image(systemName: AttachmentIcon.symbol(file.name))
-                .font(.system(size: 16))
+                .appFont(.system(size: 16))
                 .foregroundStyle(Palette.secondary)
             VStack(alignment: .leading, spacing: 1) {
                 Text(file.name)
-                    .font(.subheadline)
+                    .appFont(.subheadline)
                     .foregroundStyle(Palette.text)
                     .lineLimit(1)
                     .truncationMode(.middle)
                 Text(ByteCountFormatter.string(fromByteCount: file.size, countStyle: .file))
-                    .font(.caption2)
+                    .appFont(.caption2)
                     .foregroundStyle(Palette.tertiary)
             }
         }
