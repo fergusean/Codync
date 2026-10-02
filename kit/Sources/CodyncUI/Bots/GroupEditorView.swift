@@ -68,7 +68,7 @@ public struct GroupEditorView: View {
                         }
                         .animation(Motion.layout, value: members)
                         Text("Everyone answers in turn unless you @mention someone. Each bot works in its own folder with its own tools.")
-                            .font(.caption)
+                            .appFont(.caption)
                             .foregroundStyle(Palette.tertiary)
                     }
                     Field("Name") {
@@ -80,7 +80,7 @@ public struct GroupEditorView: View {
                             .fieldBox()
                     }
                     if let error {
-                        Text(error).font(.footnote).foregroundStyle(Palette.danger).transition(.opacity)
+                        Text(error).appFont(.footnote).foregroundStyle(Palette.danger).transition(.opacity)
                     }
                     if let group = groupId.flatMap({ model.bots[$0] }) {
                         Button("Delete group chat", role: .destructive) { confirmDelete = group }
@@ -115,11 +115,11 @@ public struct GroupEditorView: View {
                 CharacterAvatar(bot: bot, size: InterfaceMetrics.value(mac: 26, mobile: 34), animated: false)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(bot.name).foregroundStyle(Palette.text).lineLimit(1)
-                    Text(bot.folderName).font(.caption).foregroundStyle(Palette.tertiary).lineLimit(1)
+                    Text(bot.folderName).appFont(.caption).foregroundStyle(Palette.tertiary).lineLimit(1)
                 }
                 Spacer()
                 Image(systemName: "plus.circle")
-                    .font(.system(size: 20))
+                    .appFont(.system(size: 20))
                     .foregroundStyle(Palette.tertiary)
             }
             .padding(.horizontal, 12)
@@ -164,14 +164,14 @@ struct BotChip: View {
         HStack(spacing: 6) {
             CharacterAvatar(bot: bot, size: 20, animated: false)
             Text(bot.name)
-                .font(.body)
+                .appFont(.body)
                 .foregroundStyle(Palette.text)
                 .lineLimit(1)
                 .frame(maxWidth: 220, alignment: .leading)
                 .fixedSize(horizontal: true, vertical: false)
             Button(action: remove) {
                 Image(systemName: "xmark")
-                    .font(.system(size: 10, weight: .semibold))
+                    .appFont(.system(size: 10, weight: .semibold))
                     .foregroundStyle(Palette.secondary)
                     .frame(width: 18, height: 18)
                     .contentShape(Rectangle())

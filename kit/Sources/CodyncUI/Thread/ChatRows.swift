@@ -72,7 +72,7 @@ struct AuthorLabel: View {
         HStack(spacing: 8) {
             if let bot { CharacterAvatar(bot: bot, size: 26, animated: false) }
             Text(model.authorName(botId))
-                .font(.subheadline.weight(.medium))
+                .appFont(.subheadline.weight(.medium))
                 .foregroundStyle(bot.map { AvatarPalette.color($0.avatarColor) } ?? Palette.secondary)
         }
     }
@@ -94,19 +94,19 @@ struct ThreadChip: View {
                     }
                 }
                 Text(summary.count == 1 ? "1 reply" : "\(summary.count) replies")
-                    .font(.footnote.weight(.semibold))
+                    .appFont(.footnote.weight(.semibold))
                     .foregroundStyle(Palette.accent)
                 if let unread = summary.unread, unread > 0 {
                     Text("\(unread) new")
-                        .font(.footnote.weight(.semibold))
+                        .appFont(.footnote.weight(.semibold))
                         .foregroundStyle(Palette.text)
                         .transition(.opacity)
                 } else {
                     Text(RelativeTime.day(Date(milliseconds: summary.lastAt)))
-                        .font(.footnote)
+                        .appFont(.footnote)
                         .foregroundStyle(Palette.tertiary)
                 }
-                Image(systemName: "chevron.right").font(.caption2).foregroundStyle(Palette.tertiary)
+                Image(systemName: "chevron.right").appFont(.caption2).foregroundStyle(Palette.tertiary)
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 5)
@@ -172,10 +172,10 @@ struct UserBubble: View {
     @ViewBuilder private var status: some View {
         switch entry.data.status {
         case "sending":
-            Text("Sending…").font(.caption2).foregroundStyle(Palette.tertiary)
+            Text("Sending…").appFont(.caption2).foregroundStyle(Palette.tertiary)
         case "queued":
             Text(botWorking ? "Queued until this response finishes" : "Queued")
-                .font(.caption2)
+                .appFont(.caption2)
                 .foregroundStyle(Palette.tertiary)
         case "failed":
             HStack(spacing: 10) {
@@ -184,9 +184,9 @@ struct UserBubble: View {
                 Button("Delete", systemImage: "trash") { model.discard(entry) }.labelStyle(.iconOnly).help("Delete")
             }
             .buttonStyle(.plain)
-            .font(.caption2.bold())
+            .appFont(.caption2.bold())
         case "cancelled":
-            Text("Not sent — stopped").font(.caption2).foregroundStyle(Palette.tertiary)
+            Text("Not sent — stopped").appFont(.caption2).foregroundStyle(Palette.tertiary)
         case "waiting":
             HStack(spacing: 10) {
                 Text("Waiting for the computer to come online").foregroundStyle(Palette.tertiary)
@@ -196,12 +196,12 @@ struct UserBubble: View {
                     .accessibilityLabel("Don't send")
             }
             .buttonStyle(.plain)
-            .font(.caption2)
+            .appFont(.caption2)
         case "delivering":
-            Text("Delivered to the computer").font(.caption2).foregroundStyle(Palette.tertiary)
+            Text("Delivered to the computer").appFont(.caption2).foregroundStyle(Palette.tertiary)
         default:
             #if os(macOS)
-                Text(entry.date, style: .time).font(.system(size: 10)).foregroundStyle(Palette.tertiary)
+                Text(entry.date, style: .time).appFont(.system(size: 10)).foregroundStyle(Palette.tertiary)
             #else
                 EmptyView()
             #endif
@@ -233,7 +233,7 @@ struct AgentBubble: View {
             #if os(macOS)
                 HStack(spacing: 6) {
                     Text(entry.date, style: .time)
-                        .font(.system(size: 10))
+                        .appFont(.system(size: 10))
                         .foregroundStyle(Palette.tertiary)
                     if hovering {
                         MessageActions(reactions: model.reactionPick(entry), reply: reply, trace: openTrace) {
@@ -261,7 +261,7 @@ struct NoticeRow: View {
         let text = entry.data.text ?? ""
         if let seconds = entry.data.callSeconds {
             Label("\(text) · \(String(format: "%02d:%02d", seconds / 60, seconds % 60))", systemImage: "waveform")
-                .font(.footnote.monospacedDigit())
+                .appFont(.footnote.monospacedDigit())
                 .foregroundStyle(Palette.secondary)
                 .frame(maxWidth: .infinity)
         } else {
@@ -275,7 +275,7 @@ struct NoticeRow: View {
             HStack(spacing: 10) {
                 Rectangle().fill(Palette.border).frame(height: 1)
                 Text(text)
-                    .font(.caption2)
+                    .appFont(.caption2)
                     .foregroundStyle(Palette.tertiary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
@@ -286,7 +286,7 @@ struct NoticeRow: View {
             .padding(.vertical, 6)
         case "error":
             Label {
-                Text(text).font(.footnote).foregroundStyle(Palette.text).textSelection(.enabled)
+                Text(text).appFont(.footnote).foregroundStyle(Palette.text).textSelection(.enabled)
             } icon: {
                 Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(Palette.danger)
             }
@@ -295,7 +295,7 @@ struct NoticeRow: View {
             .background(Palette.danger.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
         default:
             Text(text)
-                .font(.footnote)
+                .appFont(.footnote)
                 .foregroundStyle(Palette.secondary)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: .infinity)
@@ -321,17 +321,17 @@ struct WorkingIndicator: View {
                     HStack(spacing: 8) {
                         ThinkingOrb(state: bot.needsInput ? .listening : .working, size: 16, color: bot.needsInput ? Palette.warning : Palette.secondary)
                         Text(bot.activity.isEmpty ? "Working…" : bot.activity)
-                            .font(.subheadline)
+                            .appFont(.subheadline)
                             .foregroundStyle(bot.needsInput ? Palette.warning : Palette.secondary)
                             .lineLimit(1)
                         if let started = bot.startedAt {
                             Text(Date(milliseconds: started), style: .timer)
-                                .font(.footnote.monospacedDigit())
+                                .appFont(.footnote.monospacedDigit())
                                 .foregroundStyle(Palette.tertiary)
                         }
                         if thinking != nil {
                             Image(systemName: "chevron.down")
-                                .font(.caption2.weight(.semibold))
+                                .appFont(.caption2.weight(.semibold))
                                 .foregroundStyle(Palette.tertiary)
                                 .rotationEffect(.degrees(expanded ? 180 : 0))
                         }
@@ -339,7 +339,7 @@ struct WorkingIndicator: View {
                     if expanded, let thinking {
                         ScrollView {
                             Text(thinking)
-                                .font(.footnote)
+                                .appFont(.footnote)
                                 .foregroundStyle(Palette.secondary)
                                 .textSelection(.enabled)
                                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -392,7 +392,7 @@ struct ReactionsRow: View {
                 ForEach(reactions, id: \.self) { emoji in
                     Button { model.react(entry, emoji) } label: {
                         Text(emoji)
-                            .font(.system(size: InterfaceMetrics.value(mac: 13, mobile: 15)))
+                            .appFont(.system(size: InterfaceMetrics.value(mac: 13, mobile: 15)))
                             .padding(.horizontal, 8)
                             .padding(.vertical, 3)
                             .background(Palette.surface, in: Capsule())

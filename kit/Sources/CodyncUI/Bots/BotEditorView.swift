@@ -156,7 +156,7 @@ struct BotSettingsForm: View {
                         .lineLimit(3...8)
                         .fieldBox()
                     Text("Rules that always apply. Put task-specific requests in the chat instead.")
-                        .font(.caption)
+                        .appFont(.caption)
                         .foregroundStyle(Palette.tertiary)
                 }
 
@@ -175,7 +175,7 @@ struct BotSettingsForm: View {
                     }
                     if computer != nil, model.connection != .online {
                         Text("Connect this computer to create the bot, or choose another computer.")
-                            .font(.caption).foregroundStyle(Palette.warning)
+                            .appFont(.caption).foregroundStyle(Palette.warning)
                     }
                     OptionRow("Agent") {
                         ChoicePicker(selection: $draft.backend,
@@ -183,12 +183,12 @@ struct BotSettingsForm: View {
                                  fill: Palette.background)
                     }
                     if let b = model.hello?.backends.first(where: { $0.id == draft.backend }), !b.available {
-                        Text(b.installHint).font(.caption).foregroundStyle(Palette.warning)
+                        Text(b.installHint).appFont(.caption).foregroundStyle(Palette.warning)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     if draft.backend == "custom" {
                         TextField("ACP command, e.g. my-agent --acp", text: Binding(get: { draft.command ?? "" }, set: { draft.command = $0.isEmpty ? nil : $0 }))
-                            .font(.callout.monospaced())
+                            .appFont(.callout.monospaced())
                             .plainTextInput()
                             .fieldBox()
                     }
@@ -206,7 +206,7 @@ struct BotSettingsForm: View {
                         } label: {
                             HStack(spacing: 6) {
                                 Text(draft.cwd.isEmpty ? "Personal" : (draft.cwd as NSString).lastPathComponent).lineLimit(1)
-                                Image(systemName: "chevron.down").font(.caption2.weight(.semibold))
+                                Image(systemName: "chevron.down").appFont(.caption2.weight(.semibold))
                             }
                             .pill()
                         }
@@ -215,7 +215,7 @@ struct BotSettingsForm: View {
                     Text(draft.cwd.isEmpty
                          ? "This bot has its own space for files. It can work in other folders when you ask."
                          : "This project is the default starting folder. The bot can work elsewhere when you ask.")
-                        .font(.caption)
+                        .appFont(.caption)
                         .foregroundStyle(Palette.secondary)
                     OptionRow("Permissions") {
                         ChoicePicker(selection: $draft.permission, options: [("ask", "Ask me"), ("auto", "Approve automatically")],
@@ -224,7 +224,7 @@ struct BotSettingsForm: View {
                     Toggle(isOn: Binding(get: { draft.notify ?? true }, set: { draft.notify = $0 })) {
                         VStack(alignment: .leading, spacing: 3) {
                             Text("Notifications").foregroundStyle(Palette.text)
-                            Text("Get notified when this bot finishes or needs you").font(InterfaceMetrics.secondary).foregroundStyle(Palette.secondary)
+                            Text("Get notified when this bot finishes or needs you").appFont(AppFont.compactSecondary).foregroundStyle(Palette.secondary)
                         }
                     }
                     .toggleStyle(.codync)
@@ -235,7 +235,7 @@ struct BotSettingsForm: View {
                                 Text(model.screen?.enabled == true
                                     ? "Let this bot see the screen and use the mouse and keyboard. You can watch and take over from your phone."
                                     : "Let this bot see the screen and use the mouse and keyboard. Turn on Remote screen in Codync's menu on the computer first.")
-                                    .font(InterfaceMetrics.secondary).foregroundStyle(Palette.secondary)
+                                    .appFont(AppFont.compactSecondary).foregroundStyle(Palette.secondary)
                             }
                         }
                         .toggleStyle(.codync)
@@ -264,16 +264,16 @@ struct BotSettingsForm: View {
                 Text(draft.permission == "auto"
                     ? "Tool requests are approved automatically. Your agent's own settings (like Claude Code's permission rules) still apply."
                     : "You'll get an approval card and a notification whenever the agent asks.")
-                    .font(.caption)
+                    .appFont(.caption)
                     .foregroundStyle(Palette.tertiary)
 
                 if let error {
-                    Text(error).font(.footnote).foregroundStyle(Palette.danger)
+                    Text(error).appFont(.footnote).foregroundStyle(Palette.danger)
                 }
             }
             .padding(InterfaceMetrics.value(mac: 14, mobile: 20))
         }
-        .font(InterfaceMetrics.body)
+        .appFont(AppFont.compactBody)
         #if os(macOS)
         .controlSize(.small)
         #endif
@@ -303,7 +303,7 @@ struct Field<Content: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(label).font(InterfaceMetrics.secondary).foregroundStyle(Palette.secondary).padding(.leading, 4)
+            Text(label).appFont(AppFont.compactSecondary).foregroundStyle(Palette.secondary).padding(.leading, 4)
             content
         }
     }
@@ -336,10 +336,10 @@ private struct PluginToggles: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(title).font(InterfaceMetrics.secondary).foregroundStyle(Palette.secondary).padding(.leading, 4)
+            Text(title).appFont(AppFont.compactSecondary).foregroundStyle(Palette.secondary).padding(.leading, 4)
             VStack(alignment: .leading, spacing: InterfaceMetrics.value(mac: 12, mobile: 16)) {
                 if items.isEmpty {
-                    Text(empty).font(InterfaceMetrics.secondary).foregroundStyle(Palette.secondary)
+                    Text(empty).appFont(AppFont.compactSecondary).foregroundStyle(Palette.secondary)
                 }
                 ForEach(items, id: \.id) { item in
                     Toggle(isOn: Binding(
@@ -352,7 +352,7 @@ private struct PluginToggles: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(item.name).foregroundStyle(Palette.text)
                             if !item.detail.isEmpty {
-                                Text(item.detail).font(.caption).foregroundStyle(Palette.secondary).lineLimit(2)
+                                Text(item.detail).appFont(.caption).foregroundStyle(Palette.secondary).lineLimit(2)
                             }
                         }
                     }
@@ -518,7 +518,7 @@ private struct FolderLevel: View {
                             onPick(listing.path)
                         } label: {
                             Label("Use “\((listing.path as NSString).lastPathComponent)”", systemImage: "checkmark.circle.fill")
-                                .font(.headline)
+                                .appFont(.headline)
                                 .foregroundStyle(Palette.accent)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .contentShape(Rectangle())
@@ -539,7 +539,7 @@ private struct FolderLevel: View {
                                         Text(dir.name).foregroundStyle(Palette.text).lineLimit(1)
                                         Spacer(minLength: 8)
                                         Image(systemName: "chevron.right")
-                                            .font(.caption2.weight(.semibold))
+                                            .appFont(.caption2.weight(.semibold))
                                             .foregroundStyle(Palette.tertiary)
                                     }
                                     .contentShape(Rectangle())
@@ -554,7 +554,7 @@ private struct FolderLevel: View {
                     Spinner(size: 20).frame(maxWidth: .infinity)
                 }
             }
-            .font(InterfaceMetrics.body)
+            .appFont(AppFont.compactBody)
             .padding(InterfaceMetrics.value(mac: 14, mobile: 20))
         }
         .scrollDismissesKeyboard(.interactively)

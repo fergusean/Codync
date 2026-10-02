@@ -27,17 +27,17 @@ struct PermissionCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
-                Text(headline).font(.headline).foregroundStyle(Palette.text)
+                Text(headline).appFont(.headline).foregroundStyle(Palette.text)
                 if pending {
                     Circle().fill(Palette.warning).frame(width: 7, height: 7)
                 }
             }
             Text(d.title ?? "")
-                .font(.subheadline.monospaced())
+                .appFont(.subheadline.monospaced())
                 .foregroundStyle(Palette.secondary)
                 .lineLimit(expanded ? nil : 3)
             Label("Runs on \(hostName)\(d.cwd.map { " · \(($0 as NSString).lastPathComponent)" } ?? "")", systemImage: "desktopcomputer")
-                .font(.caption)
+                .appFont(.caption)
                 .foregroundStyle(Palette.tertiary)
 
             if hasDetail {
@@ -53,7 +53,7 @@ struct PermissionCard: View {
                     }
                     .padding(.top, 6)
                 } label: {
-                    Text("Details").font(.caption.weight(.medium)).foregroundStyle(Palette.secondary)
+                    Text("Details").appFont(.caption.weight(.medium)).foregroundStyle(Palette.secondary)
                 }
             }
 
@@ -61,7 +61,7 @@ struct PermissionCard: View {
                 buttons
             } else {
                 Text(outcome)
-                    .font(.caption.weight(.medium))
+                    .appFont(.caption.weight(.medium))
                     .foregroundStyle(Palette.secondary)
             }
         }
@@ -98,7 +98,7 @@ struct PermissionCard: View {
                 Button { respond(o.optionId) } label: {
                     HStack(spacing: 8) {
                         Text(label(o))
-                            .font(.body.weight(o.kind == "allow_once" ? .semibold : .regular))
+                            .appFont(.body.weight(o.kind == "allow_once" ? .semibold : .regular))
                             .foregroundStyle(o.kind.hasPrefix("allow") ? Palette.text : Palette.danger)
                         Spacer(minLength: 0)
                         if answering == o.optionId { Spinner(size: 14) }
@@ -139,7 +139,7 @@ struct CodeBox: View {
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             Text(text)
-                .font(.system(.caption, design: .monospaced))
+                .appFont(.system(.caption, design: .monospaced))
                 .foregroundStyle(Palette.text)
                 .textSelection(.enabled)
                 .padding(8)
@@ -161,7 +161,7 @@ struct DiffView: View {
                 Text("+\(diff.added)").foregroundStyle(Palette.added)
                 Text("−\(diff.removed)").foregroundStyle(Palette.removed)
             }
-            .font(.caption.monospaced())
+            .appFont(.caption.monospaced())
             .foregroundStyle(Palette.secondary)
             ScrollView(.horizontal, showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 0) {
@@ -170,7 +170,7 @@ struct DiffView: View {
                             .foregroundStyle(line.hasPrefix("+") ? Palette.added : line.hasPrefix("-") ? Palette.removed : Palette.secondary)
                     }
                 }
-                .font(.system(.caption2, design: .monospaced))
+                .appFont(.system(.caption2, design: .monospaced))
                 .padding(8)
             }
             .frame(maxHeight: 260)

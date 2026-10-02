@@ -44,7 +44,7 @@ struct MemoryCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Text("Memory").font(InterfaceMetrics.secondary).foregroundStyle(Palette.secondary).padding(.leading, 4)
+                Text("Memory").appFont(AppFont.compactSecondary).foregroundStyle(Palette.secondary).padding(.leading, 4)
                 Spacer()
                 if !facts.isEmpty {
                     Button("Forget everything", systemImage: "trash") { confirmClear = true }
@@ -59,13 +59,13 @@ struct MemoryCard: View {
                     Text(loaded
                         ? "Nothing yet. The bot remembers who you are and what you work on as you chat."
                         : "Loading…")
-                        .font(InterfaceMetrics.secondary)
+                        .appFont(AppFont.compactSecondary)
                         .foregroundStyle(Palette.secondary)
                 }
                 ForEach(facts) { fact in
                     HStack(alignment: .firstTextBaseline, spacing: 10) {
                         Image(systemName: fact.kind == "profile" ? "person" : "clock")
-                            .font(.caption)
+                            .appFont(.caption)
                             .foregroundStyle(Palette.tertiary)
                             .help(fact.kind == "profile" ? "About you" : "History")
                         Text(fact.content)
@@ -74,7 +74,7 @@ struct MemoryCard: View {
                         Button("Forget", systemImage: "xmark") { forget(fact) }
                             .labelStyle(.iconOnly)
                             .buttonStyle(.plain)
-                            .font(.caption)
+                            .appFont(.caption)
                             .foregroundStyle(Palette.tertiary)
                             .help("Forget")
                     }

@@ -77,7 +77,7 @@ struct Composer: View {
                             Button { mention(member) } label: {
                                 HStack(spacing: 6) {
                                     CharacterAvatar(bot: member, size: 18, animated: false)
-                                    Text(member.name).font(.subheadline).foregroundStyle(Palette.text)
+                                    Text(member.name).appFont(.subheadline).foregroundStyle(Palette.text)
                                 }
                                 .padding(.horizontal, 10)
                                 .padding(.vertical, 6)
@@ -171,7 +171,7 @@ struct Composer: View {
             if let onInterrupt, draft.isEmpty, files.isEmpty {
                 Button(action: onInterrupt) {
                     Image(systemName: "stop.fill")
-                        .font(.system(size: 12, weight: .bold))
+                        .appFont(.system(size: 12, weight: .bold))
                         .frame(width: InterfaceMetrics.value(mac: 28, mobile: 34), height: InterfaceMetrics.value(mac: 28, mobile: 34))
                         .background(Palette.danger, in: Circle())
                         .foregroundStyle(.white)
@@ -185,7 +185,7 @@ struct Composer: View {
                     model.stop(botId)
                 } label: {
                     Image(systemName: "stop.fill")
-                        .font(.system(size: 12, weight: .bold))
+                        .appFont(.system(size: 12, weight: .bold))
                         .frame(width: InterfaceMetrics.value(mac: 28, mobile: 34), height: InterfaceMetrics.value(mac: 28, mobile: 34))
                         .background(Palette.accentFill, in: Circle())
                         .foregroundStyle(Palette.onAccent)
@@ -196,7 +196,7 @@ struct Composer: View {
             } else if let onCall, draft.isEmpty, files.isEmpty {
                 Button(action: onCall) {
                     Image(systemName: "waveform")
-                        .font(.system(size: 15, weight: .bold))
+                        .appFont(.system(size: 15, weight: .bold))
                         .frame(width: buttonSize * 1.35, height: buttonSize)
                         .background(Palette.accentFill, in: Capsule())
                         .foregroundStyle(Palette.onAccent)
@@ -208,7 +208,7 @@ struct Composer: View {
             } else {
                 Button(action: submit) {
                     Image(systemName: "arrow.up")
-                        .font(.system(size: 14, weight: .bold))
+                        .appFont(.system(size: 14, weight: .bold))
                         .frame(width: InterfaceMetrics.value(mac: 28, mobile: 34), height: InterfaceMetrics.value(mac: 28, mobile: 34))
                         .background(canSend ? Palette.accentFill : Palette.accentDim, in: Circle())
                         .foregroundStyle(canSend ? Palette.onAccent : Palette.tertiary)
@@ -256,7 +256,7 @@ struct Composer: View {
 
     private var addLabel: some View {
         Image(systemName: "plus")
-            .font(.system(size: InterfaceMetrics.value(mac: 13, mobile: 18), weight: .medium))
+            .appFont(.system(size: InterfaceMetrics.value(mac: 13, mobile: 18), weight: .medium))
             .foregroundStyle(Palette.text)
             .frame(width: buttonSize + 2 * InterfaceMetrics.value(mac: 4, mobile: 6),
                    height: buttonSize + 2 * InterfaceMetrics.value(mac: 4, mobile: 6))
@@ -269,7 +269,7 @@ struct Composer: View {
             HStack(spacing: 6) {
                 Button(action: pasteFiles) {
                     Label("Paste image", systemImage: "doc.on.clipboard")
-                        .font(.footnote.weight(.medium))
+                        .appFont(.footnote.weight(.medium))
                         .foregroundStyle(Palette.text)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 6)
@@ -277,7 +277,7 @@ struct Composer: View {
                 }
                 .buttonStyle(PressScale())
                 Button { pasteCount = UIPasteboard.general.changeCount } label: {
-                    Image(systemName: "xmark").font(.system(size: 10, weight: .bold)).foregroundStyle(Palette.secondary)
+                    Image(systemName: "xmark").appFont(.system(size: 10, weight: .bold)).foregroundStyle(Palette.secondary)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Don't paste")
@@ -295,7 +295,7 @@ struct Composer: View {
                         Image(systemName: AttachmentIcon.symbol(file.name))
                             .foregroundStyle(Palette.secondary)
                         Text(file.name)
-                            .font(.footnote)
+                            .appFont(.footnote)
                             .foregroundStyle(Palette.text)
                             .lineLimit(1)
                             .truncationMode(.middle)
@@ -303,7 +303,7 @@ struct Composer: View {
                         Button {
                             files.removeAll { $0.id == file.id }
                         } label: {
-                            Image(systemName: "xmark").font(.system(size: 10, weight: .bold)).foregroundStyle(Palette.secondary)
+                            Image(systemName: "xmark").appFont(.system(size: 10, weight: .bold)).foregroundStyle(Palette.secondary)
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel("Remove \(file.name)")

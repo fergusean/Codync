@@ -76,7 +76,7 @@ private struct AccountRestoreView: View {
         VStack(spacing: 14) {
             Spinner(size: 24)
             Text("Checking for a saved account…")
-                .font(.callout)
+                .appFont(.callout)
                 .foregroundStyle(Palette.secondary)
             Button("Continue on this Mac", action: onContinue)
                 .buttonStyle(.plain)
@@ -130,12 +130,12 @@ private struct AccountWelcomeView: View {
 
             VStack(alignment: .leading, spacing: 10) {
                 Text("Your coding agents,\nas teammates.")
-                    .font(.system(size: 34, weight: .semibold))
+                    .appFont(.system(size: 34, weight: .semibold))
                     .tracking(-0.6)
                     .foregroundStyle(Palette.text)
                     .fixedSize(horizontal: false, vertical: true)
                 Text("Give each one a name and a project. They work on your computer while you're away.")
-                    .font(.body)
+                    .appFont(.body)
                     .foregroundStyle(Palette.secondary)
             }
             .opacity(beat >= 3 ? 1 : 0)
@@ -146,7 +146,7 @@ private struct AccountWelcomeView: View {
             VStack(spacing: 10) {
                 Button(action: onContinue) {
                     Text("Continue on this Mac")
-                        .font(.headline)
+                        .appFont(.headline)
                         .frame(maxWidth: .infinity, minHeight: 50)
                 }
                 .buttonStyle(.primary)
@@ -154,13 +154,13 @@ private struct AccountWelcomeView: View {
                 Button { onSignIn(.apple) } label: {
                     ZStack {
                         HStack(spacing: 10) {
-                            Image(systemName: "apple.logo").font(.system(size: 20))
+                            Image(systemName: "apple.logo").appFont(.system(size: 20))
                             Text("Continue with Apple")
                         }
                         .opacity(isBusy ? 0 : 1)
                         if isBusy { Spinner(size: 18) }
                     }
-                    .font(.headline)
+                    .appFont(.headline)
                     .frame(maxWidth: .infinity, minHeight: 50)
                 }
                 .buttonStyle(.primary)
@@ -178,7 +178,7 @@ private struct AccountWelcomeView: View {
                         .opacity(isBusy ? 0 : 1)
                         if isBusy { Spinner(size: 18) }
                     }
-                    .font(.headline)
+                    .appFont(.headline)
                     .frame(maxWidth: .infinity, minHeight: 50)
                 }
                 .buttonStyle(.secondary)
@@ -186,13 +186,13 @@ private struct AccountWelcomeView: View {
 
                 if !isConfigured {
                     Text("Sign-in isn't configured in this build. You can still use Codync on this Mac.")
-                        .font(.footnote)
+                        .appFont(.footnote)
                         .foregroundStyle(Palette.tertiary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 if let errorMessage {
                     Text(errorMessage)
-                        .font(.footnote)
+                        .appFont(.footnote)
                         .foregroundStyle(Palette.warning)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -246,7 +246,7 @@ private struct WelcomeChatGlimpse: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Fix the flaky login test")
-                .font(.subheadline)
+                .appFont(.subheadline)
                 .foregroundStyle(Palette.text)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 9)
@@ -259,7 +259,7 @@ private struct WelcomeChatGlimpse: View {
                 CharacterAvatar(shape: "blob", color: "blue", size: 28, mood: replied ? .idle : .working)
                 if replied {
                     Text("Done. It raced the session refresh; tests pass on fix/login.")
-                        .font(.subheadline)
+                        .appFont(.subheadline)
                         .foregroundStyle(Palette.text)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 9)
@@ -267,7 +267,7 @@ private struct WelcomeChatGlimpse: View {
                         .transition(.opacity.combined(with: .scale(scale: 0.92, anchor: .bottomLeading)))
                 } else {
                     Text("Working…")
-                        .font(.subheadline)
+                        .appFont(.subheadline)
                         .foregroundStyle(Palette.tertiary)
                         .transition(.opacity)
                 }
@@ -341,12 +341,12 @@ struct EmptyState: View {
     var body: some View {
         VStack(spacing: 10) {
             Image(systemName: icon)
-                .font(.system(size: 36, weight: .light))
+                .appFont(.system(size: 36, weight: .light))
                 .foregroundStyle(Palette.tertiary)
                 .accessibilityHidden(true)
-            Text(title).font(.title3.weight(.semibold)).foregroundStyle(Palette.text)
+            Text(title).appFont(.title3.weight(.semibold)).foregroundStyle(Palette.text)
             Text(message)
-                .font(.callout)
+                .appFont(.callout)
                 .foregroundStyle(Palette.secondary)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 360)
@@ -488,9 +488,9 @@ private struct ChatSplitView: View {
                     if visibleRoster.isEmpty && !compact {
                         VStack(spacing: 8) {
                             Text(search.isEmpty ? "No bots yet" : "No matching bots")
-                                .font(.system(size: 13, weight: .medium))
+                                .appFont(.system(size: 13, weight: .medium))
                             Text(search.isEmpty ? "Use + to start a new chat." : "Try another name or message.")
-                                .font(.system(size: 12)).foregroundStyle(Palette.secondary)
+                                .appFont(.system(size: 12)).foregroundStyle(Palette.secondary)
                         }
                         .allowsHitTesting(false)
                     }
@@ -541,7 +541,7 @@ private struct ChatSplitView: View {
                             CharacterAvatar(shape: "squircle", color: "orange", size: 60)
                             CharacterAvatar(shape: "teardrop", color: "violet", size: 60, mood: .working)
                         }
-                        Text("Your coding agents, as teammates.").font(.title2.weight(.semibold))
+                        Text("Your coding agents, as teammates.").appFont(.title2.weight(.semibold))
                         Text("Pick a bot, or create one for each kind of work and point it at a project.")
                             .foregroundStyle(Palette.secondary)
                             .multilineTextAlignment(.center)
@@ -775,7 +775,7 @@ extension ChatSplitView {
             }
         }
         .animation(Motion.reduced(Motion.fade, reduceMotion), value: search.isEmpty)
-        .font(.system(size: 13))
+        .appFont(.system(size: 13))
         .padding(.horizontal, 9)
         .frame(height: 28)
         .background(Palette.bubbleAgent, in: RoundedRectangle(cornerRadius: 8))
@@ -831,7 +831,7 @@ extension ChatSplitView {
                          options: onlineStores.map { ($0.computer.id, $0.hostName) })
             Spacer()
         }
-        .font(.callout)
+        .appFont(.callout)
         .padding(.horizontal, 22)
         .padding(.top, 12)
     }
@@ -860,7 +860,7 @@ extension ChatSplitView {
 
     private var profilePlaceholder: some View {
         Image(systemName: "person.fill")
-            .font(.system(size: 15, weight: .medium))
+            .appFont(.system(size: 15, weight: .medium))
             .foregroundStyle(Palette.secondary)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -872,7 +872,7 @@ extension ChatSplitView {
             } label: {
                 HStack(spacing: 10) {
                     Image(systemName: "square.grid.2x2")
-                        .font(.system(size: 14, weight: .regular))
+                        .appFont(.system(size: 14, weight: .regular))
                         .frame(width: 30, height: 30)
                         .background(Palette.text.opacity(0.025), in: Circle())
                     Text("Marketplace")
@@ -909,7 +909,7 @@ extension ChatSplitView {
             .focused($profileFocused)
         }
         .buttonStyle(.plain)
-        .font(.system(size: 13, weight: .medium))
+        .appFont(.system(size: 13, weight: .medium))
         .foregroundStyle(Palette.text)
         .padding(.horizontal, 12)
         .padding(.top, 6)
@@ -1014,7 +1014,7 @@ private struct UsageSheet: View {
                     ForEach(withUsage, id: \.computer.id) { store in
                         if stores.count > 1 {
                             Label { Text(store.hostName) } icon: { ComputerBadge(store.computer, size: 16) }
-                                .font(.headline)
+                                .appFont(.headline)
                         }
                         UsageLimits(usage: store.usage)
                     }
@@ -1137,7 +1137,7 @@ private struct SidebarAccountPanel: View {
                 menuRow(items[index], index: index)
             }
             if let errorMessage, page == "main" {
-                Text(errorMessage).font(.system(size: 12)).foregroundStyle(Palette.warning)
+                Text(errorMessage).appFont(.system(size: 12)).foregroundStyle(Palette.warning)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.horizontal, 10).padding(.vertical, 8)
             }
@@ -1155,10 +1155,10 @@ private struct SidebarAccountPanel: View {
 
     private var accountIdentity: some View {
         HStack(spacing: 8) {
-            Image(systemName: "person.crop.circle").font(.system(size: 15))
-            Text(email ?? name).font(.system(size: 12)).lineLimit(1)
+            Image(systemName: "person.crop.circle").appFont(.system(size: 15))
+            Text(email ?? name).appFont(.system(size: 12)).lineLimit(1)
             Spacer()
-            if !signedIn { Text("Not signed in").font(.system(size: 11)) }
+            if !signedIn { Text("Not signed in").appFont(.system(size: 11)) }
         }
         .foregroundStyle(Palette.secondary)
         .padding(.horizontal, 10)
@@ -1211,12 +1211,12 @@ private struct AccountPanelRow: View {
                 if let assetIcon {
                     Image(assetIcon).resizable().scaledToFit().frame(width: 16, height: 16).frame(width: 20)
                 } else {
-                    Image(systemName: icon).font(.system(size: 14, weight: .regular)).frame(width: 20)
+                    Image(systemName: icon).appFont(.system(size: 14, weight: .regular)).frame(width: 20)
                 }
-                Text(title).font(.system(size: 12)).lineLimit(1)
+                Text(title).appFont(.system(size: 12)).lineLimit(1)
                 Spacer(minLength: 8)
-                if let detail { Text(detail).font(.system(size: 13)).foregroundStyle(Palette.secondary) }
-                if chevron { Image(systemName: "chevron.right").font(.system(size: 11)).foregroundStyle(Palette.secondary) }
+                if let detail { Text(detail).appFont(.system(size: 13)).foregroundStyle(Palette.secondary) }
+                if chevron { Image(systemName: "chevron.right").appFont(.system(size: 11)).foregroundStyle(Palette.secondary) }
             }
             .foregroundStyle(destructive ? Palette.danger : Palette.text)
             .padding(.horizontal, 10)
