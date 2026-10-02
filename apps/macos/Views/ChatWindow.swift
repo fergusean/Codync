@@ -422,6 +422,23 @@ private struct ChatSplitView: View {
     private var shownIDs: Set<ComputerID> {
         Set(ComputerSelection(all: accounts.computers.map(\.id), hidden: hiddenComputers).shown)
     }
+    private var connectingComputers: [ComputerConnectionProgress] {
+        host.ssh.profiles.compactMap { profile in
+            let detail: String
+            switch host.ssh.status(of: profile.id) {
+            case let .connecting(step): detail = step
+            case .retrying: detail = "Retrying…"
+            default: return nil
+            }
+            if let id = profile.computerId, accounts.computers.contains(where: { $0.id == id }), !shownIDs.contains(id) { return nil }
+            return ComputerConnectionProgress(computerId: profile.computerId,
+                                              name: profile.name.isEmpty ? profile.host : profile.name, detail: detail)
+        }
+    }
+    private var isConnecting: Bool {
+        onlineStores.isEmpty && (!connectingComputers.isEmpty
+            || stores.contains { shownIDs.contains($0.computer.id) && $0.shownConnection == .connecting })
+    }
     private var visibleRoster: [RosterItem] {
         let query = search.trimmingCharacters(in: .whitespacesAndNewlines)
         return accounts.roster.filter { item in
@@ -445,7 +462,8 @@ private struct ChatSplitView: View {
             VStack(spacing: 0) {
                 HStack(spacing: 6) {
                     Spacer(minLength: 0)
-                    ComputerFilterHeader(accounts: accounts, hidden: $hiddenComputers) { showComputers = true }
+                    ComputerFilterHeader(accounts: accounts, hidden: $hiddenComputers,
+                                         connectingComputers: connectingComputers) { showComputers = true }
                     IconButton("New", systemImage: "plus") { newMenu.toggle() }
                         .codyncMenu(isPresented: $newMenu, items: newItems)
                         .disabled(onlineStores.isEmpty)
@@ -457,7 +475,8 @@ private struct ChatSplitView: View {
                 .allowsHitTesting(!compact)
                 .accessibilityHidden(compact)
                 if compact {
-                    ComputerFilterHeader(accounts: accounts, hidden: $hiddenComputers, compact: true) { showComputers = true }
+                    ComputerFilterHeader(accounts: accounts, hidden: $hiddenComputers, compact: true,
+                                         connectingComputers: connectingComputers) { showComputers = true }
                         .frame(width: 70)
                 }
                 ScrollView {
@@ -492,11 +511,13 @@ private struct ChatSplitView: View {
                 .overlay {
                     if visibleRoster.isEmpty && !compact {
                         VStack(spacing: 8) {
-                            Text(search.isEmpty ? "No bots yet" : "No matching bots")
+                            Text(search.isEmpty ? (isConnecting ? "Connecting…" : "No bots yet") : "No matching bots")
                                 .appFont(.system(size: 13, weight: .medium))
-                            Text(search.isEmpty ? "Use + to start a new chat." : "Try another name or message.")
+                            Text(search.isEmpty ? (isConnecting ? "Your bots will appear once connected." : "Use + to start a new chat.") : "Try another name or message.")
                                 .appFont(.system(size: 12)).foregroundStyle(Palette.secondary)
+                                .multilineTextAlignment(.center)
                         }
+                        .padding(.horizontal, 16)
                         .allowsHitTesting(false)
                     }
                 }
@@ -539,6 +560,15 @@ private struct ChatSplitView: View {
                         .environment(store)
                         .id(ref)
                         .transition(.asymmetric(insertion: .opacity, removal: .identity))
+                } else if isConnecting && visibleRoster.isEmpty {
+                    VStack(spacing: 14) {
+                        Spinner(size: 24)
+                        Text("Connecting to your computer…").appFont(.title2.weight(.semibold))
+                        Text("Your bots will appear once connected.").foregroundStyle(Palette.secondary)
+                        Button("Manage computers") { showComputers = true }.buttonStyle(.secondary)
+                    }
+                    .padding(32)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
                     VStack(spacing: 14) {
                         HStack(spacing: -10) {
