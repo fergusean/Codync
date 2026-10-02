@@ -99,7 +99,7 @@ public struct ThreadView: View {
                     if !model.historyComplete.contains(botId), thread.count >= 50 {
                         Button("Load earlier messages") { Task { await model.loadOlder(botId) } }
                             .buttonStyle(.plain)
-                            .font(.footnote)
+                            .appFont(.footnote)
                             .foregroundStyle(Palette.secondary)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 12)
@@ -287,7 +287,7 @@ public struct ThreadView: View {
         switch item.kind {
         case .separator(let date):
             Text(RelativeTime.separator(date))
-                .font(.footnote)
+                .appFont(.footnote)
                 .foregroundStyle(Palette.tertiary)
                 .frame(maxWidth: .infinity)
                 .padding(.top, 18)
@@ -298,7 +298,7 @@ public struct ThreadView: View {
                     openRoutine(id)
                 } label: {
                     Label(e.data.text ?? "Routine", systemImage: "clock.arrow.circlepath")
-                        .font(.footnote).foregroundStyle(Palette.secondary).padding(.vertical, 10)
+                        .appFont(.footnote).foregroundStyle(Palette.secondary).padding(.vertical, 10)
                 }.buttonStyle(.plain)
             } else {
                 ChatRow(entry: e, groupStart: groupStart, chat: bot) {
@@ -318,7 +318,7 @@ public struct ThreadView: View {
                 if model.shownConnection == .connecting {
                     Spinner(size: 8)
                 } else {
-                    Image(systemName: connectionSymbol).font(.system(size: 8, weight: .medium))
+                    Image(systemName: connectionSymbol).appFont(.system(size: 8, weight: .medium))
                 }
             }
             .frame(width: 12)
@@ -327,7 +327,7 @@ public struct ThreadView: View {
                 .lineLimit(1)
                 .truncationMode(.middle)
         }
-        .font(.system(size: 10, weight: .medium))
+        .appFont(.system(size: 10, weight: .medium))
         .foregroundStyle(Palette.secondary)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(model.hostName), \(connectionDescription)")
@@ -407,7 +407,7 @@ public struct ThreadView: View {
                 if bot.isGroup { GroupAvatar(members: model.members(of: bot), size: 22) } else { CharacterAvatar(bot: bot, size: 22) }
             }
             Text(bot?.name ?? "")
-                .font(.system(size: 13, weight: .semibold))
+                .appFont(.system(size: 13, weight: .semibold))
                 .foregroundStyle(Palette.text)
                 .lineLimit(1)
         }
@@ -531,19 +531,19 @@ private struct GroupIntroCard: View {
     var body: some View {
         VStack(spacing: 12) {
             GroupAvatar(members: model.members(of: group), size: 72)
-            Text(group.name).font(.title2.weight(.semibold)).foregroundStyle(Palette.text)
+            Text(group.name).appFont(.title2.weight(.semibold)).foregroundStyle(Palette.text)
             Text(model.members(of: group).map(\.name).joined(separator: " · "))
-                .font(.subheadline)
+                .appFont(.subheadline)
                 .foregroundStyle(Palette.secondary)
                 .multilineTextAlignment(.center)
             if !group.description.isEmpty {
                 Text(group.description)
-                    .font(.subheadline)
+                    .appFont(.subheadline)
                     .foregroundStyle(Palette.secondary)
                     .multilineTextAlignment(.center)
             }
             Text("Everyone answers in turn. @mention a bot to ask just that one. Each bot works in its own folder.")
-                .font(.footnote)
+                .appFont(.footnote)
                 .foregroundStyle(Palette.tertiary)
                 .multilineTextAlignment(.center)
                 .padding(.top, 4)
@@ -562,15 +562,15 @@ private struct GroupMembersList: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 2) {
-                Text("\(group.members.count) bots").font(.system(size: 13, weight: .semibold)).padding(.bottom, 6)
+                Text("\(group.members.count) bots").appFont(.system(size: 13, weight: .semibold)).padding(.bottom, 6)
                 ForEach(model.members(of: group)) { bot in
                     Button { model.selection = bot.id } label: {
                         HStack(spacing: 10) {
                             CharacterAvatar(bot: bot, size: 26)
                             VStack(alignment: .leading, spacing: 1) {
-                                Text(bot.name).font(.system(size: 13)).foregroundStyle(Palette.text)
+                                Text(bot.name).appFont(.system(size: 13)).foregroundStyle(Palette.text)
                                 Text(bot.isWorking ? (bot.activity.isEmpty ? "Working…" : bot.activity) : bot.folderName)
-                                    .font(.system(size: 11)).foregroundStyle(Palette.tertiary).lineLimit(1)
+                                    .appFont(.system(size: 11)).foregroundStyle(Palette.tertiary).lineLimit(1)
                             }
                             Spacer()
                         }
@@ -594,19 +594,19 @@ private struct IntroCard: View {
     var body: some View {
         VStack(spacing: 12) {
             CharacterAvatar(bot: bot, size: 72)
-            Text(bot.name).font(.title2.weight(.semibold)).foregroundStyle(Palette.text)
+            Text(bot.name).appFont(.title2.weight(.semibold)).foregroundStyle(Palette.text)
             Text(bot.managedWorkspace ? "\(model.backendName(bot.backend)) · Personal workspace" : "\(model.backendName(bot.backend)) in \(bot.cwd)")
-                .font(.footnote.monospaced())
+                .appFont(.footnote.monospaced())
                 .foregroundStyle(Palette.tertiary)
                 .multilineTextAlignment(.center)
             if !bot.description.isEmpty {
                 Text(bot.description)
-                    .font(.subheadline)
+                    .appFont(.subheadline)
                     .foregroundStyle(Palette.secondary)
                     .multilineTextAlignment(.center)
             }
             Text("Tell it what you need. You'll get a notification when it's done or needs you.")
-                .font(.footnote)
+                .appFont(.footnote)
                 .foregroundStyle(Palette.tertiary)
                 .multilineTextAlignment(.center)
                 .padding(.top, 4)
@@ -634,7 +634,7 @@ private struct DetailsPanel: View {
             HStack(spacing: 10) {
                 if editing {
                     IconButton("Back to details", systemImage: "chevron.left") { setEditing(false) }
-                    Text("Settings").font(.system(size: 13, weight: .semibold)).foregroundStyle(Palette.text)
+                    Text("Settings").appFont(.system(size: 13, weight: .semibold)).foregroundStyle(Palette.text)
                     Spacer()
                 } else if bot?.isGroup == true {
                     panelTitle("Members")
@@ -673,7 +673,7 @@ private struct DetailsPanel: View {
 
     private func panelTitle(_ title: String) -> some View {
         Text(title)
-            .font(.system(size: 12, weight: .medium))
+            .appFont(.system(size: 12, weight: .medium))
             .foregroundStyle(Palette.secondary)
             .padding(.leading, 4)
     }
@@ -698,23 +698,23 @@ private struct DetailsPanel: View {
                 ComputerBadge(model.computer, size: 32)
                 VStack(alignment: .leading, spacing: 4) {
                     Text(model.hostName)
-                        .font(.system(size: 13, weight: .semibold))
+                        .appFont(.system(size: 13, weight: .semibold))
                         .foregroundStyle(Palette.text)
                         .lineLimit(2)
                     Text("Remote screen")
-                        .font(.system(size: 11))
+                        .appFont(.system(size: 11))
                         .foregroundStyle(Palette.secondary)
                 }
             }
             if !model.isOffline {
                 Label(computerStatus, systemImage: computerStatusSymbol)
-                    .font(.system(size: 12, weight: .medium))
+                    .appFont(.system(size: 12, weight: .medium))
                     .foregroundStyle(Palette.text)
                     .fixedSize(horizontal: false, vertical: true)
             }
             if screenReady {
                 Text("View and control this Mac from your iPhone.")
-                    .font(.system(size: 11))
+                    .appFont(.system(size: 11))
                     .foregroundStyle(Palette.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, -8)
@@ -728,27 +728,27 @@ private struct DetailsPanel: View {
     private func agentSummary(_ bot: Bot) -> some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("Agent")
-                .font(.system(size: 13, weight: .semibold))
+                .appFont(.system(size: 13, weight: .semibold))
                 .foregroundStyle(Palette.text)
             HStack {
                 Text("Runtime").foregroundStyle(Palette.secondary)
                 Spacer(minLength: 12)
                 Text(model.backendName(bot.backend)).foregroundStyle(Palette.text)
             }
-            .font(.system(size: 12))
+            .appFont(.system(size: 12))
             VStack(alignment: .leading, spacing: 6) {
                 Label(bot.managedWorkspace ? "Workspace" : "Project folder", systemImage: "folder")
-                    .font(.system(size: 11))
+                    .appFont(.system(size: 11))
                     .foregroundStyle(Palette.secondary)
                 Text(bot.managedWorkspace ? "Personal · managed by Codync" : bot.cwd)
-                    .font(.system(size: 11))
+                    .appFont(.system(size: 11))
                     .foregroundStyle(Palette.text)
                     .fixedSize(horizontal: false, vertical: true)
                     .textSelection(.enabled)
             }
             if !bot.description.isEmpty {
                 Text(bot.description)
-                    .font(.system(size: 12))
+                    .appFont(.system(size: 12))
                     .foregroundStyle(Palette.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }

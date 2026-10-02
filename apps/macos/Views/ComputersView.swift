@@ -45,36 +45,36 @@ struct ApprovalSheet: View {
     private var content: some View {
         VStack(spacing: 16) {
             Image(systemName: request.platform == "macos" ? "laptopcomputer" : "iphone")
-                .font(.system(size: 40, weight: .light))
+                .appFont(.system(size: 40, weight: .light))
                 .foregroundStyle(Palette.secondary)
                 .accessibilityHidden(true)
             VStack(spacing: 4) {
                 Text("\(request.deviceName) wants to use \(approval.store.hostName)")
-                    .font(.title3.weight(.semibold))
+                    .appFont(.title3.weight(.semibold))
                     .multilineTextAlignment(.center)
                 if let email = request.email {
-                    Text("Signed in as \(email)").font(.callout).foregroundStyle(Palette.secondary)
+                    Text("Signed in as \(email)").appFont(.callout).foregroundStyle(Palette.secondary)
                 }
             }
             if let code = request.code {
                 Text(Self.spaced(code))
-                    .font(.system(size: 48, weight: .semibold, design: .monospaced))
+                    .appFont(.system(size: 48, weight: .semibold, design: .monospaced))
                     .foregroundStyle(Palette.text)
                     .textSelection(.enabled)
                     .accessibilityLabel("Code \(code.map(String.init).joined(separator: " "))")
                 Text("Approve only if \(request.deviceName) shows exactly this code. If it doesn't, deny: someone may be trying to get in.")
-                    .font(.callout)
+                    .appFont(.callout)
                     .foregroundStyle(Palette.secondary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
             } else {
                 Spinner()
                 Text("Waiting for \(request.deviceName) to show its code…")
-                    .font(.callout)
+                    .appFont(.callout)
                     .foregroundStyle(Palette.secondary)
             }
             if let error {
-                Text(error).font(.caption).foregroundStyle(Palette.danger).multilineTextAlignment(.center)
+                Text(error).appFont(.caption).foregroundStyle(Palette.danger).multilineTextAlignment(.center)
                     .transition(.opacity.combined(with: .move(edge: .top)))
             }
             HStack(spacing: 12) {
@@ -155,7 +155,7 @@ struct ComputersView: View {
             }
             if host.ssh.profiles.isEmpty {
                 Text("Run bots on another computer you reach with SSH. It needs codync-host installed; your SSH keys stay on this Mac.")
-                    .font(.callout)
+                    .appFont(.callout)
                     .foregroundStyle(Palette.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -179,17 +179,17 @@ struct ComputersView: View {
             }
             if !account.isSignedIn {
                 Text("Sign in to reach the other computers in your account from this Mac.")
-                    .font(.callout).foregroundStyle(Palette.secondary)
+                    .appFont(.callout).foregroundStyle(Palette.secondary)
             } else if reached.isEmpty && others.isEmpty {
-                Text("No other computers in your account yet.").font(.callout).foregroundStyle(Palette.secondary)
+                Text("No other computers in your account yet.").appFont(.callout).foregroundStyle(Palette.secondary)
             }
             ForEach(reached) { computer in
                 if let store = host.accounts.store(for: computer.id) {
                     HStack(spacing: 10) {
                         ComputerBadge(store.computer, size: 22)
                         VStack(alignment: .leading, spacing: 1) {
-                            Text(store.hostName).font(.callout.weight(.medium))
-                            Text(host.accounts.statusText(store)).font(.caption)
+                            Text(store.hostName).appFont(.callout.weight(.medium))
+                            Text(host.accounts.statusText(store)).appFont(.caption)
                                 .foregroundStyle(host.accounts.isStale(computer.id) ? Palette.warning : Palette.secondary)
                         }
                         RouteLabel(store: store, ssh: false).foregroundStyle(Palette.tertiary)
@@ -210,7 +210,7 @@ private struct SectionTitle: View {
     let title: String
     init(_ title: String) { self.title = title }
     var body: some View {
-        Text(title).font(.headline).foregroundStyle(Palette.text).accessibilityAddTraits(.isHeader)
+        Text(title).appFont(.headline).foregroundStyle(Palette.text).accessibilityAddTraits(.isHeader)
     }
 }
 
@@ -227,8 +227,8 @@ private struct AccountComputerRow: View {
             HStack(spacing: 10) {
                 ComputerBadge(Computer(id: computer.id, name: computer.name, signKey: computer.signKey, device: computer.device), size: 22)
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(computer.name).font(.callout.weight(.medium))
-                    Text(computer.isOnline ? "Online" : "Offline").font(.caption).foregroundStyle(Palette.secondary)
+                    Text(computer.name).appFont(.callout.weight(.medium))
+                    Text(computer.isOnline ? "Online" : "Offline").appFont(.caption).foregroundStyle(Palette.secondary)
                 }
                 Spacer()
                 if ticket == nil {
@@ -249,10 +249,10 @@ private struct AccountComputerRow: View {
             if let ticket {
                 HStack(spacing: 12) {
                     Text(ticket.code.count == 6 ? "\(ticket.code.prefix(3)) \(ticket.code.suffix(3))" : ticket.code)
-                        .font(.system(size: 26, weight: .semibold, design: .monospaced))
+                        .appFont(.system(size: 26, weight: .semibold, design: .monospaced))
                         .accessibilityLabel("Code \(ticket.code.map(String.init).joined(separator: " "))")
                     Text("Approve on \(computer.name) only if it shows this code.")
-                        .font(.callout).foregroundStyle(Palette.secondary)
+                        .appFont(.callout).foregroundStyle(Palette.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                     Spacer()
                     IconButton("Cancel request", systemImage: "xmark.circle") {
@@ -289,9 +289,9 @@ private struct ManagedComputerCard: View {
             HStack(spacing: 10) {
                 ComputerBadge(store.computer, size: 26)
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(store.hostName).font(.headline)
+                    Text(store.hostName).appFont(.headline)
                     Text(ssh ? "Over SSH · \(store.statusText)" : "This Mac · \(store.statusText)")
-                        .font(.caption).foregroundStyle(Palette.secondary)
+                        .appFont(.caption).foregroundStyle(Palette.secondary)
                 }
                 Spacer()
                 IconButton("Pair iPhone", systemImage: "qrcode", selected: showPairing) { showPairing.toggle() }
@@ -308,7 +308,7 @@ private struct ManagedComputerCard: View {
             Toggle(isOn: Binding(get: { cloud?.enabled ?? false }, set: { on in run { await host.setCloud(store, enabled: on) } })) {
                 VStack(alignment: .leading, spacing: 1) {
                     Text("Reach from anywhere")
-                    Text(cloudLine).font(.caption).foregroundStyle(cloud?.lastError == nil ? Palette.secondary : Palette.warning)
+                    Text(cloudLine).appFont(.caption).foregroundStyle(cloud?.lastError == nil ? Palette.secondary : Palette.warning)
                 }
             }
             .toggleStyle(.codync)
@@ -323,7 +323,7 @@ private struct ManagedComputerCard: View {
                     VStack(alignment: .leading, spacing: 1) {
                         Text("Skip the 6-digit check")
                         Text(autoApproval ? "Devices on your account get in on their own." : "Each new device shows a code you approve here.")
-                            .font(.caption).foregroundStyle(autoApproval ? Palette.warning : Palette.secondary)
+                            .appFont(.caption).foregroundStyle(autoApproval ? Palette.warning : Palette.secondary)
                     }
                 }
                 .toggleStyle(.codync)
@@ -332,10 +332,10 @@ private struct ManagedComputerCard: View {
             }
 
             VStack(alignment: .leading, spacing: 6) {
-                Text("Devices that can use \(store.hostName)").font(.subheadline.weight(.semibold))
+                Text("Devices that can use \(store.hostName)").appFont(.subheadline.weight(.semibold))
                 if let devices {
                     if devices.isEmpty {
-                        Text("None yet. Pair an iPhone, or approve one from your account.").font(.caption).foregroundStyle(Palette.secondary)
+                        Text("None yet. Pair an iPhone, or approve one from your account.").appFont(.caption).foregroundStyle(Palette.secondary)
                     }
                     ForEach(devices) { device in deviceRow(device).transition(.opacity.combined(with: .move(edge: .top))) }
                 } else {
@@ -385,14 +385,14 @@ private struct ManagedComputerCard: View {
             if let owner = cloud?.owner {
                 Image(systemName: "person.crop.circle.badge.checkmark").foregroundStyle(Palette.secondary).accessibilityHidden(true)
                 Text(owner.userId == account.userID ? "In your account" : "In \(owner.email ?? "another") account")
-                    .font(.callout)
+                    .appFont(.callout)
                 Spacer()
                 Button("Remove from account") { confirmUnclaim = true }
                     .buttonStyle(.secondary)
                     .disabled(busy || store.connection != .online)
             } else {
                 Image(systemName: "person.crop.circle.badge.plus").foregroundStyle(Palette.secondary).accessibilityHidden(true)
-                Text(account.isSignedIn ? "Not in your account" : "Sign in to add it to your account").font(.callout)
+                Text(account.isSignedIn ? "Not in your account" : "Sign in to add it to your account").appFont(.callout)
                 Spacer()
                 if account.isSignedIn {
                     Button(busy ? "Adding…" : "Add to account") { run { await host.claim(store) } }
@@ -410,8 +410,8 @@ private struct ManagedComputerCard: View {
                 .foregroundStyle(Palette.secondary)
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 1) {
-                Text(device.name).font(.callout)
-                Text(detail(device)).font(.caption).foregroundStyle(Palette.tertiary)
+                Text(device.name).appFont(.callout)
+                Text(detail(device)).appFont(.caption).foregroundStyle(Palette.tertiary)
             }
             Spacer()
             IconButton("Revoke access", systemImage: "xmark.circle") { confirmRevoke = device }
@@ -457,8 +457,8 @@ private struct SSHRow: View {
             HStack(spacing: 10) {
                 Image(systemName: "terminal").frame(width: 22).foregroundStyle(Palette.secondary).accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(profile.name.isEmpty ? profile.host : profile.name).font(.callout.weight(.medium))
-                    Text(line(status)).font(.caption).foregroundStyle(isProblem(status) ? Palette.warning : Palette.secondary)
+                    Text(profile.name.isEmpty ? profile.host : profile.name).appFont(.callout.weight(.medium))
+                    Text(line(status)).appFont(.caption).foregroundStyle(isProblem(status) ? Palette.warning : Palette.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 Spacer()
@@ -474,9 +474,9 @@ private struct SSHRow: View {
             if case let .confirmHostKey(name, fingerprints, _) = status {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("First connection to \(name). Check that its host key fingerprint matches what the computer's owner sees (`ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub`).")
-                        .font(.caption).foregroundStyle(Palette.secondary)
+                        .appFont(.caption).foregroundStyle(Palette.secondary)
                         .fixedSize(horizontal: false, vertical: true)
-                    ForEach(fingerprints, id: \.self) { Text($0).font(.caption.monospaced()).textSelection(.enabled) }
+                    ForEach(fingerprints, id: \.self) { Text($0).appFont(.caption.monospaced()).textSelection(.enabled) }
                     HStack {
                         Button("Trust and connect") { host.ssh.trustHostKey(profile.id) }.buttonStyle(.primary)
                         Button("Cancel") { host.ssh.disconnect(profile.id) }.buttonStyle(.secondary)
@@ -487,7 +487,7 @@ private struct SSHRow: View {
             if status == .notInstalled {
                 HStack(spacing: 6) {
                     Text(SSH.installCommand)
-                        .font(.caption.monospaced())
+                        .appFont(.caption.monospaced())
                         .textSelection(.enabled)
                         .padding(6)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -583,10 +583,10 @@ private struct SSHProfileEditor: View {
                 SSHField("Codync port", text: $remotePort, prompt: "")
             }
             Text("Codync opens an SSH tunnel to codync-host on that computer's loopback. It uses your SSH config and ssh-agent; agent forwarding stays off.")
-                .font(.caption).foregroundStyle(Palette.secondary)
+                .appFont(.caption).foregroundStyle(Palette.secondary)
                 .fixedSize(horizontal: false, vertical: true)
             if let problem {
-                Text(problem).font(.caption).foregroundStyle(Palette.danger)
+                Text(problem).appFont(.caption).foregroundStyle(Palette.danger)
                     .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }

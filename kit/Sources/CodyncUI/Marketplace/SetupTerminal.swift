@@ -26,7 +26,7 @@ struct SetupTerminalView: View {
                 BackButton(action: back).keyboardShortcut(.cancelAction)
             } title: {
                 Text(step == .install ? "Install \(backend.name)" : method?.name ?? "Sign in to \(backend.name)")
-                    .font(InterfaceMetrics.body.weight(.semibold))
+                    .appFont(AppFont.compactBody.weight(.semibold))
                     .foregroundStyle(Palette.text)
                     .lineLimit(1)
             } trailing: {
@@ -65,7 +65,7 @@ struct SetupTerminalView: View {
                 Button("Done", action: back).buttonStyle(.primary)
             }
         }
-        .font(.footnote)
+        .appFont(.footnote)
         .lineLimit(2)
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
@@ -232,15 +232,21 @@ private struct TerminalSurface: UIViewRepresentable {
 private struct TerminalSurface: NSViewRepresentable {
     let session: TermSession
     let open: (URL) -> Void
+    @Environment(\.appFontScale) private var fontScale
 
     func makeCoordinator() -> TerminalBridge { TerminalBridge(session: session, open: open) }
 
     func makeNSView(context: Context) -> TerminalView {
         let view = context.coordinator.make()
+        view.font = .monospacedSystemFont(ofSize: 12 * fontScale, weight: .regular)
         Task { @MainActor in context.coordinator.focus(view) }
         return view
     }
 
-    func updateNSView(_ view: TerminalView, context: Context) {}
+    func updateNSView(_ view: TerminalView, context: Context) {
+        let size = 12 * fontScale
+        guard view.font.pointSize != size else { return }
+        view.font = .monospacedSystemFont(ofSize: size, weight: .regular)
+    }
 }
 #endif
