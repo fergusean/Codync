@@ -87,7 +87,9 @@ struct RoutinesView: View {
         HStack(spacing: 12) {
             Button { open(routine.id) } label: {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(routine.name).foregroundStyle(Palette.text)
+                    Text(routine.name)
+                        .appFont(AppFont.compactBody)
+                        .foregroundStyle(Palette.text)
                     Text(summary(routine))
                         .appFont(.caption)
                         .foregroundStyle(routine.lastError == nil ? Palette.secondary : Palette.danger)
