@@ -135,9 +135,7 @@ private struct MarkdownTextUpdate: ViewModifier {
 
     func body(content: Content) -> some View {
         #if os(macOS)
-            // Refresh the selectable text's backing view as a streamed block grows.
-            // Keep the surrounding message and scroll view identities intact.
-            content.id(text).transaction { $0.animation = nil }
+            content.transaction { $0.animation = nil }
         #else
             content
                 .contentTransition(streaming && !reduceMotion ? .interpolate : .identity)

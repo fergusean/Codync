@@ -7,6 +7,33 @@ import SwiftUI
 struct ChatRow: View {
     let entry: Entry
     let groupStart: Bool
+    let chat: Bot?
+    let openTrace: () -> Void
+    var openThread: ((Entry) -> Void)?
+    @Environment(BotStore.self) private var model
+
+    var body: some View {
+        #if os(macOS)
+            // Lazy parents can retain the value used when a row first appeared.
+            // Observe the mirror here too, and replace the rendered contents for
+            // each revision while preserving the enclosing row's scroll identity.
+            let current = model.allEntries(entry.botId).first { $0.id == entry.id } ?? entry
+            VStack(alignment: .leading, spacing: 0) {
+                ChatRowContent(entry: current, groupStart: groupStart, chat: chat,
+                               openTrace: openTrace, openThread: openThread)
+                    .id(current.rev)
+                    .transaction { $0.animation = nil }
+            }
+        #else
+            ChatRowContent(entry: entry, groupStart: groupStart, chat: chat,
+                           openTrace: openTrace, openThread: openThread)
+        #endif
+    }
+}
+
+private struct ChatRowContent: View {
+    let entry: Entry
+    let groupStart: Bool
     /// The bot or group the chat belongs to.
     let chat: Bot?
     let openTrace: () -> Void

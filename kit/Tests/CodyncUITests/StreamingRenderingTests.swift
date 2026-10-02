@@ -1,51 +1,12 @@
 #if os(macOS)
 import AppKit
-import Observation
 import SwiftUI
 import Testing
+import Vision
 @testable import CodyncKit
 @testable import CodyncUI
 
-@MainActor @Observable
-private final class StreamedReply {
-    var text = "The"
-    var streaming = true
-}
-
-@available(macOS 15.0, *)
-private struct StreamingConversation: View {
-    let reply: StreamedReply
-    let store: BotStore
-
-    private var entry: Entry {
-        var data = EntryData(text: reply.text)
-        data.final = !reply.streaming
-        return Entry(id: "reply", seq: 1, botId: "b", rev: 1, kind: "agent", turn: 1,
-                     data: data, createdAt: 1, updatedAt: 1)
-    }
-
-    var body: some View {
-        ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: 0) {
-                    ChatRow(entry: entry, groupStart: true, chat: nil, openTrace: {})
-                        .id("reply")
-                    Color.clear.frame(height: 8).id("bottom")
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            .defaultScrollAnchor(.bottom, for: .initialOffset)
-            .onChange(of: reply.text) { _, _ in
-                withAnimation(Motion.conversation) { proxy.scrollTo("bottom", anchor: .bottom) }
-            }
-        }
-        .background(Color.white)
-        .environment(store)
-        .environment(\.conversationTypography, ConversationTypography(pointSize: 14))
-    }
-}
-
-@MainActor @Test func streamedReplyShowsItsCompletedTextWithoutReopening() async throws {
+@MainActor @Test func rapidlyCompletedReplyUpdatesInTheLiveThreadView() async throws {
     guard #available(macOS 15.0, *) else { return }
     _ = NSApplication.shared
     let suite = "StreamingRenderingTests.\(UUID())"
@@ -55,58 +16,125 @@ private struct StreamingConversation: View {
     let computer = Computer(id: "streaming-fixture", name: "Fixture", signKey: "")
     let store = BotStore(computer: computer, route: .channel, clientKind: "macos", storage: storage) { fake }
     defer { store.retire() }
-    let reply = StreamedReply()
-    let hosting = NSHostingView(rootView: StreamingConversation(reply: reply, store: store))
+    store.setActive(true)
+    try await waitFor { await fake.subscribed }
+    await fake.emit(botEvent(status: "idle", rev: 1))
+    try await waitFor { store.bots["b"] != nil }
+    for seq in 1...40 {
+        await fake.emit(try entryEvent(id: "history-\(seq)", seq: Int64(seq), rev: Int64(seq + 1),
+                                     text: "Earlier reply \(seq). " + String(repeating: "Conversation history with several wrapped lines. ", count: 4), final: true))
+    }
+    try await waitFor { store.allEntries("b").count == 40 }
+
+    let hosting = NSHostingView(rootView: ThreadView(botId: "b")
+        .environment(store)
+        .environment(\.conversationTypography, ConversationTypography(pointSize: 14)))
     let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 620, height: 560), styleMask: [.borderless], backing: .buffered, defer: false)
     window.isReleasedWhenClosed = false
     window.appearance = NSAppearance(named: .aqua)
     window.contentView = hosting
     defer { window.close() }
+    window.orderBack(nil)
+    hosting.layoutSubtreeIfNeeded()
+    hosting.displayIfNeeded()
+    try await Task.sleep(for: .seconds(1))
 
-    try await settle(hosting)
-    let first = try textPixels(hosting)
-    #expect(first > 20)
-    let complete = """
-    The nightly backup succeeded this morning. The response must grow beyond its first streamed word.
-
-    **Backup status.** The schedule is enabled, storage is available, and there are no errors. The metrics outage is separate from the backup result.
-
-    - The first item is visible.
-    - The second item is visible.
-
-    Nothing on the cluster was changed.
-    """
-    for length in [16, 60, 140, 240, complete.count] {
-        reply.text = String(complete.prefix(length))
-        try await Task.sleep(for: .milliseconds(300))
-    }
-    reply.streaming = false
-    try await settle(hosting)
-    let final = try textPixels(hosting)
-    #expect(final > first * 8, "Completed reply rendered only \(final) text pixels; first word rendered \(first)")
-}
-
-@MainActor private func settle(_ hosting: NSView) async throws {
-    for _ in 0..<40 {
+    let complete = "`example-project` was already checked out at `/srv/git/example-project`, so I pulled `_dev` there and started the agent in that same directory."
+    for (index, delay) in [16, 57, 150, 450].enumerated() {
+        let seq = Int64(index + 41)
+        let rev = seq * 10
+        await fake.emit(botEvent(status: "working", rev: rev))
+        await fake.emit(try entryEvent(id: "reply-\(seq)", seq: seq, rev: rev + 1, text: "`", final: false))
+        try await waitFor { store.allEntries("b").last?.data.text == "`" }
+        try await Task.sleep(for: .milliseconds(delay))
+        let marker = "Reply \(index + 1) is complete."
+        // The host flushes the completed text before marking the same entry final.
+        await fake.emit(try entryEvent(id: "reply-\(seq)", seq: seq, rev: rev + 2, text: complete + " " + marker, final: false))
+        await fake.emit(try entryEvent(id: "reply-\(seq)", seq: seq, rev: rev + 3, text: complete + " " + marker, final: true))
+        await fake.emit(botEvent(status: "idle", rev: rev + 4))
+        try await waitFor { store.allEntries("b").last?.data.final == true }
+        try await Task.sleep(for: .seconds(1))
         hosting.layoutSubtreeIfNeeded()
         hosting.displayIfNeeded()
-        try await Task.sleep(for: .milliseconds(20))
+        let bitmap = try #require(hosting.bitmapImageRepForCachingDisplay(in: hosting.bounds))
+        hosting.cacheDisplay(in: hosting.bounds, to: bitmap)
+        let png = try #require(bitmap.representation(using: .png, properties: [:]))
+        let rendered = try await recognizeText(png)
+        #expect(rendered.contains(marker),
+                "The live conversation retained an earlier reply revision after a \(delay)ms completion: \(rendered)")
     }
 }
 
-@MainActor private func textPixels(_ hosting: NSView) throws -> Int {
+private func botEvent(status: String, rev: Int64) -> String {
+    #"{"type":"bot","bot":{"id":"b","name":"Fixture","status":"\#(status)","rev":\#(rev),"lastAt":1}}"#
+}
+
+@MainActor @Test(arguments: ["agent", "user"])
+func retainedChatRowReadsTheLatestEntryRevision(kind: String) async throws {
+    _ = NSApplication.shared
+    let suite = "RetainedChatRowTests.\(UUID())"
+    let storage = SharedStore.Context(accountID: suite, suite: suite)
+    defer { storage.erase(); UserDefaults(suiteName: suite)?.removePersistentDomain(forName: suite) }
+    let fake = FakeRemote(.ready(.direct))
+    let store = BotStore(computer: Computer(id: "retained-fixture", name: "Fixture", signKey: ""),
+                         route: .channel, clientKind: "macos", storage: storage) { fake }
+    defer { store.retire() }
+    store.setActive(true)
+    try await waitFor { await fake.subscribed }
+    await fake.emit(try entryEvent(id: "reply", seq: 1, rev: 1, text: kind == "agent" ? "`" : "", final: false, kind: kind))
+    try await waitFor { store.allEntries("b").count == 1 }
+    // Keep the first value passed by the lazy parent. The row must independently
+    // observe subsequent revisions of this entry in its store.
+    let first = try #require(store.allEntries("b").first)
+    let hosting = NSHostingView(rootView: ChatRow(entry: first, groupStart: true, chat: nil, openTrace: {})
+        .environment(store)
+        .environment(\.conversationTypography, ConversationTypography(pointSize: 14)))
+    let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 620, height: 260), styleMask: [.borderless], backing: .buffered, defer: false)
+    window.isReleasedWhenClosed = false
+    window.appearance = NSAppearance(named: .aqua)
+    window.contentView = hosting
+    defer { window.close() }
+    hosting.layoutSubtreeIfNeeded()
+    hosting.displayIfNeeded()
+    try await Task.sleep(for: .milliseconds(100))
+    let complete = "The complete reply must appear without replacing its parent or scrolling."
+    await fake.emit(try entryEvent(id: "reply", seq: 1, rev: 2, text: complete, final: true, kind: kind))
+    try await waitFor { store.allEntries("b").first?.rev == 2 }
+    try await Task.sleep(for: .milliseconds(500))
+    hosting.layoutSubtreeIfNeeded()
+    hosting.displayIfNeeded()
     let bitmap = try #require(hosting.bitmapImageRepForCachingDisplay(in: hosting.bounds))
     hosting.cacheDisplay(in: hosting.bounds, to: bitmap)
-    var count = 0
-    for y in stride(from: 0, to: bitmap.pixelsHigh, by: 2) {
-        for x in stride(from: 0, to: bitmap.pixelsWide, by: 2) {
-            guard let color = bitmap.colorAt(x: x, y: y)?.usingColorSpace(.deviceRGB) else { continue }
-            if color.alphaComponent > 0.9 && color.redComponent < 0.5
-                && color.greenComponent < 0.5 && color.blueComponent < 0.5 {
-                count += 1
-            }
-        }
+    let png = try #require(bitmap.representation(using: .png, properties: [:]))
+    let rendered = try await recognizeText(png)
+    #expect(rendered.contains("The complete reply must appear"), "Retained row rendered: \(rendered)")
+}
+
+private func entryEvent(id: String, seq: Int64, rev: Int64, text: String, final: Bool, kind: String = "agent") throws -> String {
+    var data = EntryData(text: text)
+    data.final = final
+    let entry = Entry(id: id, seq: seq, botId: "b", rev: rev, kind: kind, turn: seq,
+                      data: data, createdAt: seq, updatedAt: rev)
+    let encoded = try JSONEncoder().encode(entry)
+    return "{\"type\":\"entry\",\"entry\":\(String(decoding: encoded, as: UTF8.self))}"
+}
+
+@MainActor private func waitFor(_ condition: @MainActor () async -> Bool) async throws {
+    for _ in 0..<200 {
+        if await condition() { return }
+        try await Task.sleep(for: .milliseconds(10))
     }
-    return count
+    Issue.record("Timed out waiting for the scripted event")
+}
+
+private func recognizeText(_ png: Data) async throws -> String {
+    let task = Task.detached {
+        let request = VNRecognizeTextRequest()
+        request.recognitionLevel = .accurate
+        let handler = VNImageRequestHandler(data: png)
+        try handler.perform([request])
+        return (request.results ?? []).compactMap { $0.topCandidates(1).first?.string }.joined(separator: " ")
+    }
+    return try await task.value
 }
 #endif
