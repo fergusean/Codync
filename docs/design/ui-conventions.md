@@ -54,7 +54,7 @@ Anything with a background fill gets no extra drawn border. Use `Palette`, `Inte
 
 Provider identity and activity presentation are shared in `CodyncKit/Design`; use those components rather than re-creating mappings per app. See [mobile widgets](mobile-widgets.md) for current rendering and previews.
 
-On macOS, chat and thread rows observe their entry directly in the store and refresh their rendered contents on each entry revision. The enclosing row keeps its message identity and scroll target; only the contents are replaced, without a transition. This prevents a retained row from continuing to display its first streamed fragment. iOS retains its streaming text transitions and parent-driven row updates; GTK and the TUI redraw updated text through their own renderers.
+Chat row identity uses a nonempty client nonce to keep an optimistic message and its acknowledged copy in the same row. Messages without a nonce, including bot-originated messages carrying an empty string, use their unique entry IDs. Apple main chats and replies share this rule through `ChatItem`; GTK and the TUI already identify messages by entry ID. Never use an empty nonce as a shared row identity.
 
 The [2026-09-25 audit](../archive/ui-audit-2026-09-25.md) is historical. Its old line numbers and recommendations are not the current UI policy or a list of confirmed open bugs.
 

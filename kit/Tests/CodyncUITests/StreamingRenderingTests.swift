@@ -69,49 +69,56 @@ private func botEvent(status: String, rev: Int64) -> String {
     #"{"type":"bot","bot":{"id":"b","name":"Fixture","status":"\#(status)","rev":\#(rev),"lastAt":1}}"#
 }
 
-@MainActor @Test(arguments: ["agent", "user"])
-func retainedChatRowReadsTheLatestEntryRevision(kind: String) async throws {
+@MainActor @Test func incomingBotMessagesWithEmptyNoncesRemainVisible() async throws {
     _ = NSApplication.shared
-    let suite = "RetainedChatRowTests.\(UUID())"
+    let suite = "IncomingBotMessageTests.\(UUID())"
     let storage = SharedStore.Context(accountID: suite, suite: suite)
     defer { storage.erase(); UserDefaults(suiteName: suite)?.removePersistentDomain(forName: suite) }
     let fake = FakeRemote(.ready(.direct))
-    let store = BotStore(computer: Computer(id: "retained-fixture", name: "Fixture", signKey: ""),
+    let store = BotStore(computer: Computer(id: "incoming-fixture", name: "Fixture", signKey: ""),
                          route: .channel, clientKind: "macos", storage: storage) { fake }
     defer { store.retire() }
     store.setActive(true)
     try await waitFor { await fake.subscribed }
-    await fake.emit(try entryEvent(id: "reply", seq: 1, rev: 1, text: kind == "agent" ? "`" : "", final: false, kind: kind))
-    try await waitFor { store.allEntries("b").count == 1 }
-    // Keep the first value passed by the lazy parent. The row must independently
-    // observe subsequent revisions of this entry in its store.
-    let first = try #require(store.allEntries("b").first)
-    let hosting = NSHostingView(rootView: ChatRow(entry: first, groupStart: true, chat: nil, openTrace: {})
+    await fake.emit(botEvent(status: "idle", rev: 1))
+    let oldMarker = "Old incoming message remains visible."
+    await fake.emit(try entryEvent(id: "old-incoming", seq: 1, rev: 2, text: oldMarker + "\n\n" + String(repeating: "An earlier bot submitted this request. ", count: 5), final: false, kind: "user", nonce: ""))
+    await fake.emit(try entryEvent(id: "old-reply", seq: 2, rev: 3, text: "Earlier response before the next incoming alert.", final: true))
+    try await waitFor { store.allEntries("b").count == 2 }
+    let hosting = NSHostingView(rootView: ThreadView(botId: "b")
         .environment(store)
         .environment(\.conversationTypography, ConversationTypography(pointSize: 14)))
-    let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 620, height: 260), styleMask: [.borderless], backing: .buffered, defer: false)
+    let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 620, height: 1080), styleMask: [.borderless], backing: .buffered, defer: false)
     window.isReleasedWhenClosed = false
     window.appearance = NSAppearance(named: .aqua)
     window.contentView = hosting
     defer { window.close() }
     hosting.layoutSubtreeIfNeeded()
     hosting.displayIfNeeded()
-    try await Task.sleep(for: .milliseconds(100))
-    let complete = "The complete reply must appear without replacing its parent or scrolling."
-    await fake.emit(try entryEvent(id: "reply", seq: 1, rev: 2, text: complete, final: true, kind: kind))
-    try await waitFor { store.allEntries("b").first?.rev == 2 }
-    try await Task.sleep(for: .milliseconds(500))
+    try await Task.sleep(for: .milliseconds(600))
+    let newMarker = "New incoming message fills this space."
+    await fake.emit(botEvent(status: "working", rev: 4))
+    await fake.emit(try entryEvent(id: "new-incoming", seq: 3, rev: 5,
+                                 text: newMarker + "\n\n" + String(repeating: "The latest incoming alert must render between the preceding response and its final reply. ", count: 15),
+                                 final: false, kind: "user", nonce: ""))
+    try await waitFor { store.allEntries("b").count == 3 }
+    try await Task.sleep(for: .milliseconds(600))
+    await fake.emit(try entryEvent(id: "new-reply", seq: 4, rev: 6, text: "Final response after the incoming alert.", final: true))
+    await fake.emit(botEvent(status: "idle", rev: 7))
+    try await waitFor { store.allEntries("b").count == 4 }
+    try await Task.sleep(for: .seconds(1))
     hosting.layoutSubtreeIfNeeded()
     hosting.displayIfNeeded()
     let bitmap = try #require(hosting.bitmapImageRepForCachingDisplay(in: hosting.bounds))
     hosting.cacheDisplay(in: hosting.bounds, to: bitmap)
     let png = try #require(bitmap.representation(using: .png, properties: [:]))
     let rendered = try await recognizeText(png)
-    #expect(rendered.contains("The complete reply must appear"), "Retained row rendered: \(rendered)")
+    #expect(rendered.contains(oldMarker), "Earlier incoming message disappeared: \(rendered)")
+    #expect(rendered.contains(newMarker), "Latest incoming message left a blank space: \(rendered)")
 }
 
-private func entryEvent(id: String, seq: Int64, rev: Int64, text: String, final: Bool, kind: String = "agent") throws -> String {
-    var data = EntryData(text: text)
+private func entryEvent(id: String, seq: Int64, rev: Int64, text: String, final: Bool, kind: String = "agent", nonce: String? = nil) throws -> String {
+    var data = EntryData(text: text, clientNonce: nonce)
     data.final = final
     let entry = Entry(id: id, seq: seq, botId: "b", rev: rev, kind: kind, turn: seq,
                       data: data, createdAt: seq, updatedAt: rev)
