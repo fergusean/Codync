@@ -54,6 +54,8 @@ Anything with a background fill gets no extra drawn border. Use `Palette`, `Inte
 
 Provider identity and activity presentation are shared in `CodyncKit/Design`; use those components rather than re-creating mappings per app. See [mobile widgets](mobile-widgets.md) for current rendering and previews.
 
+On macOS, streamed Markdown text updates directly and refreshes its selectable text backing view when a block changes. Message rows keep their identity so this refresh does not reset chat scrolling. iOS retains its streaming text transitions; GTK and the TUI redraw updated text through their own renderers.
+
 The [2026-09-25 audit](../archive/ui-audit-2026-09-25.md) is historical. Its old line numbers and recommendations are not the current UI policy or a list of confirmed open bugs.
 
 Model discovery keeps loading and refresh in one fixed-size slot beside the Model picker. Refresh retains the current catalog while loading, and loading does not add a separate row to the settings card. The Model label keeps its intrinsic width; the model picker takes the remaining width and truncates long names, with the full name available in its tooltip and menu.

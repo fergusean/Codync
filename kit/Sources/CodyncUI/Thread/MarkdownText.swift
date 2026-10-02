@@ -6,16 +6,7 @@ import SwiftUI
 public struct MarkdownText: View {
     let blocks: [Block]
     let streaming: Bool
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.conversationTypography) private var typography
-
-    private var contentTransition: ContentTransition {
-        streaming && !reduceMotion ? .interpolate : .identity
-    }
-
-    private var textAnimation: Animation? {
-        streaming ? Motion.reduced(Motion.fade, reduceMotion) : nil
-    }
 
     public init(_ source: String, streaming: Bool = false) {
         blocks = Self.parse(source)
@@ -45,29 +36,25 @@ public struct MarkdownText: View {
             Text(Self.inline(t))
                 .font(typography.body)
                 .foregroundStyle(Palette.text)
-                .contentTransition(contentTransition)
-                .animation(textAnimation, value: t)
+                .modifier(MarkdownTextUpdate(text: t, streaming: streaming))
         case let .heading(t, level):
             Text(Self.inline(t))
                 .font(typography.heading(level: level))
                 .foregroundStyle(Palette.text)
-                .contentTransition(contentTransition)
-                .animation(textAnimation, value: t)
+                .modifier(MarkdownTextUpdate(text: t, streaming: streaming))
         case let .bullet(t, marker):
             HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Text(marker).foregroundStyle(Palette.secondary).monospacedDigit()
                 Text(Self.inline(t))
                     .foregroundStyle(Palette.text)
-                    .contentTransition(contentTransition)
-                    .animation(textAnimation, value: t)
+                    .modifier(MarkdownTextUpdate(text: t, streaming: streaming))
             }
             .font(typography.body)
         case let .quote(t):
             Text(Self.inline(t))
                 .font(typography.body)
                 .foregroundStyle(Palette.secondary)
-                .contentTransition(contentTransition)
-                .animation(textAnimation, value: t)
+                .modifier(MarkdownTextUpdate(text: t, streaming: streaming))
                 .padding(.leading, 10)
                 .overlay(alignment: .leading) { Rectangle().fill(Palette.border).frame(width: 3) }
         case let .code(t, _):
@@ -138,5 +125,23 @@ public struct MarkdownText: View {
         if let c = code { blocks.append(.code(c.joined(separator: "\n"), language: language)) }
         flush()
         return blocks
+    }
+}
+
+private struct MarkdownTextUpdate: ViewModifier {
+    let text: String
+    let streaming: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func body(content: Content) -> some View {
+        #if os(macOS)
+            // Refresh the selectable text's backing view as a streamed block grows.
+            // Keep the surrounding message and scroll view identities intact.
+            content.id(text).transaction { $0.animation = nil }
+        #else
+            content
+                .contentTransition(streaming && !reduceMotion ? .interpolate : .identity)
+                .animation(streaming ? Motion.reduced(Motion.fade, reduceMotion) : nil, value: text)
+        #endif
     }
 }
