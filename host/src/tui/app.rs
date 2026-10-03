@@ -2550,6 +2550,35 @@ mod tests {
     }
 
     #[test]
+    fn switching_bots_and_threads_restores_their_drafts() {
+        let mut app = test_app();
+        app.selected = Some("first".into());
+        app.typing = true;
+        app.on_paste("  First draft\nunfinished 🐱\n");
+        app.selected = Some("second".into());
+        assert_eq!(app.draft().text, "");
+        app.on_paste("Second draft");
+        app.selected = Some("first".into());
+        assert_eq!(app.draft().text, "  First draft\nunfinished 🐱\n");
+        app.thread = Some("root".into());
+        assert_eq!(app.draft().text, "");
+        app.on_paste("Thread draft");
+        app.thread = None;
+        assert_eq!(app.draft().text, "  First draft\nunfinished 🐱\n");
+        app.sends.insert(
+            "first".into(),
+            PendingSend { text: "First draft\nunfinished 🐱".into(), files: vec![], nonce: "n".into(), busy: true },
+        );
+        app.on_reply(After::Sent("first".into()), Ok(json!({})));
+        assert_eq!(app.draft().text, "");
+        app.thread = Some("root".into());
+        assert_eq!(app.draft().text, "Thread draft");
+        app.thread = None;
+        app.selected = Some("second".into());
+        assert_eq!(app.draft().text, "Second draft");
+    }
+
+    #[test]
     fn send_failure_keeps_text_files_and_nonce_for_retry() {
         let mut app = test_app();
         let key = "bot/thread";

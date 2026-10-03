@@ -66,6 +66,15 @@ replies itself.
 - In a group, a thread is its own room: the room turn runs in the thread's lane and each
   member is shown the root and the thread's messages.
 
+## Composer drafts
+
+Unsent text stays in client memory for the current app session, separately for each bot
+or group and each thread. Leaving a conversation and returning restores its exact text,
+including whitespace. The Swift clients also scope drafts to their computer's `BotStore`.
+Submitting moves that conversation's draft to the message/outbox and clears its composer;
+other conversations' drafts stay intact. The terminal keeps its draft until delivery
+succeeds, so a failed send can be retried without losing the text.
+
 ## Client checklist
 
 Roster row for groups (member avatars), a trace per lane (main chat, or one thread), author label on group replies, the thread summary
