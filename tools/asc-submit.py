@@ -5,8 +5,10 @@ Usage: asc-submit.py 2.3.0
 Env: ASC_KEY_ID, ASC_ISSUER_ID, ASC_PRIVATE_KEY (.p8 contents); DRY_RUN=1 prints writes instead;
 SINCE (ISO 8601) ignores builds uploaded before it, so a tag run never submits an older build.
 
-What's New comes from the version's section in apps/ios/WhatsNew.md; without one, empty fields
-get a generic line.
+What's New comes from the version's section in apps/ios/WhatsNew.md, else from the
+"## What's New" bullets of the PRs merged into this release (PRS: `gh pr list --json
+body,mergeCommit` output, COMMITS: `git rev-list` of the release); without either, empty
+fields get a generic line.
 
 Latest version wins: a version still waiting for review is pulled back, renamed and
 resubmitted with the new build. A version already in review is left alone.
@@ -42,6 +44,22 @@ def release_notes(version):
         return {}
     parts = re.split(r"^### +(\S+)\s*$", section.group(1), flags=re.M)[1:]
     return {loc: body.strip() for loc, body in zip(parts[::2], parts[1::2]) if body.strip()}
+
+
+def pr_notes(prs, commits):
+    """{locale: bullets} from "### <locale>" under "## What's New" in the PRs merged into this release."""
+    notes = {}
+    for pr in prs:
+        if (pr.get("mergeCommit") or {}).get("oid") not in commits:
+            continue
+        body = re.sub(r"<!--.*?-->", "", (pr.get("body") or "").replace("\r\n", "\n"), flags=re.S)
+        section = re.search(r"^## What.s New[ \t]*$(.*?)(?=^## |\Z)", body, flags=re.M | re.S)
+        for loc, text in re.findall(r"^### +(\S+)[ \t]*$(.*?)(?=^### |\Z)", section[1] if section else "",
+                                    flags=re.M | re.S):
+            for line in map(str.strip, text.splitlines()):
+                if line not in ("", "-") and line not in notes.setdefault(loc, []):
+                    notes[loc].append(line)
+    return {loc: "\n".join(lines)[:4000] for loc, lines in notes.items() if lines}
 
 
 def token():
@@ -116,8 +134,11 @@ def main(version):
             "attributes": {"platform": "IOS", "versionString": version, "releaseType": "AFTER_APPROVAL"},
             "relationships": {"app": {"data": {"type": "apps", "id": APP_ID}}}}})["data"]["id"]
 
-    notes = release_notes(version)
-    print(f"What's New from WhatsNew.md: {sorted(notes) or 'none, generic text'}")
+    notes, source = release_notes(version), "WhatsNew.md"
+    if not notes and os.environ.get("PRS"):
+        with open(os.environ["PRS"]) as prs, open(os.environ["COMMITS"]) as commits:
+            notes, source = pr_notes(json.load(prs), set(commits.read().split())), "PRs"
+    print(f"What's New from {source}: {sorted(notes) or 'none, generic text'}")
     if version_id != "dry-run":
         for loc in call("GET", f"/appStoreVersions/{version_id}/appStoreVersionLocalizations")["data"]:
             locale = loc["attributes"]["locale"]

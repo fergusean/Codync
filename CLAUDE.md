@@ -90,6 +90,7 @@ Folder layout, file naming and shared terms: [docs/architecture/file-structure.m
 - One logical change per commit. Don't mix unrelated work, and stage only your own hunks when others have uncommitted changes in the tree.
 - Breaking changes: `!` after the type/scope, or a `BREAKING CHANGE:` footer.
 - English only; no `Co-Authored-By` or other AI attribution trailers (the commit-msg hook rejects them).
+- PRs: fill the template's *What's New* bullets (zh-Hant + en-US) for user-visible iOS changes; they become the App Store notes when `apps/ios/WhatsNew.md` has no section for the release.
 
 ## Keeping this file short
 

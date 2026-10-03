@@ -59,7 +59,7 @@ Use Swift Testing (`@Test`, `#expect`), Rust unit tests, and the relay’s Node 
 - Breaking changes: `!` after the type/scope, or a `BREAKING CHANGE:` footer.
 - English only; no `Co-Authored-By` or other AI attribution trailers (the commit-msg hook rejects them).
 
-PRs should explain behavior changes, link relevant issues, list validation performed, and include screenshots for UI changes. Update affected documentation in the same change.
+PRs should explain behavior changes, link relevant issues, list validation performed, and include screenshots for UI changes. Fill the template's *What's New* bullets (zh-Hant + en-US) for iOS changes users can see; they become the App Store notes when `apps/ios/WhatsNew.md` has no section for the release. Update affected documentation in the same change.
 
 ## Keeping this file short
 
