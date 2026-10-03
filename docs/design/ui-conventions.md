@@ -52,6 +52,14 @@ Anything with a background fill gets no extra drawn border. Use `Palette`, `Inte
 
 `CharacterAvatar` identifies a bot. `ThinkingOrb` conveys working, searching, listening or connecting and needs adjacent text or an accessible outer label. In-app animation pauses off-screen, when inactive, or with Reduce Motion. Widgets/activities use static frames.
 
+Decorative avatars, thinking orbs and onboarding crews render at most 30 frames
+per second. SwiftUI Canvas renderers resolve each base ink/tint to a concrete
+color once per drawing and apply per-dot opacity to that color, avoiding dynamic
+platform-color resolution for every dot. GTK schedules redraws only while the
+widget is mapped, its window is active and system animations are enabled;
+unmapping removes its animation callbacks and observers. Terminal avatars are static character cells
+and do not need this rendering schedule.
+
 Provider identity and activity presentation are shared in `CodyncKit/Design`; use those components rather than re-creating mappings per app. See [mobile widgets](mobile-widgets.md) for current rendering and previews.
 
 The [2026-09-25 audit](../archive/ui-audit-2026-09-25.md) is historical. Its old line numbers and recommendations are not the current UI policy or a list of confirmed open bugs.

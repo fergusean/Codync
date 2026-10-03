@@ -137,7 +137,12 @@ pub fn widget(listening_state: bool, size: i32) -> gtk::DrawingArea {
         let s = f64::from(w);
         let c = area.color();
         let speed = if listening_state { 3.998 } else { 3.9 };
-        let t = 0.6 + start.elapsed().as_secs_f64() * speed;
+        let elapsed = if crate::animation::running(area) {
+            start.elapsed().as_secs_f64()
+        } else {
+            0.0
+        };
+        let t = 0.6 + elapsed * speed;
         let mut dots = if listening_state {
             listening(s, t)
         } else {
@@ -156,9 +161,6 @@ pub fn widget(listening_state: bool, size: i32) -> gtk::DrawingArea {
             cr.fill().ok();
         }
     });
-    area.add_tick_callback(|a, _| {
-        a.queue_draw();
-        gtk::glib::ControlFlow::Continue
-    });
+    crate::animation::attach(&area);
     area
 }
