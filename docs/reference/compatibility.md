@@ -45,22 +45,65 @@ that stays undecodable after the one rewind, or a `hello` whose other fields can
 
 ## Changing what crosses the wire
 
+The policy is to move people forward rather than carry old formats: a breaking change ships
+in **one release** that raises the floor, and updates are held back only as long as someone
+couldn't get the matching side yet.
+
 - **Additive changes need no floor change**: new fields (clients decode leniently; new
   Swift fields are optional), new methods, new enum values (kept as strings).
-- **Renaming, removing or changing the meaning** of anything an older client reads or sends
-  needs `minApp` raised, in two releases:
-  1. The host sends/accepts **both** the old and the new form; clients switch to the new one.
-     The iPhone part of this release must actually ship (it changes `kit/`, so `Submit iOS`
-     includes it).
-  2. After that iPhone version is **live on the App Store**, a later host release drops the
-     old form, sets `MIN_APP` to the version from step 1, and re-records the wire shape
-     snapshot (below).
-
-  Raising `MIN_APP` before the App Store has that version locks every iPhone out with no
-  update to install.
-- **Raise `minHost`** only when the client's core flows need something older hosts lack. An
-  optional feature that needs a newer host hides its control instead.
+- **Renaming, removing or changing the meaning** of anything an older client reads or sends:
+  change it, set `MIN_APP` to this release (its iPhone part ships with it: the change
+  touches `kit/`, so `Submit iOS` includes it), add a row to the floor history, and re-record
+  the wire shape snapshot. Hosts hold that release back until the App Store has the iPhone
+  app (next section), so nobody is asked for an update that isn't there yet.
+- **Raise `minHost`** when the client's core flows need something older hosts lack. Hosts
+  update without review, so this only asks the person to update the computer. An optional
+  feature that needs a newer host hides its control instead.
 - Floors never exceed the release that ships them (unit tests in both crates check this).
+- The encrypted channel's handshake version (`v` in its `hello`, rejected with
+  `unsupportedVersion`, close code 4400) is separate: the host must keep accepting every `v`
+  a supported client sends.
+
+### Holding host updates for the App Store
+
+A release that raises `minApp` would lock out paired iPhones until App Review passes. Every
+updater therefore asks the App Store (`itunes.apple.com/lookup?id=6760984418`) before
+installing such a release:
+
+| Situation | Host update |
+|---|---|
+| The release doesn't raise `minApp` (almost always) | Installs; the App Store isn't asked |
+| No iPhone was ever paired with this computer | Installs |
+| The App Store has that iPhone version or newer | Installs |
+| The App Store has an older version (in review) | Waits; retried on the next check |
+| The App Store can't be asked or has no answer | Automatic update waits; a person can install anyway |
+
+- **Standalone hosts** (`host/src/update`): after downloading and verifying a release, the
+  updater runs it (`codync-host compat`) to read its `minApp`, so the signed manifest stays
+  as old hosts expect it. Waiting shows as phase `waitingForApp` with `requiredApp` and
+  `appStoreVersion` in the update status; `codync-host update --skip-app-check` (API
+  `installHostUpdate {"skipAppCheck": true}`, the Linux app's *Update anyway*) installs anyway.
+- **Mac app** (Sparkle): the release workflow adds `<codync:minApp>` to the appcast item
+  (`packaging/updates/annotate-appcast.py`, checked by `verify-appcast.py`), and
+  `UpdatesManager` declines it in `shouldProceedWithUpdate` while the App Store is behind.
+  A check the person starts shows why; one started without an App Store answer goes ahead.
+- Hosts released before 2.5.0 don't have this gate and install any release. Before the first
+  real `minApp` raise, most computers should be on 2.5.0 or newer.
+
+On the iPhone, the *Update Codync* button of an *Update this app* notice is greyed out with
+"still in App Store review" while the App Store has an older version; an unanswered lookup
+keeps it enabled (the App Store page shows the truth).
+
+### Reminders
+
+While everything still works, a newer release gets a reminder, dismissed per version:
+
+| Client | This app is behind | A computer's host is behind (older than this app) |
+|---|---|---|
+| iPhone | Card at the top of the bot list (App Store version from the lookup), *Update* opens the App Store | Card with that computer's update steps |
+| Mac | Sparkle's own update prompts | Card in the sidebar for other computers (its own host is the app's) |
+| Linux app | Toast with *Get update* (release page) | Toast with *Update host* |
+| Terminal client | — (it is the host binary) | Status line note pointing to `^k` → Check for updates |
 
 ### Wire shape snapshot
 
@@ -77,14 +120,10 @@ the host's `minApp`.
 | Field removed, renamed or retyped | Fails, and recording is refused, until `MIN_APP` differs from the recorded one; then record |
 
 So a breaking change can't land by accident: it either keeps the old field or raises the
-floor, and the floor is raised only by the two-release rule above. `null` fields match any
-type. Not covered: subtrees that depend on the machine rather than the code (`backends`,
-`screen`, `urls`, `usage`), fields the sample turn doesn't produce (thread replies, group
-chats, routines and other method responses), and what the host accepts in requests. Changes
-there still follow the rule by review.
-- The encrypted channel's handshake version (`v` in its `hello`, rejected with
-  `unsupportedVersion`, close code 4400) is separate: the host must keep accepting every `v`
-  a supported client sends.
+floor. `null` fields match any type. Not covered: subtrees that depend on the machine rather
+than the code (`backends`, `screen`, `urls`, `usage`), fields the sample turn doesn't produce
+(thread replies, group chats, routines and other method responses), and what the host
+accepts in requests. Changes there still follow the rule by review.
 
 ## Floor history
 
