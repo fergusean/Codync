@@ -15,6 +15,7 @@ Source review, a passing build, local integration tests and production acceptanc
 | Run the host on a Linux server or cloud VM | [Linux servers](guides/linux-servers.md) |
 | Set up accounts, approvals or desktop SSH | [Accounts and SSH](guides/accounts-and-ssh.md) |
 | Change transport or cryptography | [Remote protocol](reference/remote-relay.md) and [shared vectors](reference/fixtures/README.md) |
+| Change what the host and clients exchange | [Client and host compatibility](reference/compatibility.md) |
 | Change an Apple screen or button | [UI conventions](design/ui-conventions.md) |
 
 ## Features
