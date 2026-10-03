@@ -78,15 +78,22 @@ installing such a release:
 | The App Store has an older version (in review) | Waits; retried on the next check |
 | The App Store can't be asked or has no answer | Automatic update waits; a person can install anyway |
 
-- **Standalone hosts** (`host/src/update`): after downloading and verifying a release, the
-  updater runs it (`codync-host compat`) to read its `minApp`, so the signed manifest stays
-  as old hosts expect it. Waiting shows as phase `waitingForApp` with `requiredApp` and
-  `appStoreVersion` in the update status; `codync-host update --skip-app-check` (API
-  `installHostUpdate {"skipAppCheck": true}`, the Linux app's *Update anyway*) installs anyway.
+- **Standalone hosts** (`host/src/update`): each release publishes a signed
+  `codync-host-<platform>.compat.json` (`{"version", "minApp"}`, ~50 bytes, same key as the
+  manifest, written by `sign-host-release.py` from `MIN_APP`), so the updater decides before
+  downloading anything; for a release without one it runs the verified download
+  (`codync-host compat`) instead. The signed manifest itself is unchanged, as old hosts
+  expect it. Waiting shows as phase `waitingForApp` with `requiredApp` and `appStoreVersion`
+  in the update status; `codync-host update --skip-app-check` (API
+  `installHostUpdate {"skipAppCheck": true}`, the Linux app's *Update anyway*) installs
+  anyway. With automatic updates on, a waiting host asks the App Store hourly and updates as
+  soon as the app is there.
 - **Mac app** (Sparkle): the release workflow adds `<codync:minApp>` to the appcast item
   (`packaging/updates/annotate-appcast.py`, checked by `verify-appcast.py`), and
-  `UpdatesManager` declines it in `shouldProceedWithUpdate` while the App Store is behind.
-  A check the person starts shows why; one started without an App Store answer goes ahead.
+  `UpdatesManager` declines it in `shouldProceedWithUpdate` while the App Store is behind,
+  before Sparkle shows or downloads anything. A check the person starts shows why; one
+  started without an App Store answer goes ahead. While waiting it asks the App Store hourly
+  and starts a background check as soon as the app is there.
 - Hosts released before 2.5.0 don't have this gate and install any release. Before the first
   real `minApp` raise, most computers should be on 2.5.0 or newer.
 
