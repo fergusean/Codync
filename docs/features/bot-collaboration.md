@@ -4,7 +4,7 @@ Create two or more bots normally, giving each a clear name, description, project
 
 > Ask Reviewer to inspect the changes in /path/to/project. Have it report bugs without editing files, then summarize its findings for me.
 
-Every bot receives the built-in `team` MCP server. `list_bots` returns the other visible bots' IDs, descriptions, agents, folders and status. `ask_bot(botId, message)` sends a self-contained request and waits for the recipient's final text reply. The requesting bot incorporates that answer into its response to you. The same tools work across ACP backends that support MCP servers.
+Every bot receives the built-in `team` MCP server. `list_bots` returns the other visible bots' IDs, descriptions, agents, folders and status. `ask_bot(botId, message)` sends a self-contained request and waits for the recipient's final text reply. The requesting bot incorporates that answer into its response to you. `message_bot(botId, message)` queues a request and returns immediately; the recipient reports to you in its own chat. The same tools work across ACP backends that support MCP servers.
 
 The host records the request and its outcome in both chats using existing notice entries, so the current iOS, macOS, Linux and terminal clients can display them. Tool details also remain in the trace. There is no additional team setup screen.
 
