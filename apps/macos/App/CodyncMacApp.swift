@@ -42,6 +42,16 @@ struct CodyncMacApp: App {
         }
         .defaultSize(width: 1100, height: 760)
         .windowStyle(.hiddenTitleBar)
+        .commands {
+            CommandGroup(after: .toolbar) {
+                Button("Bigger") { conversationFontSize = ConversationTypography.step(conversationFontSize, up: true) }
+                    .keyboardShortcut("+")
+                Button("Smaller") { conversationFontSize = ConversationTypography.step(conversationFontSize, up: false) }
+                    .keyboardShortcut("-")
+                Button("Actual Size") { conversationFontSize = ConversationTypography.defaultSize }
+                    .keyboardShortcut("0")
+            }
+        }
 
         MenuBarExtra {
             MenuView()

@@ -12,6 +12,14 @@ import Testing
     #expect(ConversationTypography(pointSize: 12.5).pointSize == 12.5)
 }
 
+@Test func conversationTypographyStepsThroughSizes() {
+    #expect(ConversationTypography.step(12, up: true) == 13)
+    #expect(ConversationTypography.step(12.5, up: true) == 13)
+    #expect(ConversationTypography.step(12.5, up: false) == 12)
+    #expect(ConversationTypography.step(18, up: true) == 18)
+    #expect(ConversationTypography.step(11, up: false) == 11)
+}
+
 #if os(macOS)
 @Test func conversationTypographyPreservesTextHierarchyWhenResized() throws {
     guard #available(macOS 26, *) else { return }
