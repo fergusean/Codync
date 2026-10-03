@@ -25,6 +25,8 @@ Run from the repository root unless a command changes directories:
 
 Always stop the old Mac app, host and iPhone process before running a new build (old host = old protocol, old app = old UI); commands in [docs/guides/development.md](docs/guides/development.md#apple-apps).
 
+After every backend update is validated and integrated into `fergusean/consolidated`, deploy the host to `dex@100.66.59.58` (`rdev`), following the [development deployment steps](docs/guides/development.md#deploying-the-backend-to-rdev).
+
 ## Versioning & releases
 
 - **Every source change ships as a release.** A version bump on `main` is the only release trigger (Auto Tag → DMG, host, Linux app, Homebrew, in-app update), so any change to shipped code (`apps/`, `kit/`, `host/`, `packaging/`) bumps the version before it reaches `main`, without being asked. Docs, `web/`, `cloud/`, `relay/` and CI-only changes don't bump.

@@ -52,6 +52,8 @@ Bot-based remote for coding agents: persistent named bots on your computer, mess
 
 Always stop the old Mac app, host and iPhone process before running a new build (old host = old protocol, old app = old UI); commands in [docs/guides/development.md](docs/guides/development.md#apple-apps).
 
+After every backend update is validated and integrated into `fergusean/consolidated`, deploy the host to `dex@100.66.59.58` (`rdev`), following the [development deployment steps](docs/guides/development.md#deploying-the-backend-to-rdev).
+
 ## Project generation
 
 - `apps/project.yml` + `xcodegen generate --spec apps/project.yml` produce `apps/Codync.xcodeproj`. Edit `project.yml`, not the pbxproj.

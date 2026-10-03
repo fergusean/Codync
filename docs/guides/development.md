@@ -85,6 +85,25 @@ the `Screen` Xcode target against WebRTC.
 
 Host development: `cargo run --manifest-path host/Cargo.toml -- serve`. Avoid competing with an installed host on port 19222; isolated tests should use a temporary `CODYNC_HOME` and another port. Stop test hosts when finished.
 
+## Deploying the backend to rdev
+
+After every validated backend update is integrated into `fergusean/consolidated`, deploy its host to `dex@100.66.59.58` (`rdev`). The remote user service runs `~/.local/bin/codync-host` on port 19222. Preserve its service configuration and `~/.codync` data.
+
+From a clean consolidated checkout, cross-compile a static x86_64 Linux release locally with Rust, Zig and `cargo-zigbuild`, then stage it on the server:
+
+```sh
+rustup target add x86_64-unknown-linux-musl
+cargo zigbuild --manifest-path host/Cargo.toml --release --locked --target x86_64-unknown-linux-musl
+shasum -a 256 host/target/x86_64-unknown-linux-musl/release/codync-host
+scp host/target/x86_64-unknown-linux-musl/release/codync-host dex@100.66.59.58:.local/bin/codync-host.new
+ssh dex@100.66.59.58 'sha256sum ~/.local/bin/codync-host.new'
+ssh dex@100.66.59.58 '~/.local/bin/codync-host.new --version'
+```
+
+Confirm the uploaded hash matches the local artifact, record the current `/health` computer identity, and check that bots and setup terminals are idle before restarting. Retain one previous binary at `~/.local/bin/codync-host.previous`. Stop `systemctl --user stop codync-host.service`, atomically replace the executable with the staged file, and start `systemctl --user start codync-host.service`. Do not reinstall the service or change its captured PATH.
+
+Verify the service is active and `http://127.0.0.1:19222/health` reports `ok`, the expected `binaryHash` and `binaryPath`, and the same `computerId`. Check that the team MCP tool list includes `message_bot`. If startup or verification fails, stop the service, restore the previous binary, restart, and verify recovery. Report deployment separately from builds and tests.
+
 ## Visual checks
 
 Follow [UI conventions](../design/ui-conventions.md) for native toolbar behavior and [widget design](../design/mobile-widgets.md) for previews. Widget images can be rendered with `python3 tools/render-widgets.py`; output is under `build/widget-previews/`.
