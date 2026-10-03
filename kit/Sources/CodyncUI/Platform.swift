@@ -56,9 +56,15 @@ extension View {
     @ViewBuilder func sendOnReturn(_ send: @escaping () -> Void) -> some View {
         #if os(macOS)
         onKeyPress(.return, phases: .down) { press in
-            guard !press.modifiers.contains(.shift) else { return .ignored }
-            if let editor = NSApp.keyWindow?.firstResponder as? NSTextView, editor.hasMarkedText() {
+            let editor = NSApp.keyWindow?.firstResponder as? NSTextView
+            if editor?.hasMarkedText() == true {
                 return .ignored
+            }
+            if press.modifiers.contains(.shift) {
+                guard let editor else { return .ignored }
+                // The multiline TextField treats Return as submission, even with Shift.
+                editor.insertNewlineIgnoringFieldEditor(nil)
+                return .handled
             }
             send()
             return .handled
