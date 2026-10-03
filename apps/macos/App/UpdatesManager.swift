@@ -1,4 +1,5 @@
 import AppKit
+import CodyncUI
 import Observation
 import Sparkle
 
@@ -216,6 +217,7 @@ final class CodyncAppDelegate: NSObject, NSApplicationDelegate {
     var openChatWindow: (() -> Void)?
 
     func applicationWillFinishLaunching(_ notification: Notification) {
+        ActivationDiagnostics.start()
         let visible = UserDefaults.standard.bool(forKey: Self.showInDockKey)
         NSApp.setActivationPolicy(visible ? .regular : .accessory)
     }

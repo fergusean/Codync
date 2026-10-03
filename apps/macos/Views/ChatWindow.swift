@@ -727,7 +727,16 @@ private struct ChatSplitView: View {
                       message: errorMessage, cancel: "OK") { [] }
         .animation(Motion.reduced(Motion.fade, reduceMotion), value: accounts.selection)
         .animation(Motion.reduced(Motion.fade, reduceMotion), value: composing)
-        .onChange(of: accounts.selection) { _, ref in if ref != nil { composing = false } }
+        .onChange(of: accounts.selection) { _, ref in
+            ActivationDiagnostics.record("chat.selection.changed")
+            if ref != nil { composing = false }
+        }
+        .onChange(of: showAccount) { _, shown in
+            ActivationDiagnostics.record(shown ? "account.menu.opened" : "account.menu.closed")
+        }
+        .onChange(of: contextBot != nil) { _, shown in
+            ActivationDiagnostics.record(shown ? "conversation.menu.opened" : "conversation.menu.closed")
+        }
         .onChange(of: storeSelection) { _, ref in
             guard let ref else { return }
             accounts.store(for: ref.computerId)?.selection = nil
