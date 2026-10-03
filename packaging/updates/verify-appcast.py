@@ -31,6 +31,8 @@ def main():
     )
     assert info["SUPublicEDKey"] == public_key, "app has the wrong Sparkle public key"
     assert info["SUVerifyUpdateBeforeExtraction"] is True
+    min_app = item.findtext("{https://codync.dev/xml-namespaces/appcast}minApp")
+    assert min_app and all(part.isdigit() for part in min_app.split(".")), "appcast needs codync:minApp"
     print("Sparkle appcast matches the signed app and release archive")
 
 
