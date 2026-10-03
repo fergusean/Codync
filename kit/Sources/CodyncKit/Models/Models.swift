@@ -330,7 +330,8 @@ public struct Hello: Codable, Sendable {
     public var computerId: ComputerID?
     public var signKey: String?
     public var boxKey: String?
-    public var `protocol`: Int?
+    /// The oldest app version this host serves (missing from hosts that predate the check).
+    public var minApp: String?
     /// The cloud relay the host uses; nil = cloud off.
     public var cloud: String?
 }

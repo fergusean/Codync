@@ -155,14 +155,23 @@ public struct ThreadView: View {
         .background(Palette.background)
         .safeAreaInset(edge: .bottom) {
             VStack(spacing: 6) {
-                #if os(iOS)
-                    Composer(botId: botId,
-                             onCall: !calling && bot?.isGroup == false ? { calling = true } : nil,
-                             onInterrupt: callSpeaking ? interruptCall : nil)
-                #else
-                    Composer(botId: botId)
-                #endif
+                if let mismatch = model.mismatch {
+                    // Nothing sent now could be read on the other side.
+                    UpdateNeededCard(store: model, mismatch: mismatch)
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 8)
+                        .transition(.opacity)
+                } else {
+                    #if os(iOS)
+                        Composer(botId: botId,
+                                 onCall: !calling && bot?.isGroup == false ? { calling = true } : nil,
+                                 onInterrupt: callSpeaking ? interruptCall : nil)
+                    #else
+                        Composer(botId: botId)
+                    #endif
+                }
             }
+            .animation(Motion.reduced(Motion.layout, reduceMotion), value: model.mismatch)
         }
         #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
@@ -329,6 +338,7 @@ public struct ThreadView: View {
         case .unpaired: return "Not paired"
         case .online: break
         }
+        if model.mismatch != nil { return "Needs update" }
         switch model.hostRoute {
         case .relay: return "Connected through Cloudflare"
         case .direct: return "Connected over Wi-Fi or Tailscale"
