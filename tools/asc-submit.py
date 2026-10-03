@@ -4,17 +4,22 @@
 Usage: asc-submit.py 2.3.0
 Env: ASC_KEY_ID, ASC_ISSUER_ID, ASC_PRIVATE_KEY (.p8 contents); DRY_RUN=1 prints writes instead;
 SINCE (ISO 8601) ignores builds uploaded before it, so a tag run never submits an older build.
+Runs in a checkout with the release tags.
+
+A release whose tag changes nothing the iPhone app is built from since the last App Store
+version is skipped (FORCE=1 ships it anyway). Otherwise it starts the Xcode Cloud archive
+on the tag (only when SINCE is set or no build of the version exists yet) and waits for it.
 
 What's New comes from the version's section in apps/ios/WhatsNew.md, else from the
-"## What's New" bullets of the PRs merged into this release (PRS: `gh pr list --json
-body,mergeCommit` output, COMMITS: `git rev-list` of the release); without either, empty
-fields get a generic line.
+"## What's New" bullets of the PRs merged since the last App Store version (PRS: `gh pr list
+--json body,mergeCommit` output); without either, empty fields get a generic line.
 
 Latest version wins: a version still waiting for review is pulled back, renamed and
 resubmitted with the new build. A version already in review is left alone.
 """
 
 import json
+import subprocess
 import os
 import sys
 import time
@@ -34,6 +39,22 @@ EDITABLE = {"PREPARE_FOR_SUBMISSION", "READY_FOR_REVIEW", "DEVELOPER_REJECTED", 
 DONE = {"READY_FOR_DISTRIBUTION", "REPLACED_WITH_NEW_VERSION", "REMOVED_FROM_SALE"}
 DRY_RUN = os.environ.get("DRY_RUN") == "1"
 NOTES = Path(__file__).resolve().parent.parent / "apps/ios/WhatsNew.md"
+WORKFLOW_ID = "44342080-ce08-4dc1-be35-34ce6cbb41b5"  # Xcode Cloud "Release": Archive iOS for the App Store
+# What the iPhone app is built from; apps/project.yml counts except its version lines.
+IOS_PATHS = ["apps/ios", "apps/shared", "kit", "apps/Codync.xcodeproj/project.xcworkspace"]
+
+
+def git(*args):
+    return subprocess.run(["git", *args], capture_output=True, text=True, check=False).stdout.strip()
+
+
+def ios_changed(base, tag):
+    """Whether anything the iPhone app is built from differs between two refs."""
+    if git("diff", "--name-only", base, tag, "--", *IOS_PATHS):
+        return True
+    project = git("diff", "-U0", base, tag, "--", "apps/project.yml").splitlines()
+    return any(line[:1] in "+-" and line[:3] not in ("+++", "---") and "_VERSION" not in line
+               for line in project)
 
 
 def release_notes(version):
@@ -93,8 +114,43 @@ def wait_for(what, check, minutes):
     sys.exit(f"timed out waiting for {what}")
 
 
+def all_pages(path):
+    items = []
+    while path:
+        page = call("GET", path)
+        items += page["data"]
+        path = page.get("links", {}).get("next", "").removeprefix(API)
+    return items
+
+
+def start_archive(tag):
+    repo = call("GET", f"/ciWorkflows/{WORKFLOW_ID}/repository")["data"]["id"]
+    ref = wait_for(f"Xcode Cloud to see {tag}", lambda: next((
+        r["id"] for r in all_pages(f"/scmRepositories/{repo}/gitReferences?limit=200")
+        if r["attributes"]["canonicalName"] == f"refs/tags/{tag}"), None), 15)
+    run = call("POST", "/ciBuildRuns", {"data": {"type": "ciBuildRuns", "relationships": {
+        "workflow": {"data": {"type": "ciWorkflows", "id": WORKFLOW_ID}},
+        "sourceBranchOrTag": {"data": {"type": "scmGitReferences", "id": ref}}}}})["data"]
+    print(f"started Xcode Cloud build {run.get('attributes', {}).get('number', run['id'])} on {tag}")
+
+
 def main(version):
+    tag = f"v{version}"
     since = datetime.fromisoformat(os.environ.get("SINCE", "2000-01-01T00:00:00Z"))
+    shipped = next((v["attributes"]["versionString"] for v in call(
+        "GET", f"/apps/{APP_ID}/appStoreVersions?filter[platform]=IOS&limit=10"
+        "&fields[appStoreVersions]=versionString")["data"]
+        if v["attributes"]["versionString"] != version), None)
+    base = f"v{shipped}" if shipped and git("tag", "-l", f"v{shipped}") else \
+        git("describe", "--tags", "--abbrev=0", "--match", "v*", f"{tag}^")
+    if os.environ.get("FORCE") != "1" and base and not ios_changed(base, tag):
+        print(f"nothing the iPhone app is built from changed since {base}; not shipping iOS {version}")
+        return
+    print(f"iOS changes since {base or 'the start'}")
+
+    builds = call("GET", f"/builds?filter[app]={APP_ID}&filter[preReleaseVersion.version]={version}&limit=1")
+    if "SINCE" in os.environ or not builds["data"]:
+        start_archive(tag)
     build = wait_for(f"build {version} to finish processing", lambda: next(iter(
         b for b in call("GET", f"/builds?filter[app]={APP_ID}&filter[preReleaseVersion.version]={version}"
                         "&filter[processingState]=VALID&sort=-uploadedDate&limit=1")["data"]
@@ -136,8 +192,9 @@ def main(version):
 
     notes, source = release_notes(version), "WhatsNew.md"
     if not notes and os.environ.get("PRS"):
-        with open(os.environ["PRS"]) as prs, open(os.environ["COMMITS"]) as commits:
-            notes, source = pr_notes(json.load(prs), set(commits.read().split())), "PRs"
+        with open(os.environ["PRS"]) as prs:
+            commits = set(git("rev-list", f"{base}..{tag}" if base else tag).split())
+            notes, source = pr_notes(json.load(prs), commits), "PRs"
     print(f"What's New from {source}: {sorted(notes) or 'none, generic text'}")
     if version_id != "dry-run":
         for loc in call("GET", f"/appStoreVersions/{version_id}/appStoreVersionLocalizations")["data"]:

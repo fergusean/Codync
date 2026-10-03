@@ -24,3 +24,8 @@ assert asc.pr_notes(prs, {"a", "b", "c"}) == {
     "zh-Hant": "- 例行任務改用同一個表單", "en-US": "- Routines use one form"}, asc.pr_notes(prs, {"a", "b", "c"})
 assert asc.pr_notes(prs, {"c"}) == {}
 print("ok")
+
+# Release history: v2.2.3 changed only the Mac app, host and website; v2.3.1 changed kit/.
+assert not asc.ios_changed("v2.2.2", "v2.2.3")
+assert asc.ios_changed("v2.3.0", "v2.3.1")
+print("ok")
