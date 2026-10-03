@@ -19,6 +19,11 @@ prs = [
     {"body": template, "mergeCommit": {"oid": "c"}},  # untouched template adds nothing
     {"body": filled.replace("Routines", "Old"), "mergeCommit": {"oid": "z"}},  # not in this release
     {"body": None, "mergeCommit": None},
+    # an empty template followed by a PR footer (shipped as "🤖 ..." in v2.4.3) adds nothing
+    {"body": template + "\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nhttps://claude.ai/code/x",
+     "mergeCommit": {"oid": "c"}},
+    # emoji are stripped (the App Store rejects them), so this repeats a bullet above
+    {"body": filled.replace("- Routines use one form", "- Routines use one form 🚀"), "mergeCommit": {"oid": "b"}},
 ]
 assert asc.pr_notes(prs, {"a", "b", "c"}) == {
     "zh-Hant": "- 例行任務改用同一個表單", "en-US": "- Routines use one form"}, asc.pr_notes(prs, {"a", "b", "c"})
