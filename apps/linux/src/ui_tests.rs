@@ -133,6 +133,48 @@ fn native_ui_flows() {
     assert!(text(&ui.chat_list, "Streaming fixture answer"));
     screenshot("linux-chat-streaming");
 
+    // The two persistent GTK composers must restore the destination they display.
+    let draft_text = |c: &Composer| {
+        let buf = c.view.buffer();
+        buf.text(&buf.start_iter(), &buf.end_iter(), false)
+            .to_string()
+    };
+    ui.compose
+        .view
+        .buffer()
+        .set_text("  Bot draft\nunfinished 🐱\n");
+    select(&ui, "other");
+    assert_eq!(draft_text(&ui.compose), "");
+    ui.compose.view.buffer().set_text("Other draft");
+    select(&ui, "bot");
+    assert_eq!(draft_text(&ui.compose), "  Bot draft\nunfinished 🐱\n");
+    ui.state.borrow_mut().open_thread = Some("user".into());
+    render(&ui);
+    ui.reply.view.buffer().set_text("Thread draft");
+    ui.state.borrow_mut().open_thread = None;
+    render(&ui);
+    assert_eq!(draft_text(&ui.compose), "  Bot draft\nunfinished 🐱\n");
+    ui.state.borrow_mut().open_thread = Some("user".into());
+    render(&ui);
+    assert_eq!(draft_text(&ui.reply), "Thread draft");
+    select(&ui, "other");
+    assert_eq!(draft_text(&ui.compose), "Other draft");
+    send(&ui, false);
+    assert_eq!(draft_text(&ui.compose), "");
+    select(&ui, "bot");
+    assert_eq!(draft_text(&ui.compose), "  Bot draft\nunfinished 🐱\n");
+    select(&ui, "other");
+    assert_eq!(draft_text(&ui.compose), "");
+    ui.compose.view.buffer().set_text("New draft after send");
+    wait(|| text(&ui.chat_list, "Failed to send"));
+    click(&ui.chat_list, "Resend");
+    wait(|| ui.state.borrow().outbox.is_empty());
+    assert_eq!(draft_text(&ui.compose), "New draft after send");
+    ui.compose.view.buffer().set_text("");
+    select(&ui, "bot");
+    screenshot("linux-restored-composer-draft");
+    ui.compose.view.buffer().set_text("");
+
     send_text(&ui, "bot", "Retry this message", None, vec![]);
     wait(|| text(&ui.chat_list, "Failed to send"));
     click(&ui.chat_list, "Resend");
@@ -148,7 +190,7 @@ fn native_ui_flows() {
         .as_array()
         .unwrap()
         .iter()
-        .filter(|r| r[0] == "send")
+        .filter(|r| r[0] == "send" && r[1]["text"] == "Retry this message")
         .cloned()
         .collect();
     assert_eq!(sent.len(), 2);

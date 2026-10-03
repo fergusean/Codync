@@ -639,3 +639,24 @@ private func helloJSON(version: String, minApp: String? = nil, backends: String 
         store.retire()
     }
 }
+
+@MainActor @Test func deliveredComposerMessageDoesNotEraseANewOrAnotherBotsDraft() async {
+    let (storage, suite) = context()
+    defer { UserDefaults(suiteName: suite)?.removePersistentDomain(forName: suite) }
+    let fake = FakeRemote(.ready(.direct))
+    let store = BotStore(computer: randomComputer("Mac"), route: .channel, clientKind: "ios", storage: storage) { fake }
+    defer { store.retire() }
+    store.setActive(true)
+    #expect(await until { await fake.subscribed })
+    await fake.emit(botEvent("first", name: "First", rev: 1))
+    #expect(await until { store.connection == .online })
+    store.setComposerDraft("First message", for: "first")
+    store.setComposerDraft("Other bot's unfinished message", for: "second")
+    #expect(store.sendComposerDraft(to: "first"))
+    #expect(store.composerDraft(for: "first").isEmpty)
+    store.setComposerDraft("Next unfinished message", for: "first")
+    store.selection = "second"
+    #expect(await until { store.chat("first").last?.id == "e1" })
+    #expect(store.composerDraft(for: "first") == "Next unfinished message")
+    #expect(store.composerDraft(for: "second") == "Other bot's unfinished message")
+}
