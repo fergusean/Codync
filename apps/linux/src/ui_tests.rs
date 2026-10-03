@@ -133,6 +133,34 @@ fn native_ui_flows() {
     assert!(text(&ui.chat_list, "Streaming fixture answer"));
     screenshot("linux-chat-streaming");
 
+    // Switching restores each bot's draft; sending clears only its destination.
+    let draft_text = |c: &Composer| {
+        let buf = c.view.buffer();
+        buf.text(&buf.start_iter(), &buf.end_iter(), false)
+            .to_string()
+    };
+    ui.compose
+        .view
+        .buffer()
+        .set_text("  Bot draft\nunfinished 🐱\n");
+    select(&ui, "other");
+    assert_eq!(draft_text(&ui.compose), "");
+    ui.compose.view.buffer().set_text("Other draft");
+    select(&ui, "bot");
+    assert_eq!(draft_text(&ui.compose), "  Bot draft\nunfinished 🐱\n");
+    select(&ui, "other");
+    send(&ui, false);
+    assert_eq!(draft_text(&ui.compose), "");
+    select(&ui, "bot");
+    assert_eq!(draft_text(&ui.compose), "  Bot draft\nunfinished 🐱\n");
+    select(&ui, "other");
+    assert_eq!(draft_text(&ui.compose), "");
+    wait(|| text(&ui.chat_list, "Failed to send"));
+    click(&ui.chat_list, "Resend");
+    wait(|| ui.state.borrow().outbox.is_empty());
+    select(&ui, "bot");
+    ui.compose.view.buffer().set_text("");
+
     send_text(&ui, "bot", "Retry this message", None, vec![]);
     wait(|| text(&ui.chat_list, "Failed to send"));
     click(&ui.chat_list, "Resend");
@@ -148,7 +176,7 @@ fn native_ui_flows() {
         .as_array()
         .unwrap()
         .iter()
-        .filter(|r| r[0] == "send")
+        .filter(|r| r[0] == "send" && r[1]["text"] == "Retry this message")
         .cloned()
         .collect();
     assert_eq!(sent.len(), 2);
