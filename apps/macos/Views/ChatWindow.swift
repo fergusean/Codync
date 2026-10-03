@@ -209,6 +209,7 @@ private struct AccountWelcomeView: View {
 private struct WelcomeCrew: View {
     let shown: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.scenePhase) private var scenePhase
 
     private let members: [(shape: String, color: String, size: CGFloat, x: CGFloat, y: CGFloat, mood: CharacterAvatar.Mood)] = [
         ("blob", "blue", 92, 0, 0, .working),
@@ -219,7 +220,8 @@ private struct WelcomeCrew: View {
     ]
 
     var body: some View {
-        TimelineView(.animation(paused: reduceMotion || !shown)) { context in
+        TimelineView(.animation(minimumInterval: 1.0 / 30,
+                                paused: reduceMotion || !shown || scenePhase != .active)) { context in
             let time = context.date.timeIntervalSinceReferenceDate
             ZStack {
                 ForEach(members.indices, id: \.self) { index in

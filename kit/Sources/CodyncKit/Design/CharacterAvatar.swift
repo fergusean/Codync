@@ -54,41 +54,59 @@ private struct DottedBody: View {
     let size: CGFloat
     let mood: CharacterAvatar.Mood
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var visible = false
 
     var body: some View {
         let grid = Grid(size: size)
         let step = size / CGFloat(grid.cells)
         let dots = Self.grid(shape: shape, size: size, step: step, cells: grid.cells)
-        let still = mood == .idle || reduceMotion
-        TimelineView(.animation(paused: still)) { timeline in
-            let t = still ? 0 : timeline.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 3600)
-            // Glance: whole-cell steps left / center / right, like a small display.
-            let glance = mood == .working ? Int((sin(t * 2 * .pi / 3.2) * 1.4).rounded()) : 0
-            let blinking = !still && (t / 4.7).truncatingRemainder(dividingBy: 1) < 0.035
-            let eyeRows = blinking ? Array(grid.eyeRows.suffix(1)) : grid.eyeRows
-            let eyeCols = grid.eyeColumns.map { $0 + glance }
-            Canvas { ctx, _ in
-                let half = size / 2
-                let yaw = mood == .working ? t * 1.4 : -0.7
-                let lx = sin(yaw) * 0.8, ly = 0.55, lz = cos(yaw) * 0.5 + 0.6  // never fully behind
-                let ll = (lx * lx + ly * ly + lz * lz).squareRoot()
-                for d in dots where !(eyeCols.contains(d.col) && eyeRows.contains(d.row)) {
-                    let p = d.center
-                    let u = (p.x - half) / half, v = (half - p.y) / half
-                    let z = max(0.2, 1 - u * u - v * v).squareRoot()
-                    let nl = (u * u + v * v + z * z).squareRoot()
-                    var shade = 0.3 + 0.7 * max(0, (u * lx + v * ly + z * lz) / (nl * ll))
-                    if mood == .needsInput {
-                        let ripple = 0.5 + 0.5 * sin((u * u + v * v).squareRoot() * 9 - t * 5)
-                        shade *= 0.6 + 0.4 * ripple
-                    }
-                    let r = step * 0.42 * (0.55 + 0.45 * shade)
-                    let dot = Path(ellipseIn: CGRect(x: p.x - r, y: p.y - r, width: r * 2, height: r * 2))
-                    let ink = grid.cells < 13 ? 0.4 + 0.4 * shade : 0.2 + 0.4 * min(1, shade / 0.7)
-                    ctx.fill(dot, with: .color(Palette.text.opacity(ink)))
-                    if shade > 0.6 {
-                        ctx.fill(dot, with: .color(color.opacity((shade - 0.6) / 0.4)))
-                    }
+        let running = mood != .idle && !reduceMotion && visible && scenePhase == .active
+        Group {
+            if running {
+                TimelineView(.animation(minimumInterval: 1.0 / 30)) { timeline in
+                    drawing(grid: grid, dots: dots, time: timeline.date.timeIntervalSinceReferenceDate
+                        .truncatingRemainder(dividingBy: 3600), animated: true)
+                }
+            } else {
+                drawing(grid: grid, dots: dots, time: 0, animated: false)
+            }
+        }
+        .onAppear { visible = true }
+        .onDisappear { visible = false }
+    }
+
+    private func drawing(grid: Grid, dots: [Dot], time t: Double, animated: Bool) -> some View {
+        let step = size / CGFloat(grid.cells)
+        // Glance: whole-cell steps left / center / right, like a small display.
+        let glance = mood == .working ? Int((sin(t * 2 * .pi / 3.2) * 1.4).rounded()) : 0
+        let blinking = animated && (t / 4.7).truncatingRemainder(dividingBy: 1) < 0.035
+        let eyeRows = blinking ? Array(grid.eyeRows.suffix(1)) : grid.eyeRows
+        let eyeCols = grid.eyeColumns.map { $0 + glance }
+        return Canvas { ctx, _ in
+            // Resolve dynamic ink once per frame; keep per-dot alpha in the shading.
+            let inkColor = Color(Palette.text.resolve(in: ctx.environment))
+            let tintColor = Color(color.resolve(in: ctx.environment))
+            let half = size / 2
+            let yaw = mood == .working ? t * 1.4 : -0.7
+            let lx = sin(yaw) * 0.8, ly = 0.55, lz = cos(yaw) * 0.5 + 0.6  // never fully behind
+            let ll = (lx * lx + ly * ly + lz * lz).squareRoot()
+            for d in dots where !(eyeCols.contains(d.col) && eyeRows.contains(d.row)) {
+                let p = d.center
+                let u = (p.x - half) / half, v = (half - p.y) / half
+                let z = max(0.2, 1 - u * u - v * v).squareRoot()
+                let nl = (u * u + v * v + z * z).squareRoot()
+                var shade = 0.3 + 0.7 * max(0, (u * lx + v * ly + z * lz) / (nl * ll))
+                if mood == .needsInput {
+                    let ripple = 0.5 + 0.5 * sin((u * u + v * v).squareRoot() * 9 - t * 5)
+                    shade *= 0.6 + 0.4 * ripple
+                }
+                let r = step * 0.42 * (0.55 + 0.45 * shade)
+                let dot = Path(ellipseIn: CGRect(x: p.x - r, y: p.y - r, width: r * 2, height: r * 2))
+                let ink = grid.cells < 13 ? 0.4 + 0.4 * shade : 0.2 + 0.4 * min(1, shade / 0.7)
+                ctx.fill(dot, with: .color(inkColor.opacity(ink)))
+                if shade > 0.6 {
+                    ctx.fill(dot, with: .color(tintColor.opacity((shade - 0.6) / 0.4)))
                 }
             }
         }
