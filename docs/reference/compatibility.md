@@ -53,13 +53,35 @@ that stays undecodable after the one rewind, or a `hello` whose other fields can
      The iPhone part of this release must actually ship (it changes `kit/`, so `Submit iOS`
      includes it).
   2. After that iPhone version is **live on the App Store**, a later host release drops the
-     old form and sets `MIN_APP` to the version from step 1.
+     old form, sets `MIN_APP` to the version from step 1, and re-records the wire shape
+     snapshot (below).
 
   Raising `MIN_APP` before the App Store has that version locks every iPhone out with no
   update to install.
 - **Raise `minHost`** only when the client's core flows need something older hosts lack. An
   optional feature that needs a newer host hides its control instead.
 - Floors never exceed the release that ships them (unit tests in both crates check this).
+
+### Wire shape snapshot
+
+`wire_shape_matches_the_snapshot` (`host/tests/e2e.rs`) runs a full turn against a real host
+(fake agent: user message, narration, tool call with a diff, plan, permission, final reply),
+then records every field path and JSON type of `hello` and the event stream's catch-up (bot
+and entry events, entries per kind) in `host/tests/fixtures/wire-shape.json`, together with
+the host's `minApp`.
+
+| Change | Test |
+|---|---|
+| Nothing on the wire | Passes |
+| New field | Fails until recorded: `CODYNC_UPDATE_WIRE_SHAPE=1 cargo test --test e2e wire_shape`, no decision needed |
+| Field removed, renamed or retyped | Fails, and recording is refused, until `MIN_APP` differs from the recorded one; then record |
+
+So a breaking change can't land by accident: it either keeps the old field or raises the
+floor, and the floor is raised only by the two-release rule above. `null` fields match any
+type. Not covered: subtrees that depend on the machine rather than the code (`backends`,
+`screen`, `urls`, `usage`), fields the sample turn doesn't produce (thread replies, group
+chats, routines and other method responses), and what the host accepts in requests. Changes
+there still follow the rule by review.
 - The encrypted channel's handshake version (`v` in its `hello`, rejected with
   `unsupportedVersion`, close code 4400) is separate: the host must keep accepting every `v`
   a supported client sends.
