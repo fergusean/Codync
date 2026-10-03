@@ -39,6 +39,7 @@ EDITABLE = {"PREPARE_FOR_SUBMISSION", "READY_FOR_REVIEW", "DEVELOPER_REJECTED", 
 DONE = {"READY_FOR_DISTRIBUTION", "REPLACED_WITH_NEW_VERSION", "REMOVED_FROM_SALE"}
 DRY_RUN = os.environ.get("DRY_RUN") == "1"
 NOTES = Path(__file__).resolve().parent.parent / "apps/ios/WhatsNew.md"
+EMOJI = re.compile("[\U00010000-\U0010FFFF\u2600-\u27BF\uFE0F\u200D]")
 WORKFLOW_ID = "44342080-ce08-4dc1-be35-34ce6cbb41b5"  # Xcode Cloud "Release": Archive iOS for the App Store
 # What the iPhone app is built from; apps/project.yml counts except its version lines.
 IOS_PATHS = ["apps/ios", "apps/shared", "kit", "apps/Codync.xcodeproj/project.xcworkspace"]
@@ -77,8 +78,11 @@ def pr_notes(prs, commits):
         section = re.search(r"^## What.s New[ \t]*$(.*?)(?=^## |\Z)", body, flags=re.M | re.S)
         for loc, text in re.findall(r"^### +(\S+)[ \t]*$(.*?)(?=^### |\Z)", section[1] if section else "",
                                     flags=re.M | re.S):
+            # Only filled bullets count: text after the section (a PR footer) is not a note,
+            # and the App Store rejects emoji in What's New.
             for line in map(str.strip, text.splitlines()):
-                if line not in ("", "-") and line not in notes.setdefault(loc, []):
+                line = EMOJI.sub("", line).strip()
+                if re.match(r"[-*] +\S", line) and line not in notes.setdefault(loc, []):
                     notes[loc].append(line)
     return {loc: "\n".join(lines)[:4000] for loc, lines in notes.items() if lines}
 
