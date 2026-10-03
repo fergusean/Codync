@@ -355,6 +355,8 @@ private final class KeyProxyField: UITextField, UITextFieldDelegate {
     }
 
     override func pressesBegan(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
+        // While an IME is composing, Return, Delete, arrows and Escape pick and edit candidates.
+        if markedTextRange != nil { return super.pressesBegan(presses, with: event) }
         var unhandled = Set<UIPress>()
         for press in presses {
             guard let key = press.key, let (name, mods) = Self.map(key) else {
@@ -374,6 +376,8 @@ private final class KeyProxyField: UITextField, UITextFieldDelegate {
         if key.modifierFlags.contains(.control) { mods.append("ctrl") }
         if key.modifierFlags.contains(.shift) { mods.append("shift") }
         if let special = special[key.keyCode] { return (special, mods) }
+        // Ctrl-Space switches the iPad's input source (e.g. to Zhuyin).
+        if key.keyCode == .keyboardSpacebar, mods == ["ctrl"] { return nil }
         let chord = mods.contains("cmd") || mods.contains("ctrl") || mods.contains("option")
         guard chord, let c = key.charactersIgnoringModifiers.lowercased().first else { return nil }
         return (String(c), mods)
