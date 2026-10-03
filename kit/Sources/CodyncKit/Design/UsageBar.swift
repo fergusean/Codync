@@ -111,7 +111,7 @@ public struct ProviderMascot: View {
                     .overlay(alignment: .topTrailing) {
                         if full {
                             Image(systemName: "exclamationmark.circle.fill")
-                                .font(.system(size: size * 0.34, weight: .bold))
+                                .appFont(.system(size: size * 0.34, weight: .bold))
                                 .symbolRenderingMode(.palette)
                                 .foregroundStyle(.white, Palette.danger)
                                 .offset(x: size * 0.12, y: -size * 0.12)

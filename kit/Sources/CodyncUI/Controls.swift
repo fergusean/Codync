@@ -86,7 +86,7 @@ private struct StyledButton: View {
 
     var body: some View {
         configuration.label
-            .font(InterfaceMetrics.body.weight(.medium))
+            .appFont(AppFont.compactBody.weight(.medium))
             .foregroundStyle(foreground)
             .padding(.horizontal, InterfaceMetrics.value(mac: 12, mobile: 18))
             .padding(.vertical, InterfaceMetrics.value(mac: 6, mobile: 11))
@@ -247,7 +247,7 @@ struct ReactionStrip: View {
                     dismiss()
                     pick.toggle(emoji)
                 } label: {
-                    Text(emoji).font(.system(size: InterfaceMetrics.value(mac: 14, mobile: 24)))
+                    Text(emoji).appFont(.system(size: InterfaceMetrics.value(mac: 14, mobile: 24)))
                 }
                 .buttonStyle(ReactionButtonStyle(chosen: chosen))
                 .help(chosen ? "Remove \(emoji)" : "React \(emoji)")
@@ -302,10 +302,10 @@ private struct MenuRow: View {
                 Text(item.title).fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: 16)
                 if let selected = item.selected {
-                    Image(systemName: "checkmark").font(.caption.weight(.semibold)).opacity(selected ? 1 : 0)
+                    Image(systemName: "checkmark").appFont(.caption.weight(.semibold)).opacity(selected ? 1 : 0)
                 }
             }
-            .font(InterfaceMetrics.body)
+            .appFont(AppFont.compactBody)
             .foregroundStyle(item.destructive ? Palette.danger : Palette.text)
             .padding(.horizontal, 10)
             .padding(.vertical, InterfaceMetrics.value(mac: 6, mobile: 11))
@@ -505,9 +505,9 @@ public struct ChoicePicker<ID: Hashable>: View {
         } label: {
             HStack(spacing: 6) {
                 Text(options.first { $0.id == selection }?.label ?? "Choose").lineLimit(1)
-                Image(systemName: "chevron.down").font(.caption2.weight(.semibold)).foregroundStyle(Palette.secondary)
+                Image(systemName: "chevron.down").appFont(.caption2.weight(.semibold)).foregroundStyle(Palette.secondary)
             }
-            .font(InterfaceMetrics.body)
+            .appFont(AppFont.compactBody)
             .foregroundStyle(Palette.text)
             .pill(fill: fill)
         }
@@ -536,7 +536,7 @@ public struct SegmentedChoice<ID: Hashable>: View {
                     withAnimation(Motion.reduced(Motion.morph, reduceMotion)) { selection = option.id }
                 } label: {
                     Text(option.label)
-                        .font(InterfaceMetrics.secondary.weight(.medium))
+                        .appFont(AppFont.compactSecondary.weight(.medium))
                         .foregroundStyle(on ? Palette.text : Palette.secondary)
                         .lineLimit(1)
                         .frame(maxWidth: .infinity)
@@ -575,12 +575,12 @@ public struct ChoiceList<ID: Hashable>: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(option.label).foregroundStyle(Palette.text)
                             if let detail = option.detail, !detail.isEmpty {
-                                Text(detail).font(InterfaceMetrics.secondary).foregroundStyle(Palette.secondary)
+                                Text(detail).appFont(AppFont.compactSecondary).foregroundStyle(Palette.secondary)
                             }
                         }
                         Spacer(minLength: 8)
                         Image(systemName: "checkmark")
-                            .font(.caption.weight(.semibold))
+                            .appFont(.caption.weight(.semibold))
                             .foregroundStyle(Palette.text)
                             .opacity(option.id == selection ? 1 : 0)
                     }
@@ -606,7 +606,7 @@ public struct CardForm<Content: View>: View {
             VStack(alignment: .leading, spacing: InterfaceMetrics.value(mac: 14, mobile: 22)) {
                 content
             }
-            .font(InterfaceMetrics.body)
+            .appFont(AppFont.compactBody)
             .padding(InterfaceMetrics.value(mac: 14, mobile: 20))
             .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -630,7 +630,7 @@ public struct CardSection<Content: View>: View {
     public var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             if let title {
-                Text(title).font(InterfaceMetrics.secondary).foregroundStyle(Palette.secondary).padding(.leading, 4)
+                Text(title).appFont(AppFont.compactSecondary).foregroundStyle(Palette.secondary).padding(.leading, 4)
             }
             VStack(alignment: .leading, spacing: InterfaceMetrics.value(mac: 12, mobile: 16)) {
                 content
@@ -640,7 +640,7 @@ public struct CardSection<Content: View>: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Palette.bubbleAgent, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
             if let footer {
-                Text(footer).font(.caption).foregroundStyle(Palette.tertiary).padding(.horizontal, 4)
+                Text(footer).appFont(.caption).foregroundStyle(Palette.tertiary).padding(.horizontal, 4)
             }
         }
     }
@@ -692,7 +692,7 @@ public struct SearchField: View {
                 .accessibilityLabel("Clear search")
             }
         }
-        .font(InterfaceMetrics.body)
+        .appFont(AppFont.compactBody)
         .padding(.horizontal, InterfaceMetrics.value(mac: 10, mobile: 14))
         .padding(.vertical, InterfaceMetrics.value(mac: 7, mobile: 10))
         .background(Palette.bubbleAgent, in: Capsule())
@@ -721,7 +721,7 @@ public struct Disclosure<Label: View, Content: View>: View {
                     label
                     Spacer(minLength: 8)
                     Image(systemName: "chevron.right")
-                        .font(.caption2.weight(.semibold))
+                        .appFont(.caption2.weight(.semibold))
                         .foregroundStyle(Palette.secondary)
                         .rotationEffect(.degrees(isExpanded ? 90 : 0))
                 }
@@ -813,9 +813,9 @@ private struct DialogCard: View {
                 .onTapGesture { if cancel != nil { dismiss() } }
             VStack(spacing: 14) {
                 VStack(spacing: 6) {
-                    Text(title).font(.headline).foregroundStyle(Palette.text)
+                    Text(title).appFont(.headline).foregroundStyle(Palette.text)
                     if let message, !message.isEmpty {
-                        Text(message).font(InterfaceMetrics.secondary).foregroundStyle(Palette.secondary)
+                        Text(message).appFont(AppFont.compactSecondary).foregroundStyle(Palette.secondary)
                     }
                 }
                 .multilineTextAlignment(.center)
@@ -852,7 +852,7 @@ private struct DialogButtonStyle: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(InterfaceMetrics.body.weight(.medium))
+            .appFont(AppFont.compactBody.weight(.medium))
             .foregroundStyle(destructive ? Color.white : (prominent ? Palette.onAccent : Palette.text))
             .padding(.vertical, InterfaceMetrics.value(mac: 8, mobile: 12))
             .background(destructive ? Palette.danger : (prominent ? Palette.accentFill : Palette.bubbleUser), in: Capsule())

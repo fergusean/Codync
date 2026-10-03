@@ -10,6 +10,8 @@ struct CodyncMacApp: App {
     @State private var host: HostController
     @State private var account: AccountSession
     @Environment(\.openWindow) private var openWindow
+    @AppStorage(ConversationTypography.preferenceKey)
+    private var conversationFontSize = ConversationTypography.defaultSize
 
     init() {
         let account = AccountSession()
@@ -29,14 +31,27 @@ struct CodyncMacApp: App {
         // First scene: the one SwiftUI opens at launch and when the Dock icon is clicked.
         Window("Codync", id: "chat") {
             ChatWindow()
+                .environment(\.conversationTypography, ConversationTypography(pointSize: conversationFontSize))
                 .task { launch() }
                 .modalHost()
+                .appFont(.body)
+                .environment(\.appFontScale, ConversationTypography(pointSize: conversationFontSize).scale)
                 .environment(host)
                 .environment(account)
                 .environment(updates)
         }
         .defaultSize(width: 1100, height: 760)
         .windowStyle(.hiddenTitleBar)
+        .commands {
+            CommandGroup(after: .toolbar) {
+                Button("Bigger") { conversationFontSize = ConversationTypography.step(conversationFontSize, up: true) }
+                    .keyboardShortcut("+")
+                Button("Smaller") { conversationFontSize = ConversationTypography.step(conversationFontSize, up: false) }
+                    .keyboardShortcut("-")
+                Button("Actual Size") { conversationFontSize = ConversationTypography.defaultSize }
+                    .keyboardShortcut("0")
+            }
+        }
 
         MenuBarExtra {
             MenuView()
@@ -70,6 +85,8 @@ struct CodyncMacApp: App {
                 }
             }
             .frame(width: 340)
+            .appFont(.body)
+            .environment(\.appFontScale, ConversationTypography(pointSize: conversationFontSize).scale)
             .environment(host)
         }
         .windowResizability(.contentSize)
@@ -83,6 +100,8 @@ struct MenuView: View {
     @Environment(\.openWindow) private var openWindow
     @AppStorage(SharedStore.usageIconStyleKey, store: UserDefaults(suiteName: SharedStore.appGroup))
     private var usageIconStyle = UsageIconStyle.character.rawValue
+    @AppStorage(ConversationTypography.preferenceKey)
+    private var conversationFontSize = ConversationTypography.defaultSize
 
     var body: some View {
         Text(status)
@@ -102,6 +121,12 @@ struct MenuView: View {
             Picker("Usage icons", selection: $usageIconStyle) {
                 Text("Character").tag(UsageIconStyle.character.rawValue)
                 Text("Original").tag(UsageIconStyle.original.rawValue)
+            }
+            Picker("Text Size", selection: $conversationFontSize) {
+                ForEach(ConversationTypography.sizes, id: \.self) { size in
+                    Text(size == ConversationTypography.defaultSize ? "\(Int(size)) pt (Default)" : "\(Int(size)) pt")
+                        .tag(size)
+                }
             }
             Toggle("Open at login", isOn: Binding(
                 get: { host.launchAtLogin },
@@ -374,7 +399,7 @@ struct PairingPanel: View {
                         .accessibilityLabel("Pairing code for \(store.hostName)")
                 }
                 Text("Scan with the Codync app or the iPhone Camera. No Tailscale or open ports needed: your iPhone connects directly on the same Wi-Fi, and through the encrypted relay anywhere else.")
-                    .font(.caption)
+                    .appFont(.caption)
                     .foregroundStyle(Palette.secondary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
@@ -382,7 +407,7 @@ struct PairingPanel: View {
                     Text(info.urls.isEmpty
                         ? "No network address found and “Reach from anywhere” is off. Connect to Wi-Fi or turn it on."
                         : "“Reach from anywhere” is off, so the iPhone only reaches \(store.hostName) on the same network.")
-                        .font(.caption)
+                        .appFont(.caption)
                         .foregroundStyle(Palette.warning)
                         .multilineTextAlignment(.center)
                         .fixedSize(horizontal: false, vertical: true)
@@ -390,7 +415,7 @@ struct PairingPanel: View {
                 HStack(spacing: 4) {
                     if let expires = info.expiresAt {
                         Text("Works once, until \(Date(milliseconds: expires).formatted(date: .omitted, time: .shortened))")
-                            .font(.caption2).foregroundStyle(Palette.tertiary)
+                            .appFont(.caption2).foregroundStyle(Palette.tertiary)
                     }
                     IconButton("New code", systemImage: "arrow.clockwise") { Task { await load() } }
                     IconButton("Copy pairing link", systemImage: "doc.on.doc") {
@@ -399,7 +424,7 @@ struct PairingPanel: View {
                     }
                 }
             } else if let error {
-                Text(error).font(.caption).foregroundStyle(Palette.danger).multilineTextAlignment(.center)
+                Text(error).appFont(.caption).foregroundStyle(Palette.danger).multilineTextAlignment(.center)
                 IconButton("Try again", systemImage: "arrow.clockwise") { Task { await load() } }
             } else {
                 Spinner(size: 20)

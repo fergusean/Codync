@@ -20,8 +20,8 @@ struct RepliesView: View {
         VStack(spacing: 0) {
             HStack(spacing: 8) {
                 VStack(alignment: .leading, spacing: 0) {
-                    Text("Thread").font(InterfaceMetrics.body.weight(.semibold)).foregroundStyle(Palette.text)
-                    Text(chat?.name ?? "").font(.caption).foregroundStyle(Palette.tertiary).lineLimit(1)
+                    Text("Thread").appFont(AppFont.compactBody.weight(.semibold)).foregroundStyle(Palette.text)
+                    Text(chat?.name ?? "").appFont(.caption).foregroundStyle(Palette.tertiary).lineLimit(1)
                 }
                 Spacer(minLength: 8)
                 IconButton("Close thread", systemImage: "xmark", action: close)
@@ -38,7 +38,7 @@ struct RepliesView: View {
                         ChatRow(entry: root, groupStart: true, chat: chat) { showTrace = true }
                         HStack(spacing: 10) {
                             Text(replies.isEmpty ? "No replies yet" : replies.count == 1 ? "1 reply" : "\(replies.count) replies")
-                                .font(.caption)
+                                .appFont(.caption)
                                 .foregroundStyle(Palette.tertiary)
                                 .fixedSize()
                             Rectangle().fill(Palette.border).frame(height: 1)

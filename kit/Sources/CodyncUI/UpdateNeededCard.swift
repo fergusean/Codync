@@ -44,13 +44,13 @@ public struct UpdateNeededCard: View {
     public var body: some View {
         HStack(alignment: .top, spacing: 12) {
             Image(systemName: "arrow.down.circle")
-                .font(.title3)
+                .appFont(.title3)
                 .foregroundStyle(Palette.warning)
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 6) {
-                Text(title).font(.subheadline.weight(.semibold)).foregroundStyle(Palette.text)
+                Text(title).appFont(.subheadline.weight(.semibold)).foregroundStyle(Palette.text)
                 Text(detail)
-                    .font(.footnote)
+                    .appFont(.footnote)
                     .foregroundStyle(Palette.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                 if let action {

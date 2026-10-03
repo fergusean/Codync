@@ -172,10 +172,10 @@ public struct MarketplaceView: View {
                     }
                 }
                 if let error {
-                    Text(error).font(.footnote).foregroundStyle(Palette.danger)
+                    Text(error).appFont(.footnote).foregroundStyle(Palette.danger)
                 }
                 Text("Connectors come from the official MCP Registry, apps through Composio, skills from Anthropic, agents from the ACP registry. Everything installs on \(model.hostName).")
-                    .font(.footnote)
+                    .appFont(.footnote)
                     .foregroundStyle(Palette.tertiary)
             }
             .padding(.horizontal, 44)
@@ -199,7 +199,7 @@ public struct MarketplaceView: View {
                 ComputerBadge(model.computer, size: 32)
                 VStack(alignment: .leading, spacing: 0) {
                     Text("Marketplace")
-                        .font(.title2.weight(.semibold))
+                        .appFont(.title2.weight(.semibold))
                         .foregroundStyle(Palette.text)
                     if let computer, computers.count > 1 {
                         DropdownMenu {
@@ -209,9 +209,9 @@ public struct MarketplaceView: View {
                         } label: {
                             HStack(spacing: 4) {
                                 Text(model.hostName)
-                                Image(systemName: "chevron.down").font(.caption2.weight(.semibold))
+                                Image(systemName: "chevron.down").appFont(.caption2.weight(.semibold))
                             }
-                            .font(.subheadline)
+                            .appFont(.subheadline)
                             .foregroundStyle(Palette.secondary)
                             .contentShape(Rectangle())
                         }
@@ -219,7 +219,7 @@ public struct MarketplaceView: View {
                         .help("Switch computer")
                     } else {
                         Text(model.hostName)
-                            .font(.subheadline)
+                            .appFont(.subheadline)
                             .foregroundStyle(Palette.secondary)
                     }
                 }
@@ -237,7 +237,7 @@ public struct MarketplaceView: View {
                             }
                         }
                         Text("\(installedCount) installed").foregroundStyle(Palette.secondary).lineLimit(1).fixedSize()
-                        Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(Palette.tertiary)
+                        Image(systemName: "chevron.right").appFont(.caption.weight(.semibold)).foregroundStyle(Palette.tertiary)
                     }
                     .contentShape(Rectangle())
                 }
@@ -340,7 +340,7 @@ private struct InstalledView: View {
             ScreenHeader {
                 BackButton(action: back).keyboardShortcut(.cancelAction)
             } title: {
-                Text("Installed").font(InterfaceMetrics.body.weight(.semibold)).foregroundStyle(Palette.text)
+                Text("Installed").appFont(AppFont.compactBody.weight(.semibold)).foregroundStyle(Palette.text)
             } trailing: {
                 EmptyView()
             }
@@ -450,9 +450,9 @@ private struct EmptyState: View {
 
     var body: some View {
         VStack(spacing: 8) {
-            Image(systemName: icon).font(.system(size: 28)).foregroundStyle(Palette.tertiary).accessibilityHidden(true)
-            Text(title).font(InterfaceMetrics.body.weight(.semibold)).foregroundStyle(Palette.text)
-            Text(detail).font(InterfaceMetrics.secondary).foregroundStyle(Palette.secondary).multilineTextAlignment(.center)
+            Image(systemName: icon).appFont(.system(size: 28)).foregroundStyle(Palette.tertiary).accessibilityHidden(true)
+            Text(title).appFont(AppFont.compactBody.weight(.semibold)).foregroundStyle(Palette.text)
+            Text(detail).appFont(AppFont.compactSecondary).foregroundStyle(Palette.secondary).multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 40)
@@ -471,7 +471,7 @@ private struct InstalledRow<Icon: View, Accessory: View>: View {
             icon
             VStack(alignment: .leading, spacing: 2) {
                 Text(title).foregroundStyle(Palette.text).lineLimit(1)
-                Text(subtitle).font(.caption).foregroundStyle(Palette.secondary).lineLimit(1)
+                Text(subtitle).appFont(.caption).foregroundStyle(Palette.secondary).lineLimit(1)
             }
             Spacer(minLength: 12)
             accessory
@@ -495,7 +495,7 @@ struct MarketSection<Content: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(title).font(.headline).foregroundStyle(Palette.text).padding(.leading, 4)
+            Text(title).appFont(.headline).foregroundStyle(Palette.text).padding(.leading, 4)
             content
         }
     }
@@ -530,9 +530,9 @@ private struct AgentCard: View {
                     .frame(width: 64, height: 64)
                     .background(Palette.bubbleAgent, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
                 VStack(spacing: 2) {
-                    Text(backend.name).font(.subheadline.weight(.semibold)).foregroundStyle(Palette.text).lineLimit(1)
+                    Text(backend.name).appFont(.subheadline.weight(.semibold)).foregroundStyle(Palette.text).lineLimit(1)
                     Text(status)
-                        .font(.caption)
+                        .appFont(.caption)
                         .foregroundStyle(Palette.secondary)
                         .lineLimit(1)
                 }
@@ -609,9 +609,9 @@ private struct AgentSheet: View {
                         .frame(width: 52, height: 52)
                         .background(Palette.bubbleAgent, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(backend.name).font(.title3.weight(.semibold))
+                        Text(backend.name).appFont(.title3.weight(.semibold))
                         if let d = backend.description, !d.isEmpty {
-                            Text(d).font(.subheadline).foregroundStyle(Palette.secondary).lineLimit(3)
+                            Text(d).appFont(.subheadline).foregroundStyle(Palette.secondary).lineLimit(3)
                         }
                     }
                 }
@@ -654,7 +654,7 @@ private struct AgentSheet: View {
                 }
             }
             if signedIn != true, let detail = auth?.detail, !detail.isEmpty {
-                Text(detail).font(.footnote).foregroundStyle(Palette.secondary).textSelection(.enabled)
+                Text(detail).appFont(.footnote).foregroundStyle(Palette.secondary).textSelection(.enabled)
             }
             // Some CLIs drop the current sign-in the moment a new one starts: no options once signed in.
             if signedIn != true, !checking {
@@ -703,19 +703,19 @@ private struct AgentSheet: View {
         Button(action: action) {
             HStack(spacing: 12) {
                 Image(systemName: icon)
-                    .font(.body)
+                    .appFont(.body)
                     .foregroundStyle(Palette.secondary)
                     .frame(width: 26)
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(title).font(.body.weight(.medium)).foregroundStyle(Palette.text)
-                    Text(detail).font(.subheadline).foregroundStyle(Palette.secondary).lineLimit(3)
+                    Text(title).appFont(.body.weight(.medium)).foregroundStyle(Palette.text)
+                    Text(detail).appFont(.subheadline).foregroundStyle(Palette.secondary).lineLimit(3)
                 }
                 Spacer(minLength: 8)
                 if busy {
                     ThinkingOrb(size: 16, color: Palette.secondary)
                 } else {
-                    Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(Palette.tertiary)
+                    Image(systemName: "chevron.right").appFont(.caption.weight(.semibold)).foregroundStyle(Palette.tertiary)
                 }
             }
             .contentShape(Rectangle())
@@ -776,7 +776,7 @@ private struct AgentKeysForm: View {
             ScreenHeader {
                 BackButton(action: back).keyboardShortcut(.cancelAction)
             } title: {
-                Text(method.name).font(InterfaceMetrics.body.weight(.semibold)).foregroundStyle(Palette.text).lineLimit(1)
+                Text(method.name).appFont(AppFont.compactBody.weight(.semibold)).foregroundStyle(Palette.text).lineLimit(1)
             } trailing: {
                 if saving {
                     Spinner()
@@ -805,7 +805,7 @@ private struct AgentKeysForm: View {
                                 }
                             }
                             .plainTextInput()
-                            Text(v.label + (v.optional ? " (optional)" : "")).font(.caption).foregroundStyle(Palette.secondary)
+                            Text(v.label + (v.optional ? " (optional)" : "")).appFont(.caption).foregroundStyle(Palette.secondary)
                         }
                     }
                 }
@@ -816,7 +816,7 @@ private struct AgentKeysForm: View {
                         WebLink("Get a key", url: url)
                     }
                 }
-                .font(.caption)
+                .appFont(.caption)
                 .foregroundStyle(Palette.tertiary)
                 .padding(.horizontal, 4)
             }
@@ -867,22 +867,22 @@ private struct SetupStepRow: View {
             ZStack {
                 Circle().fill(done ? Palette.accentFill : Palette.bubbleAgent)
                 if done {
-                    Image(systemName: "checkmark").font(.caption.weight(.bold)).foregroundStyle(Palette.onAccent)
+                    Image(systemName: "checkmark").appFont(.caption.weight(.bold)).foregroundStyle(Palette.onAccent)
                 } else {
-                    Text("\(number)").font(.caption.weight(.semibold)).foregroundStyle(Palette.secondary)
+                    Text("\(number)").appFont(.caption.weight(.semibold)).foregroundStyle(Palette.secondary)
                 }
             }
             .frame(width: 26, height: 26)
             .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(.body.weight(.medium)).foregroundStyle(Palette.text)
-                Text(detail).font(.subheadline).foregroundStyle(Palette.secondary).textSelection(.enabled)
+                Text(title).appFont(.body.weight(.medium)).foregroundStyle(Palette.text)
+                Text(detail).appFont(.subheadline).foregroundStyle(Palette.secondary).textSelection(.enabled)
             }
             Spacer(minLength: 8)
             if let action {
                 Button(action.label, action: action.run)
                     .buttonStyle(.plain)
-                    .font(.subheadline.weight(.semibold))
+                    .appFont(.subheadline.weight(.semibold))
                     .foregroundStyle(Palette.text)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 7)
@@ -910,8 +910,8 @@ struct MarketRow<Icon: View>: View {
         HStack(spacing: 14) {
             icon.frame(width: 46, height: 46)
             VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(.body.weight(.medium)).foregroundStyle(Palette.text).lineLimit(1)
-                Text(subtitle).font(.subheadline).foregroundStyle(Palette.secondary).lineLimit(1)
+                Text(title).appFont(.body.weight(.medium)).foregroundStyle(Palette.text).lineLimit(1)
+                Text(subtitle).appFont(.subheadline).foregroundStyle(Palette.secondary).lineLimit(1)
             }
             Spacer(minLength: 8)
             if busy {
@@ -919,14 +919,14 @@ struct MarketRow<Icon: View>: View {
             } else if added {
                 Label("Added", systemImage: "checkmark")
                     .labelStyle(.iconOnly)
-                    .font(.subheadline.weight(.semibold))
+                    .appFont(.subheadline.weight(.semibold))
                     .foregroundStyle(Palette.secondary)
                     .frame(width: 60)
                     .accessibilityLabel("Added")
             } else {
                 Button(addLabel, action: add)
                     .buttonStyle(.plain)
-                    .font(.subheadline.weight(.semibold))
+                    .appFont(.subheadline.weight(.semibold))
                     .foregroundStyle(Palette.text)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 7)
@@ -994,7 +994,7 @@ private struct ServiceLogo: View {
         ZStack {
             shape.fill(Palette.bubbleAgent)
             Text(name.first.map { String($0).uppercased() } ?? "?")
-                .font(.system(size: size * 0.4, weight: .semibold, design: .rounded))
+                .appFont(.system(size: size * 0.4, weight: .semibold, design: .rounded))
                 .foregroundStyle(Palette.text)
             if let faviconURL {
                 AsyncImage(url: faviconURL) { phase in
@@ -1018,7 +1018,7 @@ struct TileIcon: View {
     var body: some View {
         RoundedRectangle(cornerRadius: 12, style: .continuous)
             .fill(Palette.bubbleAgent)
-            .overlay(Image(systemName: systemName).font(.system(size: 18, weight: .medium)).foregroundStyle(Palette.text))
+            .overlay(Image(systemName: systemName).appFont(.system(size: 18, weight: .medium)).foregroundStyle(Palette.text))
     }
 }
 
@@ -1066,10 +1066,10 @@ struct InstallConnectorSheet: View {
         CardForm {
             CardSection {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(item.title).font(.title3.weight(.semibold))
+                    Text(item.title).appFont(.title3.weight(.semibold))
                     if let d = item.description { Text(d).foregroundStyle(Palette.secondary) }
                     if let w = item.website, let url = URL(string: w) {
-                        WebLink(w, url: url).font(.footnote).lineLimit(1)
+                        WebLink(w, url: url).appFont(.footnote).lineLimit(1)
                     }
                 }
                 .padding(.vertical, 4)
@@ -1100,7 +1100,7 @@ struct InstallConnectorSheet: View {
                             }
                             .plainTextInput()
                             if let d = input.description {
-                                Text(d + (input.required ? "" : " (optional)")).font(.caption).foregroundStyle(Palette.secondary)
+                                Text(d + (input.required ? "" : " (optional)")).appFont(.caption).foregroundStyle(Palette.secondary)
                             }
                         }
                     }
@@ -1202,12 +1202,12 @@ private struct CustomConnectorSheet: View {
                 if mode == .config {
                     TextField("{ \"mcpServers\": { … } }", text: $config, axis: .vertical)
                         .lineLimit(6...16)
-                        .font(.callout.monospaced())
+                        .appFont(.callout.monospaced())
                         .plainTextInput()
                 } else {
                     TextField("Name", text: $name)
                     TextField(mode == .url ? "https://example.com/mcp" : "npx -y @scope/server", text: $target)
-                        .font(.callout.monospaced())
+                        .appFont(.callout.monospaced())
                         .plainTextInput()
                 }
             }
@@ -1215,14 +1215,14 @@ private struct CustomConnectorSheet: View {
                 CardSection("Headers", footer: "Optional, one Name: value per line. Leave empty if the service has you sign in. Saved on \(model.hostName) only.") {
                     TextField("Authorization: Bearer …", text: $envText, axis: .vertical)
                         .lineLimit(2...6)
-                        .font(.callout.monospaced())
+                        .appFont(.callout.monospaced())
                         .plainTextInput()
                 }
             } else if mode == .command {
                 CardSection("Environment", footer: "One KEY=value per line. Saved on \(model.hostName) only.") {
                     TextField("API_KEY=…", text: $envText, axis: .vertical)
                         .lineLimit(2...6)
-                        .font(.callout.monospaced())
+                        .appFont(.callout.monospaced())
                         .plainTextInput()
                 }
             }

@@ -20,19 +20,19 @@ struct RoutinesView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
-                Text("Routines").font(.system(size: 13, weight: .semibold))
+                Text("Routines").appFont(.system(size: 13, weight: .semibold))
                 Spacer(minLength: 0)
                 askInChat
                 IconButton("Set up a routine", systemImage: "plus") { open(nil) }
                     .disabled(model.isOffline)
                 if let close { IconButton("Close routines", systemImage: "xmark", action: close) }
             }
-            if let loadError { Text(loadError).font(.caption).foregroundStyle(Palette.danger) }
-            if let error { Text(error).font(.caption).foregroundStyle(.red).textSelection(.enabled) }
+            if let loadError { Text(loadError).appFont(.caption).foregroundStyle(Palette.danger) }
+            if let error { Text(error).appFont(.caption).foregroundStyle(.red).textSelection(.enabled) }
             listing
         }
         .foregroundStyle(Palette.text)
-        .font(.system(size: 13))
+        .appFont(.system(size: 13))
         .onChange(of: initialId) { _, id in
             if let id { open(id) }
         }
@@ -66,7 +66,7 @@ struct RoutinesView: View {
         VStack(alignment: .leading, spacing: 0) {
             if routines.isEmpty {
                 Text(loaded ? "No routines yet. Ask the bot for one, or set it up yourself with +." : "Loading routines…")
-                    .font(.caption)
+                    .appFont(.caption)
                     .foregroundStyle(Palette.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             } else {
@@ -88,7 +88,7 @@ struct RoutinesView: View {
                 VStack(alignment: .leading, spacing: 3) {
                     Text(routine.name).foregroundStyle(Palette.text)
                     Text(summary(routine))
-                        .font(.caption)
+                        .appFont(.caption)
                         .foregroundStyle(routine.lastError == nil ? Palette.secondary : Palette.danger)
                 }
                 .padding(.vertical, 10)
