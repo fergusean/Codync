@@ -185,7 +185,6 @@ public struct ThreadView: View {
         #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar(.visible, for: .navigationBar)
-            .toolbarBackground(.hidden, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .principal) {
                     VStack(spacing: 0) {
@@ -796,7 +795,7 @@ private extension View {
     @ViewBuilder func conversationScrollEdges() -> some View {
         if #available(iOS 26, macOS 26, *) {
             #if os(iOS)
-                scrollEdgeEffectHidden(true, for: .top)
+                scrollEdgeEffectStyle(.soft, for: .top)
             #else
                 self
             #endif
