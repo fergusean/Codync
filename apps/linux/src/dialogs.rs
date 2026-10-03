@@ -37,7 +37,7 @@ pub fn editor(ui: &App, bot: Option<Value>) {
     let d = Rc::new(RefCell::new(bot.clone().unwrap_or_else(|| {
         let n = client_seed();
         json!({
-            "name": "", "description": "", "permission": "ask", "model": null, "command": null, "cwd": "",
+            "name": "", "description": "", "permission": "auto", "model": null, "command": null, "cwd": "",
             "avatarShape": avatar::SHAPES[n % avatar::SHAPES.len()],
             "avatarColor": avatar::COLORS[n % avatar::COLORS.len()].0,
             "backend": backends.iter().find(|b| b["available"] == true).and_then(|b| b["id"].as_str()).unwrap_or("claude"),
