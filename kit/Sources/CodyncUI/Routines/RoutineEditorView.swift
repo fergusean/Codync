@@ -21,6 +21,8 @@ struct RoutineEditorView: View {
     @State private var checkedSchedule: RoutineScheduleDraft?
     @State private var confirmDelete = false
     @State private var started = false
+    /// Any text field is being edited; cleared on save so nothing sits under the keyboard.
+    @FocusState private var typing: Bool
 
     /// Schedule or webhook, as in Claude Code routines. Anything else the bot set up
     /// (a one-off time, an interval, events, several triggers) stays as it is until replaced.
@@ -51,7 +53,7 @@ struct RoutineEditorView: View {
                 // The card fits the form; it scrolls only when taller than the window allows.
                 ViewThatFits(in: .vertical) { form; ScrollView { form } }
                 #else
-                ScrollView { form }
+                ScrollView { form }.scrollDismissesKeyboard(.interactively)
                 #endif
             }
             .disabled(busy || !loaded)
@@ -91,11 +93,11 @@ struct RoutineEditorView: View {
             VStack(alignment: .leading, spacing: 24) {
                 VStack(alignment: .leading, spacing: 14) {
                     Field("Name") {
-                        TextField("Name", text: $name, prompt: Text("e.g. Morning summary").foregroundStyle(Palette.secondary)).routineInput()
+                        TextField("Name", text: $name, prompt: Text("e.g. Morning summary").foregroundStyle(Palette.secondary)).routineInput().focused($typing)
                     }
                     Field("Instruction") {
                         TextField("Instruction", text: $instruction, prompt: Text("Describe what this bot should do each time it runs.").foregroundStyle(Palette.secondary), axis: .vertical)
-                            .lineLimit(3...8).routineInput()
+                            .lineLimit(3...8).routineInput().focused($typing)
                     }
                 }
                 VStack(alignment: .leading, spacing: 14) {
@@ -124,7 +126,7 @@ struct RoutineEditorView: View {
                     .buttonStyle(.plain)
                     .accessibilityValue(advanced ? "Expanded" : "Collapsed")
                     if advanced {
-                        Field("Timeout (seconds)") { TextField("3600", text: $timeout).routineInput() }
+                        Field("Timeout (seconds)") { TextField("3600", text: $timeout).routineInput().focused($typing) }
                         Text("A run is stopped after this long. 1 second to 24 hours.")
                             .font(.caption).foregroundStyle(Palette.secondary).padding(.leading, 4)
                     }
@@ -198,7 +200,7 @@ struct RoutineEditorView: View {
     private var expressionField: some View {
         Field("Cron") {
             TextField("Cron", text: $schedule.expression, prompt: Text("0 9 * * 1-5").foregroundStyle(Palette.secondary))
-                .font(.body.monospaced()).autocorrectionDisabled().routineInput()
+                .font(.body.monospaced()).autocorrectionDisabled().routineInput().focused($typing)
                 .frame(minWidth: 220)
         }
     }
@@ -206,7 +208,7 @@ struct RoutineEditorView: View {
     private var zoneField: some View {
         Field("Time zone") {
             TextField("Time zone", text: $schedule.zone, prompt: Text("Asia/Taipei").foregroundStyle(Palette.secondary))
-                .autocorrectionDisabled().routineInput()
+                .autocorrectionDisabled().routineInput().focused($typing)
         }
     }
 
@@ -306,6 +308,8 @@ struct RoutineEditorView: View {
 
     private func save() {
         guard let client = model.client, canSave else { return }
+        // Saving ends editing (a new webhook routine stays open on its URL and key, not under the keyboard).
+        typing = false
         busy = true
         error = nil
         Task {

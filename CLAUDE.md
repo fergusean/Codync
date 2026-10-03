@@ -58,8 +58,7 @@ Always stop the old Mac app, host and iPhone process before running a new build 
 
 ## App Store Upload
 
-- **IMPORTANT**: Every time you archive and upload a new build to App Store Connect, you MUST increment `CURRENT_PROJECT_VERSION` first (App Store Connect rejects duplicate build numbers).
-- Versions live in `apps/project.yml` (`MARKETING_VERSION`, `CURRENT_PROJECT_VERSION`); regenerate the project after changing them. Keep `host/Cargo.toml` `version` in sync with `MARKETING_VERSION`.
+- Xcode Cloud archives the `iOS` scheme on every `v*` tag and uploads it to App Store Connect with its own build number, then the `Submit iOS` workflow submits it to App Review for the App Store; don't upload from the local machine or edit `CURRENT_PROJECT_VERSION` for it. Details: [development guide](docs/guides/development.md#ios-releases-xcode-cloud).
 
 ## Versioning
 
@@ -67,7 +66,7 @@ Always stop the old Mac app, host and iPhone process before running a new build 
 - Minor/patch bumps are always backward compatible within the same major; the iOS decoder is lenient (`Bot.init(from:)`) so small host additions don't break older apps
 - **Every source change ships as a release.** A version bump on `main` is the only release trigger (Auto Tag → DMG, host, Linux app, Homebrew, in-app update), so any change to shipped code (`apps/`, `kit/`, `host/`, `packaging/`) bumps the version before it reaches `main`, without being asked. Docs, `web/`, `cloud/`, `relay/` and CI-only changes don't bump.
 - Pick the bump yourself: patch for fixes and small tweaks, minor for new features or protocol additions. Never bump major (stay on 2.x). One bump per merge into `main`: if `MARKETING_VERSION` is already ahead of the latest `v*` tag, leave it.
-- How: set `MARKETING_VERSION` in `apps/project.yml` and `version` in `host/Cargo.toml` (+ its `Cargo.lock` entry) to the same value, run `xcodegen generate --spec apps/project.yml`, commit as `build: bump version to X.Y.Z`. `CURRENT_PROJECT_VERSION` changes only for App Store uploads.
+- How: set `MARKETING_VERSION` in `apps/project.yml` and `version` in `host/Cargo.toml` (+ its `Cargo.lock` entry) to the same value, run `xcodegen generate --spec apps/project.yml`, commit as `build: bump version to X.Y.Z`. Never touch `CURRENT_PROJECT_VERSION` (Xcode Cloud sets the iOS build number).
 
 ## Targets
 
