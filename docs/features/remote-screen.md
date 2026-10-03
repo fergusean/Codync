@@ -8,7 +8,7 @@ Remote screen lets an authorized phone view and control a computer. Signaling tr
 2. The host checks the `screen` scope and that screen access is enabled. For relay connections it signs `POST /v1/host/screen-ice {deviceKey}`. The Worker requires a registered, active computer belonging to an active account. The host attests the device's local authorization, so account grants and local QR pairing both work on a claimed computer.
 3. The Worker issues Cloudflare Realtime credentials with a one-hour TTL, tags usage with `computerId:deviceFingerprint` (the fingerprint is the base64url encoding of the first 16 bytes of SHA-256 of the device public key; the resulting 45-character tag fits Cloudflare’s 64-character limit), and returns `Cache-Control: no-store`. Permanent TURN keys stay in Worker secrets.
 4. The host reserves a random session ID bound to the calling device and keeps the exact ICE configuration in memory. The phone and helper use that configuration. Clients cannot supply arbitrary ICE servers to the host.
-5. `screenOffer {session, sdp, display?}` carries the completed offer to the helper. Both peers gather for up to ten seconds. ICE prefers direct candidates and uses TURN when necessary, with UDP, TCP and TLS on port 443 available.
+5. `screenOffer {session, sdp, display?}` carries the completed offer to the helper. Peers gather for up to ten seconds; the Linux helper can answer earlier once its SDP contains a relay candidate, without waiting for every redundant TURN transport. ICE prefers direct candidates and uses TURN when necessary, with UDP, TCP and TLS on port 443 available.
 6. The phone reconnects with fresh credentials five minutes before expiry. The host checks active sessions every five seconds and closes expired sessions, revoked devices and expired account leases. A prepared session must start within one minute.
 
 Connections prepared through the cloud use a **4 Mbps / 30 fps** encoding limit even if ICE subsequently finds a direct path. Direct sessions retain their platform defaults (Mac: 16 Mbps / 60 fps). These are encoding limits, not exact bandwidth or billing caps. TURN does not carry plaintext desktop content; WebRTC DTLS-SRTP and data-channel encryption remain between the phone and helper.
@@ -31,7 +31,9 @@ computer display without choosing the phone's orientation.
 
 - `host/src/screen/` coordinates access to the local helper and owns viewer sessions. Another device cannot renegotiate or close a session it does not own.
 - `apps/screen-macos/` is the macOS capture/input helper (Xcode `Screen` target, `CodyncScreen.app`). The desktop app bundles it and registers it through `SMAppService` (`apps/desktop/src/main/screen.ts`); it is responsible for the OS permissions, including those of the computer-use driver it starts.
+- Linux selects the H.264 RTP payload number from the viewer's offer, converts capture to 8-bit 4:2:0, and negotiates the answer before starting encoding. This avoids rejecting Baseline offers or trying to apply Baseline to an already running 4:4:4 encoder.
 - `apps/screen-linux/` implements the Linux helper using desktop portals and GStreamer, including ICE URL conversion and TURN transport configuration. The host starts it from beside its own executable (then `PATH`). Linux host releases ship `codync-screen` in the same archive (built on Ubuntu 24.04: glibc 2.39+ and GStreamer 1.22+ with the base, good and bad plugins, PipeWire and xdg-desktop-portal at run time); `install.sh`, Homebrew and `codync-host update` put it next to the host.
+- Linux uses the pipeline's system clock rather than the PipeWire stream clock. Mixing the stream clock's origin with capture/keepalive timestamps can stall video even while keyboard input reaches the desktop.
 - Helpers communicate locally through `~/.codync/screen.sock`. SDP is non-trickle; input uses the `input` and `input-fast` data channels.
 - Screen access is on by default on macOS and on Linux while a graphical session (Wayland or X11) is running; headless servers stay off. Turning it on or off is remembered. Enabling through `setScreenEnabled` requires a loopback caller. Interactive OS permission prompts must be completed on the computer.
 - Bots with their computer capability enabled receive the built-in `computer` MCP tools, run by the computer-use driver that Codync Screen starts on macOS ([computer use](computer-use.md)). Their permission policy still applies. An interactive phone can take over; bots may still look.
@@ -61,6 +63,7 @@ Run cloud tests/type checking, host formatting/Clippy/tests, iOS Kit package tes
 Live acceptance requires the configured Worker and fresh host/helper/phone builds:
 
 - Check screen-recording and input permissions, capture, click/type/scroll, clipboard, display changes and closing the viewer.
+- Measure first-frame connection time and input-to-visible-frame delay, including after several seconds of idle. Verify video continues through pinch/pan/reset and frame-size changes.
 - Open the iPhone viewer while upright and while already held sideways, then rotate
   in both directions. Check video fitting and direct taps after each turn. Repeat
   with rotation lock on and with the Rotate button; closing returns to portrait.
