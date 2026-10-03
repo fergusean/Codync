@@ -60,7 +60,15 @@ struct RepliesView: View {
             }
             .defaultScrollAnchor(.bottom)
             .scrollDismissesKeyboard(.interactively)
-            .safeAreaInset(edge: .bottom) { Composer(botId: botId, thread: rootId) }
+            .safeAreaInset(edge: .bottom) {
+                if let mismatch = model.mismatch {
+                    UpdateNeededCard(store: model, mismatch: mismatch)
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 8)
+                } else {
+                    Composer(botId: botId, thread: rootId)
+                }
+            }
         }
         .background(Palette.background)
         .task(id: rootId) { await model.loadThread(botId, root: rootId) }

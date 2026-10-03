@@ -25,6 +25,10 @@ actor FakeRemote: RemoteTransport {
     private(set) var enqueued: [String] = []
     var cancelResult = MailboxCancel.cancelled
 
+    private var hello = #"{"hostId":"h1","name":"Mac","version":"3.0.0","os":"macos","backends":[],"rev":0}"#
+    /// What `hello` answers from now on (a host updated in place keeps its link).
+    func setHello(_ json: String) { hello = json }
+
     init(_ state: LinkState) { self.state = state }
 
     var subscribed: Bool { !eventSinks.isEmpty }
@@ -52,7 +56,7 @@ actor FakeRemote: RemoteTransport {
         }
         switch method {
         case "hello":
-            return Data(#"{"hostId":"h1","name":"Mac","version":"3.0.0","os":"macos","backends":[],"rev":0}"#.utf8)
+            return Data(hello.utf8)
         case "markRead":
             readAttempts += 1
             if failReadReceipts { throw HostError.unreachable }
@@ -555,4 +559,83 @@ extension FakeRemote {
     #expect(await until { await fake.calls.contains("respondPermission") })
     try await Task.sleep(for: .milliseconds(100))
     #expect(await fake.calls.filter { $0 == "respondPermission" }.count == 1)
+}
+
+// MARK: - Version compatibility (docs/reference/compatibility.md)
+
+private func helloJSON(version: String, minApp: String? = nil, backends: String = "[]") -> String {
+    let min = minApp.map { #","minApp":"\#($0)""# } ?? ""
+    return #"{"hostId":"h1","name":"Mac","version":"\#(version)"\#(min),"os":"macos","backends":\#(backends),"rev":0}"#
+}
+
+@MainActor @Test func hostNeedingANewerAppStopsSyncAndAsksForTheUpdate() async throws {
+    let (storage, suite) = context()
+    defer { UserDefaults(suiteName: suite)?.removePersistentDomain(forName: suite) }
+    let fake = FakeRemote(.ready(.relay))
+    await fake.setHello(helloJSON(version: "2.6.0", minApp: "2.5.0"))
+    let store = BotStore(computer: randomComputer("Mac"), route: .channel, clientKind: "ios", storage: storage, appVersion: "2.4.0") { fake }
+    defer { store.retire() }
+    store.setActive(true)
+    #expect(await until { store.mismatch == .updateApp(minimum: "2.5.0") })
+    #expect(await until { store.connection == .online })
+    try await Task.sleep(for: .milliseconds(200))
+    // Nothing this app can't read is synced.
+    #expect(await !fake.subscribed)
+}
+
+@MainActor @Test func updatedHostIsNoticedOnReconnect() async throws {
+    let (storage, suite) = context()
+    defer { UserDefaults(suiteName: suite)?.removePersistentDomain(forName: suite) }
+    let fake = FakeRemote(.ready(.relay))
+    await fake.setHello(helloJSON(version: "2.2.0"))
+    let store = BotStore(computer: randomComputer("Mac"), route: .channel, clientKind: "ios", storage: storage, appVersion: "2.4.0") { fake }
+    defer { store.retire() }
+    store.setActive(true)
+    #expect(await until { store.mismatch == .updateHost(version: "2.2.0", minimum: VersionMismatch.minHost) })
+    // The host updates and restarts: the link drops and comes back.
+    await fake.setHello(helloJSON(version: "2.4.0", minApp: "2.3.0"))
+    await fake.set(.connecting)
+    await fake.set(.ready(.relay))
+    #expect(await until { store.mismatch == nil })
+    #expect(await until { await fake.subscribed })
+    #expect(store.hostVersion == HostVersion(version: "2.4.0", minApp: "2.3.0"))
+}
+
+@MainActor @Test func unreadableHelloStillSaysWhichSideToUpdate() async throws {
+    let (storage, suite) = context()
+    defer { UserDefaults(suiteName: suite)?.removePersistentDomain(forName: suite) }
+    // A newer host whose hello this app can't decode, with or without a minApp that covers it.
+    for minApp in ["2.6.0", "2.0.0"] {
+        let fake = FakeRemote(.ready(.relay))
+        await fake.setHello(helloJSON(version: "2.6.0", minApp: minApp, backends: #""changed shape""#))
+        let store = BotStore(computer: randomComputer("Mac"), route: .channel, clientKind: "ios", storage: storage, appVersion: "2.4.0") { fake }
+        store.setActive(true)
+        #expect(await until { store.mismatch == .updateApp(minimum: "2.6.0") }, "minApp \(minApp)")
+        #expect(store.hello == nil)
+        store.retire()
+    }
+}
+
+@MainActor @Test func unreadableEventsAskForAnAppUpdateOnlyFromANewerHost() async throws {
+    let (storage, suite) = context()
+    defer { UserDefaults(suiteName: suite)?.removePersistentDomain(forName: suite) }
+    for (hostVersion, appIsBehind) in [("2.6.0", true), ("2.4.0", false)] {
+        let fake = FakeRemote(.ready(.relay))
+        await fake.setHello(helloJSON(version: hostVersion, minApp: "2.3.0"))
+        let store = BotStore(computer: randomComputer("Mac"), route: .channel, clientKind: "ios", storage: storage, appVersion: "2.4.0") { fake }
+        store.setActive(true)
+        let broken = #"{"type":"bot","bot":{"id":"b1","name":7}}"#
+        #expect(await until { await fake.eventSubscriptionCount == 1 })
+        await fake.emit(broken)
+        // The first one rewinds and subscribes again; the second one is final.
+        #expect(await until { await fake.eventSubscriptionCount == 2 })
+        await fake.emit(broken)
+        if appIsBehind {
+            #expect(await until { store.mismatch == .updateApp(minimum: hostVersion) })
+        } else {
+            try await Task.sleep(for: .milliseconds(200))
+            #expect(store.mismatch == nil)
+        }
+        store.retire()
+    }
 }
