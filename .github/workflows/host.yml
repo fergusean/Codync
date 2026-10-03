@@ -138,6 +138,8 @@ jobs:
             codync-host-*.tar.gz.sha256
             codync-host-*.update.json
             codync-host-*.update.json.sig
+            codync-host-*.compat.json
+            codync-host-*.compat.json.sig
 
   homebrew:
     # Keeps `brew install leepokai/codync/codync-host` (Linux, headless Macs) in step with releases.
