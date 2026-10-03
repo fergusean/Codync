@@ -138,6 +138,10 @@ struct MenuView: View {
                     updates.checkForUpdates()
                 }
                 .disabled(!updates.canCheckForUpdates && !updates.hasStagedUpdate)
+                if let app = updates.waitingForApp {
+                    // The release waits until paired iPhones can get the app it needs.
+                    Text("Waiting for iPhone app \(app) to pass App Store review")
+                }
                 Toggle("Automatically check for updates", isOn: Binding(
                     get: { updates.automaticallyChecksForUpdates },
                     set: { updates.automaticallyChecksForUpdates = $0 }

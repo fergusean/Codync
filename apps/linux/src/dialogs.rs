@@ -1354,12 +1354,15 @@ fn host_updates_group(ui: &App) -> adw::PreferencesGroup {
     group.add(&status);
     group.add(&automatic);
     let syncing = std::rc::Rc::new(std::cell::Cell::new(false));
+    // The App Store couldn't be asked: installing is the person's call ("Update anyway").
+    let skip_app_check = std::rc::Rc::new(std::cell::Cell::new(false));
     let render = {
-        let (status, install, automatic, syncing) = (
+        let (status, install, automatic, syncing, skip_app_check) = (
             status.clone(),
             install.clone(),
             automatic.clone(),
             syncing.clone(),
+            skip_app_check.clone(),
         );
         move |value: &Value| {
             let standalone = value["method"] == "standalone";
@@ -1367,24 +1370,47 @@ fn host_updates_group(ui: &App) -> adw::PreferencesGroup {
             status.set_title(
                 &version.map_or_else(|| "Host updates".to_owned(), |v| format!("Version {v}")),
             );
-            let description =
-                match value["method"].as_str() {
-                    Some("homebrew") => "Update with brew upgrade leepokai/codync/codync-host",
-                    Some("development") => "Rebuild this development installation to update it.",
-                    Some("appBundle") => "Update the Codync Mac app to update its bundled host.",
-                    _ => value["state"]["error"].as_str().unwrap_or_else(|| {
-                        match value["state"]["phase"].as_str() {
-                            Some("complete") => "Update installed and host restarted.",
-                            Some("installing" | "checking" | "scheduled") => "Updating the host…",
-                            Some("upToDate") => "The host is up to date.",
-                            _ => "Checks signed releases for this computer.",
-                        }
-                    }),
-                };
-            status.set_subtitle(description);
+            let required = value["state"]["requiredApp"]
+                .as_str()
+                .filter(|_| value["state"]["phase"] == "waitingForApp");
+            let in_review = required.and(value["state"]["appStoreVersion"].as_str());
+            let description = match (value["method"].as_str(), required, in_review) {
+                (Some("homebrew"), ..) => {
+                    "Update with brew upgrade leepokai/codync/codync-host".to_owned()
+                }
+                (Some("development"), ..) => {
+                    "Rebuild this development installation to update it.".to_owned()
+                }
+                (Some("appBundle"), ..) => {
+                    "Update the Codync Mac app to update its bundled host.".to_owned()
+                }
+                (_, Some(app), Some(store)) => format!(
+                    "Waits for the iPhone app {app} (the App Store has {store}); it installs after review."
+                ),
+                (_, Some(app), None) => format!(
+                    "Couldn't check the App Store for the iPhone app {app}. Paired iPhones may need it before they can connect."
+                ),
+                _ => value["state"]["error"]
+                    .as_str()
+                    .unwrap_or_else(|| match value["state"]["phase"].as_str() {
+                        Some("complete") => "Update installed and host restarted.",
+                        Some("installing" | "checking" | "scheduled") => "Updating the host…",
+                        Some("upToDate") => "The host is up to date.",
+                        _ => "Checks signed releases for this computer.",
+                    })
+                    .to_owned(),
+            };
+            status.set_subtitle(&description);
+            skip_app_check.set(required.is_some() && in_review.is_none());
+            install.set_label(if skip_app_check.get() {
+                "Update anyway"
+            } else {
+                "Install update"
+            });
             install.set_sensitive(
                 standalone
                     && version.is_some()
+                    && in_review.is_none()
                     && !matches!(
                         value["state"]["phase"].as_str(),
                         Some("installing" | "checking" | "scheduled" | "complete")
@@ -1458,7 +1484,7 @@ fn host_updates_group(ui: &App) -> adw::PreferencesGroup {
             );
             client::call(
                 "installHostUpdate",
-                json!({"force": false}),
+                json!({"force": false, "skipAppCheck": skip_app_check.get()}),
                 move |result| match result {
                     Ok(_) => {
                         status.set_subtitle("Updating the host; reconnecting when it is ready…");

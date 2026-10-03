@@ -109,3 +109,21 @@ import Testing
     #expect(VersionMismatch.check(app: "2.4.0", minHost: "2.3.0", hostVersion: "2.2.3", minApp: nil) == .updateHost(version: "2.2.3", minimum: "2.3.0"))
     #expect(VersionMismatch.check(app: "", minHost: "2.3.0", hostVersion: "2.6.0", minApp: "2.5.0") == nil)
 }
+
+@Test func remindersShowOnlyNewerReleasesNotDismissed() {
+    #expect(UpdateReminder.app(current: "2.4.0", store: "2.5.0", dismissed: nil) == "2.5.0")
+    #expect(UpdateReminder.app(current: "2.4.0", store: "2.5.0", dismissed: "2.5.0") == nil)
+    // Dismissing one release doesn't hide the next one.
+    #expect(UpdateReminder.app(current: "2.4.0", store: "2.6.0", dismissed: "2.5.0") == "2.6.0")
+    #expect(UpdateReminder.app(current: "2.5.0", store: "2.5.0", dismissed: nil) == nil)
+    // A store that lags behind this build (TestFlight, review) or can't be read says nothing.
+    #expect(UpdateReminder.app(current: "2.5.0", store: "2.4.0", dismissed: nil) == nil)
+    #expect(UpdateReminder.app(current: "2.5.0", store: nil, dismissed: nil) == nil)
+    #expect(UpdateReminder.app(current: "", store: "2.5.0", dismissed: nil) == nil)
+
+    #expect(UpdateReminder.host(app: "2.5.0", host: "2.4.3", dismissed: nil))
+    #expect(!UpdateReminder.host(app: "2.5.0", host: "2.4.3", dismissed: "2.5.0"))
+    #expect(UpdateReminder.host(app: "2.6.0", host: "2.4.3", dismissed: "2.5.0"))
+    #expect(!UpdateReminder.host(app: "2.5.0", host: "2.5.0", dismissed: nil))
+    #expect(!UpdateReminder.host(app: "2.5.0", host: nil, dismissed: nil))
+}

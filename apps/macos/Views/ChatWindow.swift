@@ -402,6 +402,7 @@ private struct ChatSplitView: View {
     @AppStorage("sidebarCompact") private var compact = false
     @AppStorage("desktopSidebarWidth") private var sidebarWidth = 296.0
     @State private var dragStartWidth: Double?
+    @State private var appUpdates = AppUpdates()
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// Sheets hang from the window's title bar; sized from it so they never run past its bottom edge.
     @State private var windowSize = CGSize(width: 1100, height: 760)
@@ -459,6 +460,8 @@ private struct ChatSplitView: View {
                 ScrollView {
                     LazyVStack(spacing: 2) {
                         if !compact {
+                            // Other computers on older releases (this Mac's own host is the app's).
+                            UpdateReminders(stores: stores.filter { shownIDs.contains($0.computer.id) })
                             ForEach(stores.filter { shownIDs.contains($0.computer.id) }, id: \.computer.id) { store in
                                 if let mismatch = store.mismatch {
                                     UpdateNeededCard(store: store, mismatch: mismatch)
@@ -691,6 +694,8 @@ private struct ChatSplitView: View {
         .environment(\.appUpdate, updates.canCheckForUpdates || updates.hasStagedUpdate
             ? AppUpdateAction { [updates] in updates.checkForUpdates() } : nil)
         .environment(\.hostUpdate, HostUpdateAction(available: { [host] in $0 === host.store }) { [host] _ in host.restart() })
+        // No App Store lookup here (Sparkle updates the Mac app); keeps reminder dismissals.
+        .environment(appUpdates)
         .codyncDialog("Start a new session?", isPresented: Binding(
             get: { newSessionBot != nil },
             set: { if !$0 { newSessionBot = nil } }

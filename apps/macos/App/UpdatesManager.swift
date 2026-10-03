@@ -1,4 +1,5 @@
 import AppKit
+import CodyncKit
 import Observation
 import Sparkle
 
@@ -13,6 +14,8 @@ final class UpdatesManager: NSObject, SPUUpdaterDelegate, @preconcurrency SPUSta
     private(set) var errorMessage: String?
     private(set) var hasStagedUpdate = false
     private(set) var preparingInstallation = false
+    /// The iPhone app the available release needs while the App Store doesn't have it yet.
+    private(set) var waitingForApp: String?
 
     var automaticallyChecksForUpdates = true {
         didSet { controller?.updater.automaticallyChecksForUpdates = automaticallyChecksForUpdates }
@@ -35,6 +38,11 @@ final class UpdatesManager: NSObject, SPUUpdaterDelegate, @preconcurrency SPUSta
     @ObservationIgnored private var automaticInstall: (() -> Void)?
     @ObservationIgnored private var servicesPrepared = false
     @ObservationIgnored private var preparationTask: Task<Bool, Never>?
+    /// For the App Store gate, refreshed before manual checks and every few hours: Sparkle asks
+    /// its delegate synchronously (docs/reference/compatibility.md).
+    @ObservationIgnored private var appStoreVersion: String?
+    @ObservationIgnored private var iphonesPaired: Bool?
+    @ObservationIgnored private var gateTask: Task<Void, Never>?
 
     func start(host: HostController) {
         guard controller == nil, isSupported else { return }
@@ -61,6 +69,29 @@ final class UpdatesManager: NSObject, SPUUpdaterDelegate, @preconcurrency SPUSta
             readSettings()
         } catch {
             errorMessage = error.localizedDescription
+        }
+        gateTask = Task { [weak self] in
+            while !Task.isCancelled, let interval = await self?.gateTick() {
+                try? await Task.sleep(for: interval)
+            }
+        }
+    }
+
+    /// Refreshes the gate; while waiting for the iPhone app it looks hourly and checks for the
+    /// update as soon as the App Store has it, instead of at the next daily check.
+    private func gateTick() async -> Duration {
+        await refreshGate()
+        if let required = waitingForApp, let store = appStoreVersion,
+           AppVersion.parse(store) != nil, !AppVersion.isBelow(store, required) {
+            controller?.updater.checkForUpdatesInBackground()
+        }
+        return .seconds(waitingForApp == nil ? 6 * 3600 : 3600)
+    }
+
+    private func refreshGate() async {
+        if let version = try? await AppStoreRelease.latestVersion() { appStoreVersion = version }
+        if let devices = try? await host?.store?.client?.devices() {
+            iphonesPaired = devices.contains { $0.platform == "ios" }
         }
     }
 
@@ -90,7 +121,10 @@ final class UpdatesManager: NSObject, SPUUpdaterDelegate, @preconcurrency SPUSta
         guard canCheckForUpdates else { return }
         errorMessage = nil
         NSApp.activate()
-        controller?.checkForUpdates(nil)
+        Task {
+            await refreshGate()
+            controller?.checkForUpdates(nil)
+        }
     }
 
     func retryInstallation() {
@@ -139,6 +173,24 @@ final class UpdatesManager: NSObject, SPUUpdaterDelegate, @preconcurrency SPUSta
             host.resumeAfterCancelledUpdate()
             return false
         }
+    }
+
+    /// A release that needs a newer iPhone app than the App Store has (still in review) waits,
+    /// so paired iPhones aren't asked for an update they can't get yet. Without an answer from
+    /// the App Store, background checks wait and a check the person started goes ahead.
+    func updater(_ updater: SPUUpdater, shouldProceedWithUpdate item: SUAppcastItem, updateCheck: SPUUpdateCheck) throws {
+        waitingForApp = nil
+        guard let required = item.propertiesDictionary["codync:minApp"] as? String,
+              AppVersion.isBelow(host?.store?.hostVersion?.minApp ?? "0", required),
+              iphonesPaired != false else { return }
+        if let appStoreVersion, AppVersion.parse(appStoreVersion) != nil, !AppVersion.isBelow(appStoreVersion, required) {
+            return
+        }
+        if appStoreVersion == nil && updateCheck == .updates { return }
+        waitingForApp = required
+        throw NSError(domain: "Codync", code: 1, userInfo: [NSLocalizedDescriptionKey:
+            "Codync \(item.displayVersionString) needs the iPhone app \(required), which isn't in the App Store yet. "
+            + "It installs once that version passes review."])
     }
 
     func updater(_ updater: SPUUpdater, shouldPostponeRelaunchForUpdate item: SUAppcastItem,

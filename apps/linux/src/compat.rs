@@ -30,7 +30,7 @@ fn parse(version: &str) -> Option<(u64, u64, u64)> {
     parts.next().is_none().then_some(v)
 }
 
-fn below(version: &str, minimum: &str) -> bool {
+pub fn below(version: &str, minimum: &str) -> bool {
     matches!((parse(version), parse(minimum)), (Some(v), Some(m)) if v < m)
 }
 

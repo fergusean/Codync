@@ -497,8 +497,9 @@ public final class BotStore {
             return
         }
         guard !Task.isCancelled, !retired else { return }
-        noteHostVersion(HostVersion(version: h.version, minApp: h.minApp))
+        // hello first: whatever the version change shows (notices, reminders) reads it.
         hello = h
+        noteHostVersion(HostVersion(version: h.version, minApp: h.minApp))
         if case .loopback = route {
             updateComputer { c in
                 c.name = h.name

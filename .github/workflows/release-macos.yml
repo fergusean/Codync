@@ -131,6 +131,9 @@ jobs:
             --download-url-prefix "https://github.com/leepokai/Codync/releases/download/v${VERSION}/" \
             --link https://www.codync.dev/ \
             -o build/appcast.xml build/updates
+          # The iPhone app this release needs: Macs with iPhones wait until the App Store has it.
+          MIN_APP=$("$RUNNER_TEMP/Codync.app/Contents/MacOS/codync-host" compat | python3 -c 'import json,sys; print(json.load(sys.stdin)["minApp"])')
+          python3 packaging/updates/annotate-appcast.py build/appcast.xml "$MIN_APP"
           python3 -m venv "$RUNNER_TEMP/update-verification"
           "$RUNNER_TEMP/update-verification/bin/pip" install 'cryptography>=44,<47'
           "$RUNNER_TEMP/update-verification/bin/python" packaging/updates/verify-appcast.py \
