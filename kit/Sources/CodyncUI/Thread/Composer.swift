@@ -128,10 +128,17 @@ struct Composer: View {
             .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in clipboardTick += 1 }
             .onReceive(NotificationCenter.default.publisher(for: UIPasteboard.changedNotification)) { _ in clipboardTick += 1 }
         #else
-            .onAppear(perform: installPasteMonitor)
+            .onAppear {
+                ActivationDiagnostics.record("composer.appeared")
+                installPasteMonitor()
+            }
             .onDisappear {
+                ActivationDiagnostics.record("composer.disappeared")
                 if let pasteMonitor { NSEvent.removeMonitor(pasteMonitor) }
                 pasteMonitor = nil
+            }
+            .onChange(of: focused) { _, value in
+                ActivationDiagnostics.record(value ? "composer.focused" : "composer.unfocused")
             }
         #endif
         .dropDestination(for: PickedFile.self) { picked, _ in
