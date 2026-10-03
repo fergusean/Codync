@@ -4,7 +4,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import { AppleLogo, GithubLogo } from "@phosphor-icons/react";
 import Image from "next/image";
 import Phone from "./phone";
-import { APP_STORE, DMG, GITHUB } from "../links";
+import { APP_STORE, DMG, GITHUB, PRODUCT_HUNT } from "../links";
 
 const ease = [0.16, 1, 0.3, 1] as const;
 
@@ -61,6 +61,22 @@ export default function Hero() {
               </a>
             </div>
           </motion.div>
+          <motion.a
+            {...rise(0.24)}
+            href={PRODUCT_HUNT}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-6 inline-flex transition hover:opacity-80"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element -- live badge served by Product Hunt */}
+            <img
+              src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1267264&theme=dark"
+              alt="Codync on Product Hunt"
+              width={250}
+              height={54}
+              className="h-[54px] w-[250px]"
+            />
+          </motion.a>
         </div>
 
         <div className="relative mx-auto w-full max-w-[26rem] md:max-w-none">
