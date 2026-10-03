@@ -71,11 +71,21 @@ final class UpdatesManager: NSObject, SPUUpdaterDelegate, @preconcurrency SPUSta
             errorMessage = error.localizedDescription
         }
         gateTask = Task { [weak self] in
-            while !Task.isCancelled {
-                await self?.refreshGate()
-                try? await Task.sleep(for: .seconds(6 * 3600))
+            while !Task.isCancelled, let interval = await self?.gateTick() {
+                try? await Task.sleep(for: interval)
             }
         }
+    }
+
+    /// Refreshes the gate; while waiting for the iPhone app it looks hourly and checks for the
+    /// update as soon as the App Store has it, instead of at the next daily check.
+    private func gateTick() async -> Duration {
+        await refreshGate()
+        if let required = waitingForApp, let store = appStoreVersion,
+           AppVersion.parse(store) != nil, !AppVersion.isBelow(store, required) {
+            controller?.updater.checkForUpdatesInBackground()
+        }
+        return .seconds(waitingForApp == nil ? 6 * 3600 : 3600)
     }
 
     private func refreshGate() async {
