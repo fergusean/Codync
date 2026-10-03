@@ -52,6 +52,8 @@ public final class BotStore {
     public private(set) var hostRoute: HostRoute?
     public private(set) var client: HostClient?
     public private(set) var hello: Hello?
+    /// The host's version and `minApp`, kept even when the rest of its `hello` can't be read.
+    public private(set) var hostVersion: HostVersion?
     public private(set) var bots: [String: Bot] = [:]
     public private(set) var entries: [String: [Entry]] = [:]
     public private(set) var usage: Usage
@@ -111,6 +113,12 @@ public final class BotStore {
     @ObservationIgnored private var voiceCalls: [UUID: VoiceCall] = [:]
     private var saveTask: Task<Void, Never>?
     private var rewound = false
+    /// Events stayed undecodable after the rewind.
+    private var unreadable = false
+    /// This app's marketing version, compared with the host's `minApp`.
+    private let appVersion: String
+    /// While one side needs an update there's nothing to sync; `hello` is asked again this often.
+    private static let mismatchRecheck: Duration = .seconds(30)
 
     /// `.channel` loads this context's `DeviceIdentity` itself.
     public convenience init(computer: Computer, route: Route, clientKind: String, storage: SharedStore.Context) {
@@ -124,7 +132,9 @@ public final class BotStore {
     }
 
     init(computer: Computer, route: Route, clientKind: String, storage: SharedStore.Context,
+         appVersion: String = AppVersion.current,
          transport: @escaping @MainActor () async throws -> any HostTransport) {
+        self.appVersion = appVersion
         self.computer = computer
         self.route = route
         self.clientKind = clientKind
@@ -155,6 +165,22 @@ public final class BotStore {
     public var shownConnection: Connection { waiting > 0 && connection == .online ? .connecting : connection }
 
     public var hostName: String { hello?.name ?? computer.name }
+
+    /// Which side must update before this app and the host can work together
+    /// (docs/reference/compatibility.md). `nil` until the host has answered, and whenever
+    /// a version can't be read: an unknown is never a reason to lock someone out.
+    public var mismatch: VersionMismatch? {
+        guard let hostVersion else { return nil }
+        if let found = VersionMismatch.check(app: appVersion, hostVersion: hostVersion.version, minApp: hostVersion.minApp) {
+            return found
+        }
+        // The host sends data this app can't read and is newer: this app is behind,
+        // whatever the host's `minApp` says.
+        if unreadable, AppVersion.isBelow(appVersion, hostVersion.version) {
+            return .updateApp(minimum: hostVersion.version)
+        }
+        return nil
+    }
 
     /// Roster order: pinned first (manual order not tracked yet), then most recent activity.
     public var roster: [Bot] {
@@ -413,21 +439,14 @@ public final class BotStore {
         var backoff: Double = 1
         while !Task.isCancelled {
             do {
-                if hello == nil || hello?.hostId != hostId {
-                    let h = try await client.hello()
-                    guard !Task.isCancelled, !retired else { return }
-                    hello = h
-                    if case .loopback = route {
-                        updateComputer { c in
-                            c.name = h.name
-                            if let device = h.device { c.device = device }
-                        }
-                    }
-                    // Host upgraded since the cache was written: its data may carry new fields.
-                    if let stamp = cacheStamp, stamp != "\(Self.appBuild)/\(h.version)" {
-                        rev = 0
-                        cacheStamp = nil
-                    }
+                try await refreshHello(client)
+                guard !Task.isCancelled, !retired else { return }
+                if mismatch != nil {
+                    // Reached, but nothing to sync until one side updates. A host update restarts
+                    // the link (and this loop) anyway; this catches one that doesn't.
+                    setConnection(.online)
+                    try await Task.sleep(for: Self.mismatchRecheck)
+                    continue
                 }
                 if case .loopback = route {
                     accessRequests = (try? await client.accessRequests()) ?? accessRequests
@@ -460,6 +479,46 @@ public final class BotStore {
             try? await Task.sleep(for: .seconds(backoff))
             backoff = min(backoff * 2, 20)
         }
+    }
+
+    /// Asked on every (re)connect: the host may have been updated while this app was away.
+    private func refreshHello(_ client: HostClient) async throws {
+        let h: Hello
+        do {
+            h = try await client.hello()
+        } catch let error as DecodingError {
+            // Its version and `minApp` still say which side to update.
+            let version: HostVersion = try await client.call("hello")
+            guard !Task.isCancelled, !retired else { return }
+            log.error("undecodable hello from host \(version.version)")
+            noteHostVersion(version)
+            Motion.animate { unreadable = true }
+            if mismatch == nil { throw error }
+            return
+        }
+        guard !Task.isCancelled, !retired else { return }
+        // hello first: whatever the version change shows (notices, reminders) reads it.
+        hello = h
+        noteHostVersion(HostVersion(version: h.version, minApp: h.minApp))
+        if case .loopback = route {
+            updateComputer { c in
+                c.name = h.name
+                if let device = h.device { c.device = device }
+            }
+        }
+    }
+
+    private func noteHostVersion(_ new: HostVersion) {
+        let cached = cacheStamp.map { $0 != "\(Self.appBuild)/\(new.version)" } ?? false
+        if cached || (hostVersion.map { $0.version != new.version } ?? false) {
+            // A different host version: its data may carry new fields, so fetch it all again.
+            rev = 0
+            rewound = false
+            unreadable = false
+        }
+        cacheStamp = nil
+        // An update notice may appear or go away with it.
+        if new != hostVersion { Motion.animate { hostVersion = new } }
     }
 
     private func apply(_ event: HostEvent) {
@@ -518,6 +577,10 @@ public final class BotStore {
                 rewound = true
                 rev = 0
                 restartEvents()
+            } else if !unreadable {
+                Motion.animate { unreadable = true }
+                // A newer host this app can't follow: stop syncing and ask for an update.
+                if mismatch != nil { restartEvents() }
             }
         }
         scheduleSave()

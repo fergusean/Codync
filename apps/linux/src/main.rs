@@ -3,6 +3,7 @@
 mod animation;
 mod avatar;
 mod client;
+mod compat;
 mod compose;
 mod connections;
 mod dialogs;

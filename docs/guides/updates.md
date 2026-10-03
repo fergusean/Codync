@@ -1,5 +1,8 @@
 # App and host updates
 
+A client and a host on versions that can't work together say which one to update:
+[Client and host compatibility](../reference/compatibility.md).
+
 ## macOS
 
 Release builds use Sparkle 2.10.0. Open **Settings → Updates** in the menu bar

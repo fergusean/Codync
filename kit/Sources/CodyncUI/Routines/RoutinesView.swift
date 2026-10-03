@@ -10,12 +10,11 @@ struct RoutinesView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var routines: [Routine] = []
     @State private var runs: [RoutineRun] = []
-    /// The routine the editor is open on; nil with `showEditor` sets up a new one.
-    @State private var editingId: String?
+    /// The open editor: on a routine, or (`routineId` nil) setting up a new one.
+    @State private var editing: EditorTarget?
     @State private var loaded = false
     @State private var busy = false
     @State private var error: String?
-    @State private var showEditor = false
     @State private var loadError: String?
 
     var body: some View {
@@ -44,16 +43,16 @@ struct RoutinesView: View {
                 do { try await Task.sleep(for: .seconds(3)) } catch { break }
             } while !Task.isCancelled
         }
-        .codyncSheet(isPresented: $showEditor) {
-            RoutineEditorView(botId: botId, routine: routines.first { $0.id == editingId }) { saved in
-                let created = editingId == nil
+        // Item-based, so the editor always gets the routine it was opened on.
+        .codyncSheet(item: $editing) { target in
+            RoutineEditorView(botId: botId, routine: routines.first { $0.id == target.routineId }) { saved in
                 if let i = routines.firstIndex(where: { $0.id == saved?.id }), let saved { routines[i] = saved }
                 else if let saved { routines.append(saved) }
                 // A new webhook routine stays open: its URL and key exist only now.
-                if created, let saved, saved.triggers.contains(where: { $0.type == "webhook" }) {
-                    animate { editingId = saved.id }
+                if target.routineId == nil, let saved, saved.triggers.contains(where: { $0.type == "webhook" }) {
+                    editing = EditorTarget(id: target.id, routineId: saved.id)
                 } else {
-                    animate { showEditor = false }
+                    animate { editing = nil }
                 }
                 Task { await load() }
             }
@@ -137,7 +136,7 @@ struct RoutinesView: View {
     }
 
     private func animate(_ change: () -> Void) { withAnimation(Motion.reduced(Motion.layout, reduceMotion), change) }
-    private func open(_ id: String?) { animate { editingId = id; showEditor = true } }
+    private func open(_ id: String?) { animate { editing = EditorTarget(id: UUID().uuidString, routineId: id) } }
     private func edit(_ text: String) {
         animate {
             model.routineDrafts[botId] = text
@@ -166,4 +165,10 @@ struct RoutinesView: View {
             loadError = nil
         } catch is CancellationError {} catch { self.loadError = error.localizedDescription }
     }
+}
+
+private struct EditorTarget: Identifiable {
+    /// One per opening; kept when a new routine is saved and the editor stays on it.
+    let id: String
+    let routineId: String?
 }

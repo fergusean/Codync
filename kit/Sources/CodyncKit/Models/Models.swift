@@ -330,7 +330,8 @@ public struct Hello: Codable, Sendable {
     public var computerId: ComputerID?
     public var signKey: String?
     public var boxKey: String?
-    public var `protocol`: Int?
+    /// The oldest app version this host serves (missing from hosts that predate the check).
+    public var minApp: String?
     /// The cloud relay the host uses; nil = cloud off.
     public var cloud: String?
 }
@@ -456,7 +457,7 @@ public struct BotDraft: Codable, Hashable, Sendable {
 
     public init(name: String = "", description: String = "", avatarColor: String = AvatarPalette.colors.randomElement()!.id,
                 avatarShape: String = AvatarPalette.shapes.randomElement()!, backend: String = "claude", cwd: String = "",
-                permission: String = "ask") {
+                permission: String = "auto") {
         self.name = name
         self.description = description
         self.avatarColor = avatarColor
@@ -505,7 +506,7 @@ extension Bot {
         command = try c.decodeIfPresent(String.self, forKey: .command)
         cwd = try c.decodeIfPresent(String.self, forKey: .cwd) ?? ""
         managedWorkspace = try c.decodeIfPresent(Bool.self, forKey: .managedWorkspace) ?? false
-        permission = try c.decodeIfPresent(String.self, forKey: .permission) ?? "ask"
+        permission = try c.decodeIfPresent(String.self, forKey: .permission) ?? "auto"
         model = try c.decodeIfPresent(String.self, forKey: .model)
         pinned = try c.decodeIfPresent(Bool.self, forKey: .pinned) ?? false
         hidden = try c.decodeIfPresent(Bool.self, forKey: .hidden) ?? false

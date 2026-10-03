@@ -43,6 +43,16 @@ struct CodyncMacApp: App {
         }
         .defaultSize(width: 1100, height: 760)
         .windowStyle(.hiddenTitleBar)
+        .commands {
+            CommandGroup(after: .toolbar) {
+                Button("Bigger") { conversationFontSize = ConversationTypography.step(conversationFontSize, up: true) }
+                    .keyboardShortcut("+")
+                Button("Smaller") { conversationFontSize = ConversationTypography.step(conversationFontSize, up: false) }
+                    .keyboardShortcut("-")
+                Button("Actual Size") { conversationFontSize = ConversationTypography.defaultSize }
+                    .keyboardShortcut("0")
+            }
+        }
 
         MenuBarExtra {
             MenuView()
@@ -137,6 +147,10 @@ struct MenuView: View {
                     updates.checkForUpdates()
                 }
                 .disabled(!updates.canCheckForUpdates && !updates.hasStagedUpdate)
+                if let app = updates.waitingForApp {
+                    // The release waits until paired iPhones can get the app it needs.
+                    Text("Waiting for iPhone app \(app) to pass App Store review")
+                }
                 Toggle("Automatically check for updates", isOn: Binding(
                     get: { updates.automaticallyChecksForUpdates },
                     set: { updates.automaticallyChecksForUpdates = $0 }

@@ -39,6 +39,10 @@ pub struct State {
     pub hide_details: bool,
     pub search: String,
     pub online: bool,
+    /// This app and the host can't work together until one of them updates.
+    pub mismatch: Option<crate::compat::Mismatch>,
+    /// The host/app versions a newer-release reminder was shown for (once each).
+    reminded: Option<String>,
     pub outbox: HashMap<String, Outgoing>,
     history_busy: HashSet<String>,
     history_done: HashSet<String>,
@@ -372,6 +376,7 @@ pub fn build(app: &adw::Application) -> App {
         .css_classes(["search-field"])
         .build();
     let banner = adw::Banner::new("Reconnecting to the Codync host…");
+
     let (sidebar_box, roster, roster_empty, account_btn) = sidebar(&new_btn, &search, &banner);
     let sidebar_page = adw::NavigationPage::new(&sidebar_box, "Codync");
 
@@ -605,6 +610,11 @@ pub fn build(app: &adw::Application) -> App {
     });
 
     // Wiring
+    {
+        let ui2 = ui.clone();
+        ui.banner
+            .connect_button_clicked(move |_| update_for_mismatch(&ui2));
+    }
     {
         let ui2 = ui.clone();
         ui.roster.connect_row_activated(move |_, row| {
@@ -897,7 +907,11 @@ fn connect(ui: &App) {
     client::call("hello", client::empty(), move |r| match r {
         Ok(hello) => {
             let mut st = ui2.state.borrow_mut();
+            st.mismatch = crate::compat::check(env!("CARGO_PKG_VERSION"), &hello);
             st.hello = hello;
+            drop(st);
+            remind_updates(&ui2);
+            let mut st = ui2.state.borrow_mut();
             // Open a specific bot on launch: `codync --bot <id>` (also used by desktop notifications).
             let args: Vec<String> = std::env::args().collect();
             if let Some(i) = args.iter().position(|a| a == "--bot") {
@@ -918,6 +932,120 @@ fn connect(ui: &App) {
     });
 }
 
+fn recheck_versions(ui: &App) {
+    let ui2 = ui.clone();
+    client::call("hello", client::empty(), move |r| {
+        if let Ok(hello) = r {
+            let mut st = ui2.state.borrow_mut();
+            st.mismatch = crate::compat::check(env!("CARGO_PKG_VERSION"), &hello);
+            st.hello = hello;
+            drop(st);
+            remind_updates(&ui2);
+            schedule(&ui2);
+        }
+    });
+}
+
+/// Still compatible, but one side is behind a release the other already runs: a toast
+/// (gone on its own or when closed) offers the update, once per pair of versions.
+fn remind_updates(ui: &App) {
+    let (host_version, host) = {
+        let mut st = ui.state.borrow_mut();
+        let host_version = st.hello["version"].as_str().unwrap_or_default().to_owned();
+        let key = format!("{host_version}/{}", env!("CARGO_PKG_VERSION"));
+        if st.mismatch.is_some() || st.reminded.as_deref() == Some(key.as_str()) {
+            return;
+        }
+        st.reminded = Some(key);
+        let host = st.hello["name"]
+            .as_str()
+            .unwrap_or("this computer")
+            .to_owned();
+        (host_version, host)
+    };
+    let own = env!("CARGO_PKG_VERSION");
+    let (title, button, host_side) = if crate::compat::below(&host_version, own) {
+        (
+            format!("Codync {own} is available for {host} (it runs {host_version})"),
+            "Update host",
+            true,
+        )
+    } else if crate::compat::below(own, &host_version) {
+        (
+            format!("Codync {host_version} is available for this app"),
+            "Get update",
+            false,
+        )
+    } else {
+        return;
+    };
+    let reminder = adw::Toast::builder()
+        .title(title)
+        .button_label(button)
+        .timeout(10)
+        .build();
+    let ui2 = ui.clone();
+    reminder.connect_button_clicked(move |_| {
+        if host_side {
+            let ui3 = ui2.clone();
+            client::call(
+                "installHostUpdate",
+                json!({"force": false}),
+                move |r| match r {
+                    Ok(_) => toast(&ui3, "Updating the host; reconnecting when it's ready…"),
+                    Err(e) => toast(&ui3, &e),
+                },
+            );
+        } else {
+            let _ = gtk::gio::AppInfo::launch_default_for_uri(
+                "https://github.com/leepokai/Codync/releases/latest",
+                None::<&gtk::gio::AppLaunchContext>,
+            );
+        }
+    });
+    ui.toasts.add_toast(reminder);
+}
+
+/// While one side needs an update nothing is sent: says so and returns true.
+pub fn blocked_by_update(ui: &App) -> bool {
+    let st = ui.state.borrow();
+    let Some(m) = &st.mismatch else {
+        return false;
+    };
+    let text = crate::compat::text(m, st.hello["name"].as_str().unwrap_or("this computer"));
+    drop(st);
+    toast(ui, &text);
+    true
+}
+
+/// The banner's button: what this app can do about a version mismatch.
+fn update_for_mismatch(ui: &App) {
+    let Some(mismatch) = ui.state.borrow().mismatch.clone() else {
+        return;
+    };
+    match mismatch {
+        crate::compat::Mismatch::UpdateHost { .. } => {
+            let ui2 = ui.clone();
+            client::call(
+                "installHostUpdate",
+                json!({"force": false}),
+                move |r| match r {
+                    // The host restarts; the reconnect checks the versions again.
+                    Ok(_) => toast(&ui2, "Updating the host; reconnecting when it's ready…"),
+                    Err(e) => toast(&ui2, &e),
+                },
+            );
+        }
+        crate::compat::Mismatch::UpdateApp { .. } => {
+            // The desktop app is package-managed; its releases are on GitHub.
+            let _ = gtk::gio::AppInfo::launch_default_for_uri(
+                "https://github.com/leepokai/Codync/releases/latest",
+                None::<&gtk::gio::AppLaunchContext>,
+            );
+        }
+    }
+}
+
 pub fn refresh_screen(ui: &App) {
     let ui2 = ui.clone();
     client::call("screenStatus", client::empty(), move |r| {
@@ -935,7 +1063,13 @@ fn handle(ui: &App, ev: Event) {
     {
         let mut st = ui.state.borrow_mut();
         match ev {
-            Event::Online(on) => st.online = on,
+            Event::Online(on) => {
+                if on && !st.online {
+                    // Back after a drop: the host may have been updated (or replaced) meanwhile.
+                    recheck_versions(ui);
+                }
+                st.online = on;
+            }
             Event::Message(m) => match m["type"].as_str().unwrap_or_default() {
                 "hello" | "usage" => st.usage = m["usage"].clone(),
                 "bot" => {
@@ -1089,7 +1223,23 @@ pub fn schedule(ui: &App) {
 }
 
 pub fn render(ui: &App) {
-    ui.banner.set_revealed(!ui.state.borrow().online);
+    {
+        let st = ui.state.borrow();
+        let host = st.hello["name"].as_str().unwrap_or("this computer");
+        // A version mismatch outranks a reconnect: it won't go away by waiting.
+        if let Some(m) = &st.mismatch {
+            ui.banner.set_title(&crate::compat::text(m, host));
+            ui.banner.set_button_label(Some(match m {
+                crate::compat::Mismatch::UpdateApp { .. } => "Get update",
+                crate::compat::Mismatch::UpdateHost { .. } => "Update host",
+            }));
+            ui.banner.set_revealed(true);
+        } else {
+            ui.banner.set_title("Reconnecting to the Codync host…");
+            ui.banner.set_button_label(None);
+            ui.banner.set_revealed(!st.online);
+        }
+    }
     render_roster(ui);
     let composing = ui.state.borrow().composing;
     if composing {
@@ -1914,6 +2064,10 @@ fn send(ui: &App, in_thread: bool) {
     };
     let c = ui.composer(in_thread);
     if (text.is_empty() && c.files.borrow().is_empty()) || (in_thread && thread.is_none()) {
+        return;
+    }
+    if blocked_by_update(ui) {
+        // The draft stays; it sends once the update is done.
         return;
     }
     let files = c.files.take();

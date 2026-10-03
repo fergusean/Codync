@@ -262,10 +262,11 @@ pub async fn dispatch(hub: &Arc<Hub>, caller: &Caller, method: &str, b: Value) -
         "installHostUpdate" => {
             let port = hub.port;
             let force = b["force"].as_bool().unwrap_or(false);
+            let skip_app_check = b["skipAppCheck"].as_bool().unwrap_or(false);
             if !force && hub.busy() {
                 bail!("host is busy; retry when idle or explicitly allow interruption");
             }
-            tokio::task::spawn_blocking(move || crate::update::spawn_worker(port, force)).await??;
+            tokio::task::spawn_blocking(move || crate::update::spawn_worker(port, force, skip_app_check)).await??;
             json!({"scheduled": true})
         }
         "credentialUpdateConnector" => {
@@ -400,10 +401,10 @@ pub async fn dispatch(hub: &Arc<Hub>, caller: &Caller, method: &str, b: Value) -
                 "computerId": hub.identity.computer_id(),
                 "signKey": hub.identity.sign_pub_b64(),
                 "boxKey": hub.identity.box_pub_b64(),
-                "protocol": 1,
                 "cloud": crate::remote::cloud::url(&hub.store),
                 "name": crate::service::host_name(),
                 "version": env!("CARGO_PKG_VERSION"),
+                "minApp": crate::compat::MIN_APP,
                 "os": std::env::consts::OS,
                 "device": tokio::task::spawn_blocking(crate::service::device).await?,
                 "home": dirs::home_dir().map(|p| p.to_string_lossy().into_owned()),

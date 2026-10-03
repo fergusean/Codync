@@ -320,6 +320,9 @@ fn remove(ui: &App, id: &str) {
 
 /// Return in To: picks the top match, or with the field empty, starts the chat.
 fn submit_to(ui: &App) {
+    if ui::blocked_by_update(ui) {
+        return;
+    }
     if ui.compose_page.to.text().trim().is_empty() {
         start(ui);
     } else if let Some(first) = matches(ui).first() {
@@ -331,6 +334,9 @@ fn submit_to(ui: &App) {
 
 /// One bot: its chat. Several: their group chat.
 fn start(ui: &App) {
+    if ui::blocked_by_update(ui) {
+        return;
+    }
     let ids = ui.compose_page.recipients.borrow().clone();
     match ids.len() {
         0 => {}
@@ -385,7 +391,7 @@ fn create(ui: &App) {
         let backends = st.hello["backends"].as_array().cloned().unwrap_or_default();
         let n = uuid::Uuid::new_v4().as_u128() as usize;
         json!({
-            "name": name, "description": "", "permission": "ask", "model": null, "command": null,
+            "name": name, "description": "", "permission": "auto", "model": null, "command": null,
             "cwd": "",
             "avatarShape": avatar::SHAPES[n % avatar::SHAPES.len()],
             "avatarColor": avatar::COLORS[(n / 8) % avatar::COLORS.len()].0,

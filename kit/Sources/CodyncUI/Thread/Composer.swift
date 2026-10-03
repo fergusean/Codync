@@ -119,6 +119,7 @@ struct Composer: View {
                 box
             }
             .composerSurface(in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+            .animation(Motion.layout, value: draft)
         }
         .animation(Motion.layout, value: files.map(\.id))
         #if os(iOS)

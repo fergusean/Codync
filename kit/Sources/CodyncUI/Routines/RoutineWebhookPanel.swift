@@ -21,7 +21,7 @@ struct RoutineWebhookPanel: View {
                     value(webhook.url ?? webhook.localUrl, copy: "url")
                 }
                 Field("Key") {
-                    value(showKey ? webhook.key : String(repeating: "•", count: 24), copy: "key") {
+                    value(showKey ? webhook.key : String(repeating: "•", count: 16), copy: "key") {
                         IconButton(showKey ? "Hide key" : "Show key", systemImage: showKey ? "eye.slash" : "eye") {
                             withAnimation(Motion.reduced(Motion.hover, reduceMotion)) { showKey.toggle() }
                         }

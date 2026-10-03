@@ -48,6 +48,11 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: apps/linux
+      - name: Version matches the host
+        # The host's minApp is compared with this app's version (docs/reference/compatibility.md).
+        run: |
+          read_version() { python3 -c 'import sys, tomllib; print(tomllib.load(open(sys.argv[1], "rb"))["package"]["version"])' "$1"; }
+          test "$(read_version Cargo.toml)" = "$(read_version ../../host/Cargo.toml)" || { echo 'apps/linux and host versions must match'; exit 1; }
       - run: cargo clippy -- -D warnings
       - run: cargo test
       - name: Verify native UI flows
@@ -133,6 +138,8 @@ jobs:
             codync-host-*.tar.gz.sha256
             codync-host-*.update.json
             codync-host-*.update.json.sig
+            codync-host-*.compat.json
+            codync-host-*.compat.json.sig
 
   homebrew:
     # Keeps `brew install leepokai/codync/codync-host` (Linux, headless Macs) in step with releases.

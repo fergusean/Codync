@@ -409,6 +409,7 @@ private struct ChatSplitView: View {
     @AppStorage("sidebarCompact") private var compact = false
     @AppStorage("desktopSidebarWidth") private var sidebarWidth = 296.0
     @State private var dragStartWidth: Double?
+    @State private var appUpdates = AppUpdates()
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// Sheets hang from the window's title bar; sized from it so they never run past its bottom edge.
     @State private var windowSize = CGSize(width: 1100, height: 760)
@@ -418,7 +419,8 @@ private struct ChatSplitView: View {
     private var accounts: AccountStore { host.accounts }
     /// Every computer with a store, in the account's order.
     private var stores: [BotStore] { accounts.computers.compactMap { accounts.store(for: $0.id) } }
-    private var onlineStores: [BotStore] { stores.filter { shownIDs.contains($0.computer.id) && $0.connection == .online } }
+    /// Computers that can take a new chat: shown, online, and on versions that work together.
+    private var onlineStores: [BotStore] { stores.filter { shownIDs.contains($0.computer.id) && $0.connection == .online && $0.mismatch == nil } }
     private var selectedStore: BotStore? { accounts.selection.flatMap { accounts.store(for: $0.computerId) } }
     private var composeStore: BotStore? { composeComputer.flatMap { accounts.store(for: $0) } }
     private var shownIDs: Set<ComputerID> {
@@ -483,6 +485,17 @@ private struct ChatSplitView: View {
                 }
                 ScrollView {
                     LazyVStack(spacing: 2) {
+                        if !compact {
+                            // Other computers on older releases (this Mac's own host is the app's).
+                            UpdateReminders(stores: stores.filter { shownIDs.contains($0.computer.id) })
+                            ForEach(stores.filter { shownIDs.contains($0.computer.id) }, id: \.computer.id) { store in
+                                if let mismatch = store.mismatch {
+                                    UpdateNeededCard(store: store, mismatch: mismatch)
+                                        .padding(.bottom, 8)
+                                        .transition(.opacity)
+                                }
+                            }
+                        }
                         ForEach(visibleRoster) { item in
                             if let store = accounts.store(for: item.ref.computerId) {
                                 row(item.bot, store)
@@ -511,7 +524,9 @@ private struct ChatSplitView: View {
                     }
                 }
                 .overlay {
-                    if visibleRoster.isEmpty && !compact {
+                    // A computer waiting for an update shows its card instead; its bots aren't known yet.
+                    if visibleRoster.isEmpty && !compact
+                        && !stores.contains(where: { shownIDs.contains($0.computer.id) && $0.mismatch != nil }) {
                         VStack(spacing: 8) {
                             Text(search.isEmpty ? (isConnecting ? "Connecting…" : "No bots yet") : "No matching bots")
                                 .appFont(.system(size: 13, weight: .medium))
@@ -711,6 +726,13 @@ private struct ChatSplitView: View {
             sidebarWidth = min(sidebarWidth, max(260, $0.width - 420))
         }
         .hiddenWindowTitle()
+        // A computer and this app on versions that don't work together: Sparkle updates the app;
+        // this Mac's own host is put back on the app's bundled copy.
+        .environment(\.appUpdate, updates.canCheckForUpdates || updates.hasStagedUpdate
+            ? AppUpdateAction { [updates] in updates.checkForUpdates() } : nil)
+        .environment(\.hostUpdate, HostUpdateAction(available: { [host] in $0 === host.store }) { [host] _ in host.restart() })
+        // No App Store lookup here (Sparkle updates the Mac app); keeps reminder dismissals.
+        .environment(appUpdates)
         .codyncDialog("Start a new session?", isPresented: Binding(
             get: { newSessionBot != nil },
             set: { if !$0 { newSessionBot = nil } }
@@ -972,7 +994,7 @@ extension ChatSplitView {
     fileprivate func compose(group: Bool = false) {
         composingGroup = group
         // The selected bot's computer if it's online, else this Mac, else any online one.
-        let target = [selectedStore, host.store].compactMap { $0 }.first { shownIDs.contains($0.computer.id) && $0.connection == .online } ?? onlineStores.first
+        let target = [selectedStore, host.store].compactMap { $0 }.first { store in onlineStores.contains { $0 === store } } ?? onlineStores.first
         guard let target else { return }
         if !composing { previousSelection = accounts.selection }
         composeComputer = target.computer.id

@@ -8,6 +8,11 @@ public struct ConversationTypography: Sendable {
 
     public let pointSize: Double
 
+    /// The next larger (`up`) or smaller size in `sizes` for ⌘+ / ⌘−, staying at either end.
+    public static func step(_ size: Double, up: Bool) -> Double {
+        (up ? sizes.first { $0 > size } : sizes.last { $0 < size }) ?? size
+    }
+
     public init(pointSize: Double = ConversationTypography.defaultSize) {
         self.pointSize = pointSize.isFinite ? min(max(pointSize, 11), 18) : Self.defaultSize
     }
