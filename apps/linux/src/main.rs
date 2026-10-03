@@ -1,5 +1,6 @@
 //! Codync for Linux — the same bot chat as the iPhone and Mac apps, in GTK 4 + libadwaita.
 
+mod animation;
 mod avatar;
 mod client;
 mod compose;

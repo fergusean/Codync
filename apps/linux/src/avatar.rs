@@ -312,7 +312,11 @@ pub fn row(looks: &[(&str, &str, Mood)], size: i32, overlap: i32) -> gtk::Drawin
             f64::from(fg.green()),
             f64::from(fg.blue()),
         );
-        let t = start.elapsed().as_secs_f64();
+        let t = if crate::animation::running(area) {
+            start.elapsed().as_secs_f64()
+        } else {
+            0.0
+        };
         for (i, (s, c, m)) in looks.iter().enumerate() {
             cr.save().ok();
             cr.translate(f64::from(size - overlap) * i as f64, 0.0);
@@ -321,10 +325,7 @@ pub fn row(looks: &[(&str, &str, Mood)], size: i32, overlap: i32) -> gtk::Drawin
         }
     });
     if moving {
-        area.add_tick_callback(|a, _| {
-            a.queue_draw();
-            gtk::glib::ControlFlow::Continue
-        });
+        crate::animation::attach(&area);
     }
     area
 }
@@ -346,7 +347,11 @@ fn area(parts: Vec<Part>, size: i32, badge: Badge) -> gtk::DrawingArea {
             f64::from(fg.green()),
             f64::from(fg.blue()),
         );
-        let t = start.elapsed().as_secs_f64();
+        let t = if crate::animation::running(area) {
+            start.elapsed().as_secs_f64()
+        } else {
+            0.0
+        };
         match parts.as_slice() {
             [] => draw(cr, s, "blob", "gray", ink, Mood::Idle, t),
             [(shape, color, m)] => draw(cr, s, shape, color, ink, *m, t),
@@ -389,10 +394,7 @@ fn area(parts: Vec<Part>, size: i32, badge: Badge) -> gtk::DrawingArea {
         }
     });
     if moving {
-        area.add_tick_callback(|a, _| {
-            a.queue_draw();
-            gtk::glib::ControlFlow::Continue
-        });
+        crate::animation::attach(&area);
     }
     area
 }
