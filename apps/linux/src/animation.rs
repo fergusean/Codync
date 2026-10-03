@@ -6,15 +6,26 @@ use std::rc::Rc;
 
 #[derive(Default)]
 struct Frames {
-    last: Option<i64>,
+    next: Option<i64>,
 }
 
 impl Frames {
     fn due(&mut self, now: i64) -> bool {
-        if self.last.is_some_and(|last| now - last < 33_334) {
+        const INTERVAL: i64 = 1_000_000 / 30;
+        let Some(next) = self.next else {
+            self.next = Some(now + INTERVAL);
+            return true;
+        };
+        if now < next {
             return false;
         }
-        self.last = Some(now);
+        // Preserve the cadence across rounded display timestamps. After a long
+        // gap, start a fresh interval instead of drawing a catch-up burst.
+        self.next = Some(if now - next >= INTERVAL {
+            now + INTERVAL
+        } else {
+            next + INTERVAL
+        });
         true
     }
 }
@@ -112,23 +123,43 @@ mod tests {
     use std::time::{Duration, Instant};
 
     #[test]
-    fn limits_redraws_on_a_fast_display() {
-        let mut frames = Frames::default();
-        let drawn: Vec<_> = (0..120)
-            .map(|i| i * 8_334)
-            .filter(|&t| frames.due(t))
-            .collect();
-        assert_eq!(drawn.len(), 30);
-        assert!(drawn.windows(2).all(|pair| pair[1] - pair[0] >= 33_334));
+    fn keeps_thirty_frames_per_second_on_common_displays() {
+        for hz in [30, 60, 90, 120, 144, 240] {
+            let mut frames = Frames::default();
+            let drawn: Vec<_> = (0..hz * 4)
+                .map(|i| i * 1_000_000 / hz)
+                .filter(|&t| frames.due(t))
+                .collect();
+            for second in 0..4 {
+                let count = drawn
+                    .iter()
+                    .filter(|&&t| (second * 1_000_000..(second + 1) * 1_000_000).contains(&t))
+                    .count();
+                assert_eq!(count, 30, "{hz} Hz display, second {second}");
+            }
+        }
+    }
+
+    #[test]
+    fn rounded_frame_clock_intervals_do_not_slow_animation() {
+        for tick in [16_666, 8_333] {
+            let mut frames = Frames::default();
+            let count = (0..4_000_000)
+                .step_by(tick)
+                .filter(|&t| frames.due(t as i64))
+                .count();
+            assert_eq!(count, 120, "display tick rounded to {tick} microseconds");
+        }
     }
 
     #[test]
     fn resuming_does_not_burst_to_catch_up() {
         let mut frames = Frames::default();
         assert!(frames.due(0));
-        assert!(frames.due(5_000_000));
-        assert!(!frames.due(5_008_334));
-        assert!(frames.due(5_033_334));
+        assert!(frames.due(5_020_000));
+        assert!(!frames.due(5_028_334));
+        assert!(!frames.due(5_050_000));
+        assert!(frames.due(5_053_334));
     }
 
     fn pump(duration: Duration) {
