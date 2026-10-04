@@ -22,6 +22,14 @@ pub struct Outgoing {
     pub files: Vec<std::path::PathBuf>,
 }
 
+type ComposerDestination = (String, Option<String>);
+
+#[derive(Clone, Default)]
+struct ComposerDraft {
+    text: String,
+    files: Vec<std::path::PathBuf>,
+}
+
 #[derive(Default)]
 pub struct State {
     pub bots: HashMap<String, Value>,
@@ -44,6 +52,7 @@ pub struct State {
     /// The host/app versions a newer-release reminder was shown for (once each).
     reminded: Option<String>,
     pub outbox: HashMap<String, Outgoing>,
+    drafts: HashMap<ComposerDestination, ComposerDraft>,
     history_busy: HashSet<String>,
     history_done: HashSet<String>,
 }
@@ -51,6 +60,7 @@ pub struct State {
 /// A message box: send, or stop while the chat (or thread) is working. In a group,
 /// typing `@` suggests its bots.
 pub struct Composer {
+    destination: RefCell<Option<ComposerDestination>>,
     view: gtk::TextView,
     attach_btn: gtk::Button,
     /// Files picked or dropped for the next message, shown as chips above the box.
@@ -166,6 +176,7 @@ fn composer() -> Composer {
             .build(),
     );
     Composer {
+        destination: RefCell::new(None),
         view,
         attach_btn,
         files: RefCell::default(),
@@ -1049,6 +1060,7 @@ fn handle(ui: &App, ev: Event) {
                     if bot["deleted"].as_bool().unwrap_or(false) {
                         st.bots.remove(&id);
                         st.entries.remove(&id);
+                        st.drafts.retain(|(bot, _), _| bot != &id);
                         if st.current.as_deref() == Some(&id) {
                             st.current = None;
                             st.open_thread = None;
@@ -1218,6 +1230,8 @@ pub fn render(ui: &App) {
         compose::render(ui);
         return;
     }
+    restore_composer(ui, false);
+    restore_composer(ui, true);
     render_chat(ui);
     render_side(ui);
 }
@@ -1933,6 +1947,53 @@ pub fn open_thread(ui: &App, root: &str) {
     );
 }
 
+/// Snapshot the old destination before replacing the shared widgets with the next draft.
+fn restore_composer(ui: &App, in_thread: bool) {
+    let destination = {
+        let st = ui.state.borrow();
+        st.current
+            .as_ref()
+            .filter(|id| st.bots.contains_key(*id))
+            .and_then(|id| {
+                if in_thread {
+                    st.open_thread
+                        .as_ref()
+                        .map(|root| (id.clone(), Some(root.clone())))
+                } else {
+                    Some((id.clone(), None))
+                }
+            })
+    };
+    let c = ui.composer(in_thread);
+    if *c.destination.borrow() == destination {
+        return;
+    }
+    let buf = c.view.buffer();
+    let draft = {
+        let mut st = ui.state.borrow_mut();
+        if let Some(old) = c.destination.borrow().as_ref() {
+            let text = buf
+                .text(&buf.start_iter(), &buf.end_iter(), false)
+                .to_string();
+            let files = c.files.borrow().clone();
+            if !st.bots.contains_key(&old.0) || (text.is_empty() && files.is_empty()) {
+                st.drafts.remove(old);
+            } else {
+                st.drafts.insert(old.clone(), ComposerDraft { text, files });
+            }
+        }
+        destination
+            .as_ref()
+            .and_then(|key| st.drafts.get(key))
+            .cloned()
+            .unwrap_or_default()
+    };
+    c.destination.replace(destination);
+    c.files.replace(draft.files);
+    buf.set_text(&draft.text);
+    show_files(ui, in_thread);
+}
+
 fn update_composer(ui: &App, in_thread: bool) {
     let st = ui.state.borrow();
     if let Some(bot) = st.current.as_ref().and_then(|id| st.bots.get(id)) {
@@ -2042,6 +2103,9 @@ fn send(ui: &App, in_thread: bool) {
         return;
     }
     let files = c.files.take();
+    if let Some(destination) = c.destination.borrow().as_ref() {
+        ui.state.borrow_mut().drafts.remove(destination);
+    }
     buf.set_text("");
     show_files(ui, in_thread);
     send_text(ui, &bot, &text, thread, files);
