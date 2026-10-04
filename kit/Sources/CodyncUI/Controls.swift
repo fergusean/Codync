@@ -511,10 +511,7 @@ public struct ChoicePicker<ID: Hashable>: View {
             .foregroundStyle(Palette.text)
             .pill(fill: fill)
             .overlay {
-                // Unfilled, it's outlined like ChatGPT's settings dropdowns (outline or fill, never both).
-                if fill == .clear {
-                    RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(Palette.border)
-                }
+                if fill == .clear { RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(Palette.border) }
             }
         }
         .fixedSize(horizontal: !fitsAvailableWidth, vertical: true)
@@ -624,25 +621,33 @@ public struct CardForm<Content: View>: View {
 /// A titled group of rows: the replacement for `Section`. Modeled on ChatGPT's desktop settings:
 /// a small bold heading over a filled, rounded group whose rows are split by inset hairlines
 /// (references in `docs/design/reference/`).
-public struct CardSection<Content: View>: View {
+public struct CardSection<Content: View, Accessory: View>: View {
     let title: String?
     let footer: String?
     let content: Content
+    /// Trailing controls on the heading's line (add, refresh, clear).
+    let accessory: Accessory
 
-    public init(_ title: String? = nil, footer: String? = nil, @ViewBuilder content: () -> Content) {
+    public init(_ title: String? = nil, footer: String? = nil, @ViewBuilder content: () -> Content,
+                @ViewBuilder accessory: () -> Accessory) {
         self.title = title
         self.footer = footer
         self.content = content()
+        self.accessory = accessory()
     }
 
     public var body: some View {
         VStack(alignment: .leading, spacing: InterfaceMetrics.value(mac: 10, mobile: 10)) {
             if let title {
-                Text(title)
-                    .appFont(.system(size: InterfaceMetrics.value(mac: 13, mobile: 15), weight: .semibold))
-                    .foregroundStyle(Palette.text)
-                    .padding(.leading, 2)
-                    .accessibilityAddTraits(.isHeader)
+                HStack(spacing: 8) {
+                    Text(title)
+                        .appFont(.system(size: InterfaceMetrics.value(mac: 13, mobile: 15), weight: .semibold))
+                        .foregroundStyle(Palette.text)
+                        .accessibilityAddTraits(.isHeader)
+                    Spacer(minLength: 0)
+                    accessory
+                }
+                .padding(.leading, 2)
             }
             VStack(alignment: .leading, spacing: 0) {
                 _VariadicView.Tree(HairlineRows()) { content }
@@ -659,6 +664,12 @@ public struct CardSection<Content: View>: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+public extension CardSection where Accessory == EmptyView {
+    init(_ title: String? = nil, footer: String? = nil, @ViewBuilder content: () -> Content) {
+        self.init(title, footer: footer, content: content) { EmptyView() }
     }
 }
 
@@ -920,6 +931,12 @@ private struct DialogButtonStyle: ButtonStyle {
 
 extension View {
     /// The value pill: a filled rounded box, no border.
+    /// A value in an outlined pill, like ChatGPT's settings dropdowns (outline or fill, never both).
+    func outlinedPill() -> some View {
+        pill(fill: .clear)
+            .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(Palette.border))
+    }
+
     func pill(fill: Color = Palette.background) -> some View {
         padding(.horizontal, InterfaceMetrics.value(mac: 9, mobile: 12))
             .padding(.vertical, InterfaceMetrics.value(mac: 5, mobile: 7))

@@ -682,13 +682,6 @@ private struct DetailsPanel: View {
             .padding(.leading, 4)
     }
 
-    /// Grok's section label: a quiet heading above its rows.
-    private func sectionLabel(_ title: String) -> some View {
-        Text(title)
-            .appFont(.system(size: 13, weight: .medium))
-            .foregroundStyle(Palette.secondary)
-    }
-
     /// A round action in the panel's header, frosted like the chat's title pill (Grok's style).
     private func roundButton(_ label: String, _ symbol: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
@@ -748,37 +741,24 @@ private struct DetailsPanel: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
-        // Grok's cards are outlined, not filled.
-        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(Palette.border))
+        .background(Palette.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
     private func agentSummary(_ bot: Bot) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            sectionLabel("Agent")
-            VStack(spacing: 12) {
-                infoRow("Runtime") {
-                    HStack(spacing: 6) {
-                        AgentIcon(registry: model.hello?.backends.first { $0.id == bot.backend }?.registry, size: 14)
-                        Text(model.backendName(bot.backend))
-                    }
-                }
-                infoRow(bot.managedWorkspace ? "Workspace" : "Folder") {
-                    Text(bot.managedWorkspace ? "Personal" : bot.folderName)
-                        .truncationMode(.middle)
-                        .help(bot.managedWorkspace ? "Personal workspace, managed by Codync" : bot.cwd)
-                }
-                if let chosen = bot.model, !chosen.isEmpty {
-                    infoRow("Model") { Text(chosen).truncationMode(.middle) }
+        CardSection("Agent", footer: bot.description.isEmpty ? nil : bot.description) {
+            infoRow("Runtime") {
+                HStack(spacing: 6) {
+                    AgentIcon(registry: model.hello?.backends.first { $0.id == bot.backend }?.registry, size: 14)
+                    Text(model.backendName(bot.backend))
                 }
             }
-            .padding(14)
-            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(Palette.border))
-            if !bot.description.isEmpty {
-                Text(bot.description)
-                    .appFont(.system(size: 12))
-                    .lineSpacing(3)
-                    .foregroundStyle(Palette.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+            infoRow(bot.managedWorkspace ? "Workspace" : "Folder") {
+                Text(bot.managedWorkspace ? "Personal" : bot.folderName)
+                    .truncationMode(.middle)
+                    .help(bot.managedWorkspace ? "Personal workspace, managed by Codync" : bot.cwd)
+            }
+            if let chosen = bot.model, !chosen.isEmpty {
+                infoRow("Model") { Text(chosen).truncationMode(.middle) }
             }
         }
     }

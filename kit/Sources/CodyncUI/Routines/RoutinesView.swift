@@ -20,10 +20,10 @@ struct RoutinesView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: close == nil ? 10 : 16) {
             HStack {
-                // In the Mac inspector it's a quiet section label like the rest of the panel (Grok's style).
                 Text("Routines")
-                    .appFont(.system(size: 13, weight: close == nil ? .medium : .semibold))
-                    .foregroundStyle(close == nil ? Palette.secondary : Palette.text)
+                    .appFont(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Palette.text)
+                    .padding(.leading, 2)
                 Spacer(minLength: 0)
                 askInChat
                 IconButton("Set up a routine", systemImage: "plus") { open(nil) }
@@ -75,16 +75,16 @@ struct RoutinesView: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(14)
-                    .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(Palette.border))
+                    .background(Palette.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
             } else {
                 VStack(spacing: 0) {
                     ForEach(routines) { routine in
-                        if routine.id != routines.first?.id { Divider() }
+                        if routine.id != routines.first?.id { Hairline() }
                         row(routine)
                     }
                 }
                 .padding(.horizontal, 14)
-                .background(Palette.surface, in: RoundedRectangle(cornerRadius: 12))
+                .background(Palette.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
             }
         }
     }

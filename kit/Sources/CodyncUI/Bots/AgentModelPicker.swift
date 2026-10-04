@@ -57,9 +57,9 @@ struct AgentModelPicker: View {
                             .multilineTextAlignment(.trailing)
                             .textFieldStyle(.plain)
                             .frame(minWidth: 0, maxWidth: InterfaceMetrics.value(mac: 160, mobile: 180))
-                            .pill()
+                            .outlinedPill()
                     } else {
-                        ChoicePicker(selection: value, options: options, fill: Palette.background, fitsAvailableWidth: true)
+                        ChoicePicker(selection: value, options: options, fitsAvailableWidth: true)
                     }
                 }
             }
