@@ -1,5 +1,5 @@
 # Homebrew cask template for the leepokai/homebrew-codync tap.
-# The release job in .github/workflows/release-macos.yml fills in the version and the
+# The macOS job in .github/workflows/release-desktop.yml fills in the version and the
 # DMG's sha256 on every `v*` tag.
 cask "codync" do
   version "0.0.0"
@@ -14,12 +14,12 @@ cask "codync" do
   depends_on macos: :sonoma
 
   app "Codync.app"
-  binary "#{appdir}/Codync.app/Contents/MacOS/codync-host"
+  binary "#{appdir}/Codync.app/Contents/Resources/codync-host"
 
   # The app sets up the host service when it opens. Upgrades remove the service too;
   # Homebrew reopens the app afterwards, which sets it up again on the new version.
   uninstall early_script: {
-              executable:   "#{appdir}/Codync.app/Contents/MacOS/codync-host",
+              executable:   "#{appdir}/Codync.app/Contents/Resources/codync-host",
               args:         ["uninstall"],
               must_succeed: false,
             },
@@ -27,6 +27,7 @@ cask "codync" do
 
   zap trash: [
     "~/.codync",
+    "~/Library/Application Support/Codync",
     "~/Library/Preferences/com.pokai.Codync.plist",
   ]
 

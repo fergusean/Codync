@@ -91,24 +91,33 @@ install_mac_app() {
   $sudo rm -rf /Applications/Codync.app
   $sudo ditto "$mnt/Codync.app" /Applications/Codync.app
   hdiutil detach -quiet "$mnt"
-  mkdir -p "$BIN_DIR" && ln -sf /Applications/Codync.app/Contents/MacOS/codync-host "$BIN_DIR/codync-host"
+  mkdir -p "$BIN_DIR" && ln -sf /Applications/Codync.app/Contents/Resources/codync-host "$BIN_DIR/codync-host"
   say "Installed Codync.app to /Applications"
-  restart_service /Applications/Codync.app/Contents/MacOS/codync-host
+  restart_service /Applications/Codync.app/Contents/Resources/codync-host
   open /Applications/Codync.app
 }
 
 install_linux_app() {
   name=codync-linux-$ARCH
-  fetch "$name.tar.gz"
-  tar xzf "$TMP/$name.tar.gz" -C "$TMP"
-  place "$TMP/$name/bin/codync" "$BIN_DIR/codync"
+  fetch "$name.AppImage"
+  place "$TMP/$name.AppImage" "$BIN_DIR/codync"
   data=${XDG_DATA_HOME:-$HOME/.local/share}
   [ "$(id -u)" = 0 ] && data=/usr/local/share
-  mkdir -p "$data" && cp -R "$TMP/$name/share/." "$data/"
+  mkdir -p "$data/applications"
+  cat > "$data/applications/com.pokai.Codync.desktop" <<EOF
+[Desktop Entry]
+Name=Codync
+Comment=Your coding agents as teammates
+Exec=$BIN_DIR/codync %U
+Terminal=false
+Type=Application
+Categories=Development;
+MimeType=x-scheme-handler/codync;x-scheme-handler/com.pokai.codync;
+StartupWMClass=Codync
+EOF
   say "Installed the Codync desktop app to $BIN_DIR/codync"
-  if command -v ldd >/dev/null && missing=$(ldd "$BIN_DIR/codync" 2>&1 | grep 'not found'); then
-    echo "   It won't start yet: it needs GTK 4, libadwaita, VTE (GTK 4) and glibc 2.39+ (Ubuntu 24.04 or newer). Missing:"
-    echo "$missing" | sed 's/^[[:space:]]*/     /' | sort -u
+  if command -v ldconfig >/dev/null && ! ldconfig -p 2>/dev/null | grep -q libfuse.so.2; then
+    echo "   AppImages need FUSE 2 to start (Ubuntu: sudo apt install libfuse2t64)."
   fi
 }
 

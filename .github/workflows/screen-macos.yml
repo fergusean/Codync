@@ -10,15 +10,15 @@ on:
     paths:
       - "apps/screen-macos/**"
       - "apps/project.yml"
-      - "kit/Package.swift"
-      - "kit/Package.resolved"
+      - "apps/ios/Kit/Package.swift"
+      - "apps/ios/Kit/Package.resolved"
       - ".github/workflows/screen-macos.yml"
   pull_request:
     paths:
       - "apps/screen-macos/**"
       - "apps/project.yml"
-      - "kit/Package.swift"
-      - "kit/Package.resolved"
+      - "apps/ios/Kit/Package.swift"
+      - "apps/ios/Kit/Package.resolved"
       - ".github/workflows/screen-macos.yml"
 
 jobs:
@@ -37,7 +37,7 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: build/screen-ci/SourcePackages
-          key: ${{ runner.os }}-screen-packages-${{ hashFiles('apps/project.yml', 'kit/Package.swift', 'kit/Package.resolved') }}
+          key: ${{ runner.os }}-screen-packages-${{ hashFiles('apps/project.yml', 'apps/ios/Kit/Package.swift', 'apps/ios/Kit/Package.resolved') }}
 
       - name: Build screen helper
         run: >-
