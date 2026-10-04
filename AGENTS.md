@@ -48,6 +48,7 @@ Name Swift files after their main `UpperCamelCase` type; use `snake_case.rs` and
 - Keep shared features, actions, terminology, displayed information, and loading, empty, error, and permission states consistent. Adapt layout, controls, and input to each platform, including terminal keyboard interaction, while preserving the same user-facing behavior.
 - Inspect every client's corresponding implementation before finishing a UI task. Implement applicable changes together; do not silently defer another client. For a platform-only change or an unsupported capability, document which clients are unaffected and the concrete reason in the change summary.
 - Validate each affected client with its relevant build/tests and UI checks. Report any checks that could not run and why.
+- Shared SwiftUI (`kit/`) builds into both iPhone and Mac: never change a shared view's or control's defaults for one platform, and keep one-platform chrome in platform files ([ui-conventions](docs/design/ui-conventions.md#shared-code-across-iphone-and-mac)).
 
 ## Testing Guidelines
 
