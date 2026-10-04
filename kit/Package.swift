@@ -9,7 +9,7 @@ let package = Package(
         .library(name: "CodyncUI", targets: ["CodyncUI"]),
     ],
     dependencies: [
-        // libwebrtc for the remote screen viewer (hardware H.264 over WebRTC).
+        // libwebrtc for the remote screen viewer (hardware H.264 over WebRTC) and realtime voice calls.
         .package(url: "https://github.com/stasel/WebRTC.git", exact: "153.0.0"),
         // Terminal emulator for agent install and sign-in. 1.19+ adds a build-tool
         // plugin every Xcode build would have to trust.
@@ -21,7 +21,7 @@ let package = Package(
             name: "CodyncUI",
             dependencies: [
                 "CodyncKit",
-                .product(name: "WebRTC", package: "WebRTC", condition: .when(platforms: [.iOS])),
+                .product(name: "WebRTC", package: "WebRTC"),
                 .product(name: "SwiftTerm", package: "SwiftTerm"),
             ],
             resources: [.process("Resources")]

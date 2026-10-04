@@ -159,6 +159,62 @@ struct Composer: View {
         #endif
     }
 
+    private enum Trailing: Equatable {
+        case interrupt, stop, call, send
+    }
+
+    private var trailing: Trailing {
+        if onInterrupt != nil, draft.isEmpty, files.isEmpty { return .interrupt }
+        if working, draft.isEmpty { return .stop }
+        if onCall != nil, draft.isEmpty, files.isEmpty { return .call }
+        return .send
+    }
+
+    /// One button that morphs between call, send, stop and interrupt: its symbol replaces itself,
+    /// its fill crossfades and the capsule narrows to a circle, so switching never pops.
+    private var trailingButton: some View {
+        let state = trailing
+        let enabled = state != .send || canSend
+        let (symbol, label, size): (String, String, CGFloat) = switch state {
+        case .interrupt: ("stop.fill", "Interrupt", 12)
+        case .stop: ("stop.fill", "Stop", 12)
+        case .call: ("waveform", "Call", 15)
+        case .send: ("arrow.up", "Send", 14)
+        }
+        let fill: Color = switch state {
+        case .interrupt: Palette.danger
+        case .send: canSend ? Palette.accentFill : Palette.accentDim
+        case .stop, .call: Palette.accentFill
+        }
+        let ink: Color = switch state {
+        case .interrupt: .white
+        case .send: canSend ? Palette.onAccent : Palette.tertiary
+        case .stop, .call: Palette.onAccent
+        }
+        return Button {
+            switch state {
+            case .interrupt: onInterrupt?()
+            case .stop: model.stop(botId)
+            case .call: onCall?()
+            case .send: submit()
+            }
+        } label: {
+            Image(systemName: symbol)
+                .appFont(.system(size: size, weight: .bold))
+                .contentTransition(.symbolEffect(.replace))
+                .foregroundStyle(ink)
+                .frame(width: state == .call ? buttonSize * 1.35 : buttonSize, height: buttonSize)
+                .background(fill, in: Capsule())
+                .contentShape(Capsule())
+        }
+        .buttonStyle(PressScale())
+        .disabled(!enabled)
+        .accessibilityLabel(label)
+        .help(label)
+        .animation(Motion.reduced(Motion.morph, reduceMotion), value: state)
+        .animation(Motion.reduced(Motion.morph, reduceMotion), value: canSend)
+    }
+
     private var box: some View {
         HStack(alignment: .bottom, spacing: 8) {
             TextField(placeholder, text: $draft, axis: .vertical)
@@ -168,61 +224,9 @@ struct Composer: View {
                 .focused($focused)
                 .padding(.vertical, fieldPadding)
                 .sendOnReturn(submit)
-            Group {
-            if let onInterrupt, draft.isEmpty, files.isEmpty {
-                Button(action: onInterrupt) {
-                    Image(systemName: "stop.fill")
-                        .appFont(.system(size: 12, weight: .bold))
-                        .frame(width: InterfaceMetrics.value(mac: 28, mobile: 34), height: InterfaceMetrics.value(mac: 28, mobile: 34))
-                        .background(Palette.danger, in: Circle())
-                        .foregroundStyle(.white)
-                        .contentTransition(.symbolEffect(.replace))
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Interrupt")
-                .help("Interrupt")
-            } else if working && draft.isEmpty {
-                Button {
-                    model.stop(botId)
-                } label: {
-                    Image(systemName: "stop.fill")
-                        .appFont(.system(size: 12, weight: .bold))
-                        .frame(width: InterfaceMetrics.value(mac: 28, mobile: 34), height: InterfaceMetrics.value(mac: 28, mobile: 34))
-                        .background(Palette.accentFill, in: Circle())
-                        .foregroundStyle(Palette.onAccent)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Stop")
-                .help("Stop")
-            } else if let onCall, draft.isEmpty, files.isEmpty {
-                Button(action: onCall) {
-                    Image(systemName: "waveform")
-                        .appFont(.system(size: 15, weight: .bold))
-                        .frame(width: buttonSize * 1.35, height: buttonSize)
-                        .background(Palette.accentFill, in: Capsule())
-                        .foregroundStyle(Palette.onAccent)
-                }
-                .buttonStyle(.plain)
-                .transition(.opacity)
-                .accessibilityLabel("Call")
-                .help("Call")
-            } else {
-                Button(action: submit) {
-                    Image(systemName: "arrow.up")
-                        .appFont(.system(size: 14, weight: .bold))
-                        .frame(width: InterfaceMetrics.value(mac: 28, mobile: 34), height: InterfaceMetrics.value(mac: 28, mobile: 34))
-                        .background(canSend ? Palette.accentFill : Palette.accentDim, in: Circle())
-                        .foregroundStyle(canSend ? Palette.onAccent : Palette.tertiary)
-                }
-                .buttonStyle(.plain)
-                .disabled(!canSend)
-                .accessibilityLabel("Send")
-                .help("Send")
-            }
-            }
-            .animation(Motion.layout, value: onInterrupt != nil)
-            .padding(.bottom, max(0, (textLineHeight + 2 * fieldPadding - buttonSize) / 2))
-            .animation(Motion.layout, value: isEmpty)
+            trailingButton
+                .padding(.bottom, max(0, (textLineHeight + 2 * fieldPadding - buttonSize) / 2))
+                .animation(Motion.layout, value: isEmpty)
         }
         .padding(.leading, InterfaceMetrics.value(mac: 14, mobile: 18))
         .padding(.trailing, 6)

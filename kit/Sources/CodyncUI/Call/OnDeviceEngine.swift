@@ -1,5 +1,5 @@
-#if os(iOS)
 import AVFoundation
+import CodyncKit
 import NaturalLanguage
 import Observation
 import os
@@ -11,17 +11,11 @@ private let log = Logger(subsystem: "com.pokai.Codync", category: "Call")
 /// sent as an ordinary message, and the bot's final replies are read aloud. The host sees text only.
 @MainActor
 @Observable
-final class CallSession {
-    enum Phase: Equatable {
-        case starting
-        case listening
-        case speaking
-        case failed(String)
+final class OnDeviceEngine: VoiceEngine {
+    private(set) var phase: VoicePhase = .starting {
+        didSet { onActivityChanged?(!ended && phase.isActive) }
     }
-
-    private(set) var phase: Phase = .starting {
-        didSet { onActivityChanged?(!ended && (phase == .listening || phase == .speaking)) }
-    }
+    var provider: VoiceProvider? { nil }
     /// Keep the transport attached while audio is active, even without a visible UI update.
     @ObservationIgnored var onActivityChanged: ((Bool) -> Void)?
     /// What you're saying right now (live caption).
@@ -77,13 +71,15 @@ final class CallSession {
             return fail("Speech recognition isn't available for this language right now.")
         }
         guard !ended else { return }
-        do {
-            let audio = AVAudioSession.sharedInstance()
-            try audio.setCategory(.playAndRecord, mode: .voiceChat, options: [.defaultToSpeaker, .allowBluetoothHFP])
-            try audio.setActive(true)
-        } catch {
-            return fail("Couldn't start audio: \(error.localizedDescription)")
-        }
+        #if os(iOS)
+            do {
+                let audio = AVAudioSession.sharedInstance()
+                try audio.setCategory(.playAndRecord, mode: .voiceChat, options: [.defaultToSpeaker, .allowBluetoothHFP])
+                try audio.setActive(true)
+            } catch {
+                return fail("Couldn't start audio: \(error.localizedDescription)")
+            }
+        #endif
         listen()
     }
 
@@ -92,11 +88,13 @@ final class CallSession {
         onActivityChanged?(false)
         stopListening()
         synthesizer.stopSpeaking(at: .immediate)
-        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        #if os(iOS)
+            try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        #endif
     }
 
     /// Reads a reply aloud (the bot's final message), pausing the microphone meanwhile.
-    func speak(_ markdown: String) {
+    func speak(reply markdown: String) {
         let text = SpokenText.from(markdown)
         guard !ended, !text.isEmpty, phase != .starting, !(phase.isFailed) else { return }
         stopListening()
@@ -108,6 +106,8 @@ final class CallSession {
         utterance.rate = rate > 0 ? rate : AVSpeechUtteranceDefaultSpeechRate
         synthesizer.speak(utterance)
     }
+
+    func announce(_ notice: String) { speak(reply: notice) }
 
     /// Cuts the reply short and goes back to listening.
     func interrupt() {
@@ -202,7 +202,7 @@ final class CallSession {
         }
     }
 
-    private nonisolated static func results(_ session: CallSession, generation: Int) -> @Sendable (SFSpeechRecognitionResult?, (any Error)?) -> Void {
+    private nonisolated static func results(_ session: OnDeviceEngine, generation: Int) -> @Sendable (SFSpeechRecognitionResult?, (any Error)?) -> Void {
         { result, _ in
             guard let result else { return }
             let text = result.bestTranscription.formattedString
@@ -234,10 +234,6 @@ final class CallSession {
     }
 }
 
-extension CallSession.Phase {
-    var isFailed: Bool { if case .failed = self { true } else { false } }
-}
-
 /// Synthesizer delegate: a finished utterance hands back to listening. Cancelled ones don't.
 private final class SpeechDone: NSObject, AVSpeechSynthesizerDelegate, Sendable {
     let onFinish: @Sendable () -> Void
@@ -248,4 +244,3 @@ private final class SpeechDone: NSObject, AVSpeechSynthesizerDelegate, Sendable 
         onFinish()
     }
 }
-#endif
