@@ -391,9 +391,9 @@ private struct ChatSplitView: View {
     @State private var previousSelection: BotReference?
     @State private var hoveredBot: BotReference?
     @State private var marketplace: ComputerID?
-    @State private var showComputers = false
+    /// The Settings page open, nil while Settings is closed.
+    @State private var settings: SettingsPage?
     @State private var search = ""
-    @State private var showUsage = false
     @State private var showAccount = false
     @State private var hoveredFooter: String?
     @FocusState private var searchFocused: Bool
@@ -442,7 +442,7 @@ private struct ChatSplitView: View {
             VStack(spacing: 0) {
                 HStack(spacing: 6) {
                     Spacer(minLength: 0)
-                    ComputerFilterHeader(accounts: accounts, hidden: $hiddenComputers) { showComputers = true }
+                    ComputerFilterHeader(accounts: accounts, hidden: $hiddenComputers) { settings = .computers }
                     IconButton("New", systemImage: "plus") { newMenu.toggle() }
                         .codyncMenu(isPresented: $newMenu, items: newItems)
                         .disabled(onlineStores.isEmpty)
@@ -454,14 +454,12 @@ private struct ChatSplitView: View {
                 .allowsHitTesting(!compact)
                 .accessibilityHidden(compact)
                 if compact {
-                    ComputerFilterHeader(accounts: accounts, hidden: $hiddenComputers, compact: true) { showComputers = true }
+                    ComputerFilterHeader(accounts: accounts, hidden: $hiddenComputers, compact: true) { settings = .computers }
                         .frame(width: 70)
                 }
                 ScrollView {
                     LazyVStack(spacing: 2) {
                         if !compact {
-                            // Other computers on older releases (this Mac's own host is the app's).
-                            UpdateReminders(stores: stores.filter { shownIDs.contains($0.computer.id) })
                             ForEach(stores.filter { shownIDs.contains($0.computer.id) }, id: \.computer.id) { store in
                                 if let mismatch = store.mismatch {
                                     UpdateNeededCard(store: store, mismatch: mismatch)
@@ -590,37 +588,12 @@ private struct ChatSplitView: View {
                         email: account.email,
                         busy: account.isBusy,
                         errorMessage: account.errorMessage ?? updates.errorMessage,
-                        onSignIn: { provider in
-                            dismissAccountMenu()
-                            Task {
-                                await account.signIn(provider: provider)
-                                if account.errorMessage != nil {
-                                    withAnimation(Motion.fade) { showAccount = true }
-                                }
-                            }
-                        },
-                        onSignOut: {
-                            dismissAccountMenu()
-                            Task {
-                                await host.signOut()
-                                if account.errorMessage != nil {
-                                    withAnimation(Motion.fade) { showAccount = true }
-                                }
-                            }
-                        },
-                        compact: compact,
+                        onSignIn: { provider in dismissAccountMenu(); signIn(provider) },
+                        onSignOut: { dismissAccountMenu(); signOut() },
                         approvals: host.approvals.count,
-                        updateVersion: updates.availableVersion,
-                        canUpdate: updates.canCheckForUpdates || updates.hasStagedUpdate,
                         onDismiss: dismissAccountMenu,
-                        onUsage: { dismissAccountMenu(); showUsage = true },
-                        onComputers: { dismissAccountMenu(); showComputers = true },
-                        onUpdate: { dismissAccountMenu(); updates.checkForUpdates() },
-                        onToggleSidebar: {
-                            dismissAccountMenu()
-                            compact.toggle()
-                        },
-                        onSearch: { dismissAccountMenu(); compact = false; searchFocused = true }
+                        onUsage: { dismissAccountMenu(); settings = .usage },
+                        onSettings: { dismissAccountMenu(); settings = .general }
                     )
                     .frame(width: min(260, windowSize.width - 32))
                     .padding(.leading, 16)
@@ -662,12 +635,10 @@ private struct ChatSplitView: View {
                 .frame(width: min(920, windowSize.width - 80), height: sheetHeight)
             }
         }
-        .codyncSheet(isPresented: $showComputers) {
-            ComputersView()
-                .frame(width: 620, height: sheetHeight)
-        }
-        .codyncSheet(isPresented: $showUsage) {
-            UsageSheet().frame(width: 520)
+        .codyncSheet(isPresented: Binding(get: { settings != nil }, set: { if !$0 { settings = nil } })) {
+            SettingsView(page: settings ?? .general,
+                         onSignIn: signIn, onSignOut: signOut)
+                .frame(width: min(800, windowSize.width - 80), height: min(620, sheetHeight))
         }
         .background {
             collapseButton.hidden()
@@ -729,7 +700,7 @@ private struct ChatSplitView: View {
                 } else if target == "plugins" {
                     marketplace = host.store?.computer.id
                 } else if target == "computers" {
-                    showComputers = true
+                    settings = .computers
                 } else if let target, let item = accounts.roster.first(where: { $0.bot.name == target }) {
                     accounts.selection = item.ref
                 }
@@ -964,6 +935,24 @@ extension ChatSplitView {
         .help(compact ? "Expand sidebar" : "Collapse sidebar")
     }
 
+    private func signIn(_ provider: AccountSession.SignInProvider) {
+        Task {
+            await account.signIn(provider: provider)
+            if account.errorMessage != nil && settings == nil {
+                withAnimation(Motion.fade) { showAccount = true }
+            }
+        }
+    }
+
+    private func signOut() {
+        Task {
+            await host.signOut()
+            if account.errorMessage != nil && settings == nil {
+                withAnimation(Motion.fade) { showAccount = true }
+            }
+        }
+    }
+
     private func dismissAccountMenu() {
         showAccount = false
         profileFocused = true
@@ -1021,33 +1010,6 @@ extension ChatSplitView {
 }
 
 /// Usage per computer, read live from the stores.
-private struct UsageSheet: View {
-    @Environment(HostController.self) private var host
-
-    var body: some View {
-        let stores = host.accounts.computers.compactMap { host.accounts.store(for: $0.id) }
-        let withUsage = stores.filter { !$0.usage.providers.isEmpty }
-        VStack(alignment: .leading, spacing: 0) {
-            ModalHeader("Usage")
-            VStack(alignment: .leading, spacing: 20) {
-                if withUsage.isEmpty {
-                    Text("No usage information yet.").foregroundStyle(Palette.secondary)
-                } else {
-                    ForEach(withUsage, id: \.computer.id) { store in
-                        if stores.count > 1 {
-                            Label { Text(store.hostName) } icon: { ComputerBadge(store.computer, size: 16) }
-                                .appFont(.headline)
-                        }
-                        UsageLimits(usage: store.usage)
-                    }
-                }
-            }
-            .padding([.horizontal, .bottom], 24)
-            .padding(.top, 4)
-        }
-    }
-}
-
 extension View {
     @ViewBuilder fileprivate func hiddenWindowTitle() -> some View {
         if #available(macOS 15.0, *) { toolbar(removing: .title) } else { self }
@@ -1063,17 +1025,10 @@ private struct SidebarAccountPanel: View {
     let errorMessage: String?
     let onSignIn: (AccountSession.SignInProvider) -> Void
     let onSignOut: () -> Void
-    let compact: Bool
     let approvals: Int
-    /// A release Sparkle found, waiting to be installed.
-    let updateVersion: String?
-    let canUpdate: Bool
     let onDismiss: () -> Void
     let onUsage: () -> Void
-    let onComputers: () -> Void
-    let onUpdate: () -> Void
-    let onToggleSidebar: () -> Void
-    let onSearch: () -> Void
+    let onSettings: () -> Void
     @State private var page = "main"
     @State private var highlighted = 0
     @FocusState private var menuFocused: Bool
@@ -1099,24 +1054,12 @@ private struct SidebarAccountPanel: View {
                 Item(title: "Report an issue", icon: "bubble.left", chevron: true,
                      action: { open("https://github.com/leepokai/codync/issues") })
             ]
-        case "settings":
-            return [
-                Item(title: "Settings", icon: "chevron.left", action: { navigate("main") }),
-                Item(title: compact ? "Expand sidebar" : "Collapse sidebar", icon: "sidebar.left", action: onToggleSidebar),
-                Item(title: "Search bots", icon: "magnifyingglass", detail: "⌘F", action: onSearch)
-            ]
         default:
             return [
                 Item(title: "Usage", icon: "gauge.with.dots.needle.33percent", chevron: true, action: onUsage),
-                Item(title: "Computers & devices", icon: "desktopcomputer",
-                     detail: approvals > 0 ? "\(approvals)" : nil, chevron: true, action: onComputers),
                 Item(title: "Get Codync for mobile", icon: "iphone", action: { open("https://apps.apple.com/app/id6760984418") }),
                 Item(title: "Support", icon: "book.closed", chevron: true, action: { navigate("support") }),
-                Item(title: "Settings", icon: "gearshape", action: { navigate("settings") }),
-                Item(title: updateVersion.map { "Update to \($0)" } ?? "Check for updates", icon: "arrow.down.circle",
-                     detail: updateVersion == nil ? Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String : nil,
-                     disabled: !canUpdate, action: onUpdate),
-                Item(title: compact ? "Expand sidebar" : "Collapse sidebar", icon: "sidebar.left", action: onToggleSidebar)
+                Item(title: "Settings", icon: "gearshape", detail: approvals > 0 ? "\(approvals)" : nil, action: onSettings)
             ] + authenticationItems
         }
     }
@@ -1167,8 +1110,8 @@ private struct SidebarAccountPanel: View {
     }
 
     @ViewBuilder private func menuRow(_ item: Item, index: Int) -> some View {
-        if index == (page == "main" ? 6 : 1) { divider }
-        if page == "main" && index == 7 { accountIdentity }
+        if index == (page == "main" ? 4 : 1) { divider }
+        if page == "main" && index == 4 { accountIdentity }
         AccountPanelRow(title: item.title, icon: item.icon, assetIcon: item.assetIcon, detail: item.detail,
                         chevron: item.chevron, keyboardFocused: highlighted == index, action: item.action)
             .disabled(item.disabled)

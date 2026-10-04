@@ -1172,7 +1172,7 @@ pub fn bot_menu(ui: &App, parent: &gtk::Widget, point: Option<(f64, f64)>, id: &
     ui::popup_menu(parent, point, items);
 }
 
-/// The sidebar's Account panel: usage, this computer and its devices, the mobile app, help.
+/// The sidebar's Account panel: usage, the mobile app, help and Settings.
 pub fn account_menu(ui: &App, anchor: &gtk::Button) {
     let open = |url: &'static str| -> Box<dyn Fn()> {
         Box::new(move || {
@@ -1183,25 +1183,12 @@ pub fn account_menu(ui: &App, anchor: &gtk::Button) {
             );
         })
     };
-    let (ui2, ui3, ui4) = (ui.clone(), ui.clone(), ui.clone());
+    let (ui2, ui3) = (ui.clone(), ui.clone());
     let items = vec![
         MenuItem::new(
             "power-profile-balanced-symbolic",
             "Usage",
-            Box::new(move || usage_sheet(&ui2)),
-        )
-        .chevron(),
-        MenuItem::new(
-            "computer-symbolic",
-            "Computers & devices",
-            Box::new(move || settings(&ui3)),
-        )
-        .chevron(),
-        // Host updates (check, install, automatic) live in Computers & devices.
-        MenuItem::new(
-            "software-update-available-symbolic",
-            "Check for updates",
-            Box::new(move || settings(&ui4)),
+            Box::new(move || settings_page(&ui2, "usage")),
         )
         .chevron(),
         MenuItem::new(
@@ -1220,14 +1207,24 @@ pub fn account_menu(ui: &App, anchor: &gtk::Button) {
             "Report an issue",
             open("https://github.com/leepokai/codync/issues"),
         ),
+        // Computers & devices, usage and updates are pages of Settings.
+        MenuItem::new(
+            "emblem-system-symbolic",
+            "Settings",
+            Box::new(move || settings(&ui3)),
+        )
+        .divider(),
     ];
     ui::popup_menu(anchor, None, items);
 }
 
-/// Usage limits per provider (UsageSheet).
-fn usage_sheet(ui: &App) {
-    let (dialog, view, _) = header_dialog("Usage", 520, 460);
-    let page = adw::PreferencesPage::new();
+/// Settings' Usage page: limits per provider (`UsageLimits` on the Mac).
+fn usage_page(ui: &App) -> adw::PreferencesPage {
+    let page = adw::PreferencesPage::builder()
+        .title("Usage")
+        .icon_name("power-profile-balanced-symbolic")
+        .name("usage")
+        .build();
     let usage = adw::PreferencesGroup::new();
     let st = ui.state.borrow();
     let mut any = false;
@@ -1264,8 +1261,7 @@ fn usage_sheet(ui: &App) {
         usage.add(&label("No usage information yet.", &["secondary"]));
     }
     page.add(&usage);
-    view.set_content(Some(&page));
-    dialog.present(Some(&ui.window));
+    page
 }
 
 // MARK: settings & pairing
@@ -1514,9 +1510,23 @@ fn host_updates_group(ui: &App) -> adw::PreferencesGroup {
     group
 }
 
+/// Settings opened on its first page, Computers & devices.
 pub fn settings(ui: &App) {
-    let (dialog, view, _) = header_dialog("Computers & devices", 520, 720);
-    let page = adw::PreferencesPage::new();
+    settings_page(ui, "computers");
+}
+
+/// Settings: Computers & devices, Usage and Updates as pages in a sidebar, like the Mac's.
+pub fn settings_page(ui: &App, name: &str) {
+    let dialog = adw::PreferencesDialog::builder()
+        .title("Settings")
+        .content_width(760)
+        .content_height(640)
+        .build();
+    let page = adw::PreferencesPage::builder()
+        .title("Computers")
+        .icon_name("computer-symbolic")
+        .name("computers")
+        .build();
     let credentials = adw::PreferencesGroup::new();
     let button = gtk::Button::with_label("Credentials");
     let ui2 = ui.clone();
@@ -1622,8 +1632,15 @@ pub fn settings(ui: &App) {
         });
     }
     page.add(&agents);
+    dialog.add(&page);
+    dialog.add(&usage_page(ui));
 
-    page.add(&host_updates_group(ui));
+    let updates = adw::PreferencesPage::builder()
+        .title("Updates")
+        .icon_name("software-update-available-symbolic")
+        .name("updates")
+        .build();
+    updates.add(&host_updates_group(ui));
     let about = adw::PreferencesGroup::new();
     about.add(
         &adw::ActionRow::builder()
@@ -1635,8 +1652,9 @@ pub fn settings(ui: &App) {
             ))
             .build(),
     );
-    page.add(&about);
-    view.set_content(Some(&page));
+    updates.add(&about);
+    dialog.add(&updates);
+    dialog.set_visible_page_name(name);
     dialog.present(Some(&ui.window));
 }
 
