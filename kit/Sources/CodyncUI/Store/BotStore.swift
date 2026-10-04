@@ -513,7 +513,7 @@ public final class BotStore {
     private func noteHostVersion(_ new: HostVersion) {
         let cached = cacheStamp.map { $0 != "\(Self.appBuild)/\(new.version)" } ?? false
         if cached || (hostVersion.map { $0.version != new.version } ?? false) {
-            // A different host version: its data may carry new fields, so fetch it all again.
+            // A different host version or app build: data may carry new fields, so fetch it all again.
             rev = 0
             rewound = false
             unreadable = false
@@ -1145,10 +1145,11 @@ public final class BotStore {
     }
 
     private func loadCache() {
+        // A cache from another app build still shows at once; the stamp mismatch makes the next
+        // hello fetch everything again underneath it.
         guard let data = try? Data(contentsOf: cacheURL),
-              let cache = try? JSONDecoder().decode(Cache.self, from: data),
-              cache.stamp?.hasPrefix(Self.appBuild + "/") == true else { return }
-        cacheStamp = cache.stamp
+              let cache = try? JSONDecoder().decode(Cache.self, from: data) else { return }
+        cacheStamp = cache.stamp ?? ""
         hostId = cache.hostId
         rev = cache.rev
         bots = Dictionary(cache.bots.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
