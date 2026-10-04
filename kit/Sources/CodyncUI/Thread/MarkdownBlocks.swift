@@ -2,7 +2,7 @@ import Foundation
 
 /// Block-level Markdown as replies use it: paragraphs, headings, nested lists, quotes, rules,
 /// tables and fenced code. Pure parsing, apart from the views, so it's tested on its own.
-/// The iPhone's `MarkdownText` renders these; the Mac's has its own smaller parser.
+/// Both native Markdown renderers use these blocks and the same streaming syntax repair.
 enum MarkdownBlocks {
     enum Block: Hashable {
         case paragraph(String)

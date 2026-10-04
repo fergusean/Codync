@@ -29,7 +29,9 @@ public struct ThreadView: View {
     @State var routineId: String?
     @State var routineRequest = UUID()
     #if os(macOS)
-        @State var isAtBottom = true
+        @State var following = true
+        @State var firstShown: String?
+        @State var loadingEarlier = false
     #else
         /// iPhone: the chat stays on the newest message until the reader scrolls away.
         @State var following = true
@@ -59,7 +61,7 @@ public struct ThreadView: View {
     private var chat: some View {
         transcript
         .background(Palette.background)
-        .safeAreaInset(edge: .bottom) {
+        .conversationInset(edge: .bottom) {
             VStack(spacing: 6) {
                 if let mismatch = model.mismatch {
                     // Nothing sent now could be read on the other side.
@@ -151,9 +153,7 @@ public struct ThreadView: View {
                 } openThread: { root in
                     withAnimation(Motion.reduced(Motion.layout, reduceMotion)) { openThread = ThreadTarget(id: root.id) }
                 }
-                #if os(iOS)
-                    .equatable()
-                #endif
+                .equatable()
             }
         }
     }
@@ -255,8 +255,8 @@ public struct ThreadView: View {
 
 // MARK: - Chat model
 
-struct ChatItem: Identifiable {
-    enum Kind {
+struct ChatItem: Identifiable, Equatable {
+    enum Kind: Equatable {
         case separator(Date)
         case entry(Entry, groupStart: Bool)
     }
@@ -407,4 +407,3 @@ extension View {
         }
     }
 }
-

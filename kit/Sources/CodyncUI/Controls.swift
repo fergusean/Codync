@@ -196,7 +196,7 @@ public struct MenuPanel: View {
                 VStack(alignment: .leading, spacing: 2) {
                     if let reactions {
                         ReactionStrip(pick: reactions, dismiss: dismiss)
-                            .padding(.bottom, 4)
+                            .padding(.bottom, items.isEmpty ? 0 : 4)
                     }
                     ForEach(items) { item in
                         if item.divider {
@@ -215,7 +215,7 @@ public struct MenuPanel: View {
                 .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { contentHeight = $0 }
             }
             .scrollBounceBehavior(.basedOnSize)
-            .frame(width: min(320, availableSize.width),
+            .frame(width: min(preferredWidth, availableSize.width),
                    height: min(contentHeight ?? estimatedHeight, availableSize.height))
             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             .onChange(of: contentHeight) { _, height in
@@ -230,6 +230,13 @@ public struct MenuPanel: View {
     private var estimatedHeight: CGFloat {
         CGFloat(items.count) * InterfaceMetrics.value(mac: 32, mobile: 46) + 12
             + (reactions == nil ? 0 : InterfaceMetrics.value(mac: 32, mobile: 46))
+    }
+
+    private var preferredWidth: CGFloat {
+        #if os(macOS)
+        if items.isEmpty, let reactions { return CGFloat(reactions.emoji.count) * 26 + 12 }
+        #endif
+        return 320
     }
 
 }
@@ -400,14 +407,35 @@ private struct AnchoredMenu: ViewModifier {
     let items: () -> [MenuItem]
     var reactions: ReactionPick?
     @State private var frame: CGRect = .zero
+    #if os(macOS)
+    @Environment(\.macChatCoordinates) private var chatCoordinates
+    #endif
 
     func body(content: Content) -> some View {
         content
-            .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { frame = $0 }
-            .codyncOverlay(isPresented: $isPresented) { close in
-                let anchor = point.map { CGRect(x: frame.minX + $0.x, y: frame.minY + $0.y, width: 0, height: 0) } ?? frame
-                AnchoredPanel(anchor: anchor, close: close) {
-                    MenuPanel(items: items(), reactions: reactions, dismiss: close)
+            // Closed menus have no anchor to position. Tracking their global frame
+            // invalidates every message's menu on every scroll frame.
+            .onGeometryChange(for: CGRect.self) {
+                guard isPresented else { return .zero }
+                return $0.frame(in: .global)
+            } action: { measured in
+                #if os(macOS)
+                frame = measured == .zero ? .zero : chatCoordinates?.windowFrame(measured) ?? measured
+                #else
+                frame = measured
+                #endif
+            }
+            // The Mac modal host captures its content when presentation starts.
+            // Wait for the opening geometry pass so it cannot capture EmptyView.
+            .codyncOverlay(isPresented: Binding(
+                get: { isPresented && frame != .zero },
+                set: { if !$0 { isPresented = false } }
+            )) { close in
+                if frame != .zero {
+                    let anchor = point.map { CGRect(x: frame.minX + $0.x, y: frame.minY + $0.y, width: 0, height: 0) } ?? frame
+                    AnchoredPanel(anchor: anchor, close: close) {
+                        MenuPanel(items: items(), reactions: reactions, dismiss: close)
+                    }
                 }
             }
     }
@@ -454,6 +482,21 @@ struct AnchoredPanel<Panel: View>: View {
         #endif
     }
 }
+
+#if os(macOS)
+/// The message action opens the same horizontal quick reactions as right-click.
+struct ReactionMenu<Label: View>: View {
+    let pick: ReactionPick
+    @ViewBuilder let label: () -> Label
+    @State private var open = false
+
+    var body: some View {
+        Button { open.toggle() } label: { label() }
+            .buttonStyle(.plain)
+            .modifier(AnchoredMenu(isPresented: $open, point: nil, items: { [] }, reactions: pick))
+    }
+}
+#endif
 
 /// A button that opens a Codync menu.
 public struct DropdownMenu<Label: View>: View {

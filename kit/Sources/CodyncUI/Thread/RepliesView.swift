@@ -11,8 +11,8 @@ struct RepliesView: View {
     let close: () -> Void
     @Environment(BotStore.self) var model
     @State var showTrace = false
+    @State var following = true
     #if os(iOS)
-        @State var following = true
         @Environment(\.accessibilityReduceMotion) var reduceMotion
     #endif
 
@@ -37,7 +37,7 @@ struct RepliesView: View {
 
             // The replies: each platform's own `messages`, in its `RepliesView+` file.
             messages
-                .safeAreaInset(edge: .bottom) {
+                .conversationInset(edge: .bottom) {
                     if let mismatch = model.mismatch {
                         UpdateNeededCard(store: model, mismatch: mismatch)
                             .padding(.horizontal, 16)
