@@ -18,9 +18,12 @@ struct RoutinesView: View {
     @State private var loadError: String?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: close == nil ? 10 : 16) {
             HStack {
-                Text("Routines").appFont(.system(size: 13, weight: .semibold))
+                // In the Mac inspector it's a quiet section label like the rest of the panel (Grok's style).
+                Text("Routines")
+                    .appFont(.system(size: 13, weight: close == nil ? .medium : .semibold))
+                    .foregroundStyle(close == nil ? Palette.secondary : Palette.text)
                 Spacer(minLength: 0)
                 askInChat
                 IconButton("Set up a routine", systemImage: "plus") { open(nil) }
@@ -66,9 +69,13 @@ struct RoutinesView: View {
         VStack(alignment: .leading, spacing: 0) {
             if routines.isEmpty {
                 Text(loaded ? "No routines yet. Ask the bot for one, or set it up yourself with +." : "Loading routines…")
-                    .appFont(.caption)
+                    .appFont(.system(size: 12))
+                    .lineSpacing(3)
                     .foregroundStyle(Palette.secondary)
                     .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(14)
+                    .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(Palette.border))
             } else {
                 VStack(spacing: 0) {
                     ForEach(routines) { routine in

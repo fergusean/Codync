@@ -113,6 +113,8 @@ struct ApprovalSheet: View {
 /// Computers this Mac manages (itself and SSH), with their account, relay and authorized devices;
 /// SSH profiles; and the account's other computers.
 struct ComputersView: View {
+    /// False inside the Settings window, which titles the page itself.
+    var showsHeader = true
     @Environment(HostController.self) private var host
     @Environment(AccountSession.self) private var account
     @State private var editingSSH: SSHProfile?
@@ -120,17 +122,17 @@ struct ComputersView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            ModalHeader("Computers & devices")
+            if showsHeader { ModalHeader("Computers & devices") }
             ScrollView {
-                VStack(alignment: .leading, spacing: 22) {
+                VStack(alignment: .leading, spacing: 26) {
                     ForEach(host.managedStores, id: \.computer.id) { store in
                         ManagedComputerCard(store: store, ssh: host.isSSH(store.computer.id))
                     }
                     sshSection
                     accountSection
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 4)
+                .padding(.horizontal, showsHeader ? 20 : 14)
+                .padding(.top, showsHeader ? 4 : 14)
                 .padding(.bottom, 20)
             }
         }
@@ -145,7 +147,7 @@ struct ComputersView: View {
     }
 
     private var sshSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 0) {
             HStack {
                 SectionTitle("Over SSH")
                 Spacer()
@@ -153,6 +155,7 @@ struct ComputersView: View {
                     editingSSH = SSHProfile(host: "", name: "")
                 }
             }
+            .sectionHeader()
             if host.ssh.profiles.isEmpty {
                 Text("Run bots on another computer you reach with SSH. It needs codync-host installed; your SSH keys stay on this Mac.")
                     .appFont(.callout)
@@ -169,7 +172,7 @@ struct ComputersView: View {
         let managed = Set(host.managedStores.map(\.computer.id))
         let reached = host.accounts.computers.filter { !managed.contains($0.id) }
         let others = host.accounts.cloudComputers.filter { c in !managed.contains(c.id) && !reached.contains { $0.id == c.id } }
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 0) {
             HStack {
                 SectionTitle("In your account")
                 Spacer()
@@ -177,12 +180,16 @@ struct ComputersView: View {
                     IconButton("Refresh", systemImage: "arrow.clockwise") { Task { await host.accounts.refreshCloud() } }
                 }
             }
-            if !account.isSignedIn {
-                Text("Sign in to reach the other computers in your account from this Mac.")
-                    .appFont(.callout).foregroundStyle(Palette.secondary)
-            } else if reached.isEmpty && others.isEmpty {
-                Text("No other computers in your account yet.").appFont(.callout).foregroundStyle(Palette.secondary)
+            .sectionHeader()
+            Group {
+                if !account.isSignedIn {
+                    Text("Sign in to reach the other computers in your account from this Mac.")
+                } else if reached.isEmpty && others.isEmpty {
+                    Text("No other computers in your account yet.")
+                }
             }
+            .appFont(.callout)
+            .foregroundStyle(Palette.secondary)
             ForEach(reached) { computer in
                 if let store = host.accounts.store(for: computer.id) {
                     HStack(spacing: 10) {
@@ -210,7 +217,7 @@ private struct SectionTitle: View {
     let title: String
     init(_ title: String) { self.title = title }
     var body: some View {
-        Text(title).appFont(.headline).foregroundStyle(Palette.text).accessibilityAddTraits(.isHeader)
+        Text(title).appFont(.system(size: 13, weight: .semibold)).foregroundStyle(Palette.text).accessibilityAddTraits(.isHeader)
     }
 }
 
@@ -276,6 +283,7 @@ private struct ManagedComputerCard: View {
     @State private var devices: [AuthorizedDevice]?
     @State private var busy = false
     @State private var showPairing = false
+    @State private var showVoice = false
     @State private var confirmRevoke: AuthorizedDevice?
     @State private var confirmUnclaim = false
     @State private var confirmAutoApproval = false
@@ -285,57 +293,63 @@ private struct ManagedComputerCard: View {
     private var autoApproval: Bool { cloud?.approval == .auto }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 10) {
-                ComputerBadge(store.computer, size: 26)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(store.hostName).appFont(.headline)
-                    Text(ssh ? "Over SSH · \(store.statusText)" : "This Mac · \(store.statusText)")
-                        .appFont(.caption).foregroundStyle(Palette.secondary)
-                }
-                Spacer()
-                IconButton("Pair iPhone", systemImage: "qrcode", selected: showPairing) { showPairing.toggle() }
-                    .disabled(store.connection != .online)
-                    .codyncSheet(isPresented: $showPairing) {
-                        VStack(spacing: 0) {
-                            ModalHeader("Pair iPhone with \(store.hostName)")
-                            PairingPanel(store: store)
-                        }
-                        .frame(width: 340)
-                    }
-            }
-
-            Toggle(isOn: Binding(get: { cloud?.enabled ?? false }, set: { on in run { await host.setCloud(store, enabled: on) } })) {
-                VStack(alignment: .leading, spacing: 1) {
-                    Text("Reach from anywhere")
-                    Text(cloudLine).appFont(.caption).foregroundStyle(cloud?.lastError == nil ? Palette.secondary : Palette.warning)
-                }
-            }
-            .toggleStyle(.codync)
-            .disabled(busy || store.connection != .online)
-
-            accountLine
-
-            if cloud?.owner != nil {
-                Toggle(isOn: Binding(get: { autoApproval }, set: { on in
-                    if on { confirmAutoApproval = true } else { setApproval(.code) }
-                })) {
+        VStack(alignment: .leading, spacing: 28) {
+            CardSection {
+                HStack(spacing: 10) {
+                    ComputerBadge(store.computer, size: 26)
                     VStack(alignment: .leading, spacing: 1) {
-                        Text("Skip the 6-digit check")
-                        Text(autoApproval ? "Devices on your account get in on their own." : "Each new device shows a code you approve here.")
-                            .appFont(.caption).foregroundStyle(autoApproval ? Palette.warning : Palette.secondary)
+                        Text(store.hostName).appFont(.headline)
+                        Text(ssh ? "Over SSH · \(store.statusText)" : "This Mac · \(store.statusText)")
+                            .appFont(.caption).foregroundStyle(Palette.secondary)
+                    }
+                    Spacer()
+                    if ssh {
+                        // This Mac's voice settings are their own Settings page.
+                        IconButton("Voice chat", systemImage: "waveform", selected: showVoice) { showVoice.toggle() }
+                            .disabled(store.connection != .online)
+                            .codyncSheet(isPresented: $showVoice) { VoiceChatSettingsView().environment(store) }
+                    }
+                    IconButton("Pair iPhone", systemImage: "qrcode", selected: showPairing) { showPairing.toggle() }
+                        .disabled(store.connection != .online)
+                        .codyncSheet(isPresented: $showPairing) {
+                            VStack(spacing: 0) {
+                                ModalHeader("Pair iPhone with \(store.hostName)")
+                                PairingPanel(store: store)
+                            }
+                            .frame(width: 340)
+                        }
+                }
+
+                Toggle(isOn: Binding(get: { cloud?.enabled ?? false }, set: { on in run { await host.setCloud(store, enabled: on) } })) {
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("Reach from anywhere")
+                        Text(cloudLine).appFont(.caption).foregroundStyle(cloud?.lastError == nil ? Palette.secondary : Palette.warning)
                     }
                 }
                 .toggleStyle(.codync)
                 .disabled(busy || store.connection != .online)
-                .transition(.opacity)
-            }
 
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Devices that can use \(store.hostName)").appFont(.subheadline.weight(.semibold))
+                accountLine
+
+                if cloud?.owner != nil {
+                    Toggle(isOn: Binding(get: { autoApproval }, set: { on in
+                        if on { confirmAutoApproval = true } else { setApproval(.code) }
+                    })) {
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text("Skip the 6-digit check")
+                            Text(autoApproval ? "Devices on your account get in on their own." : "Each new device shows a code you approve here.")
+                                .appFont(.caption).foregroundStyle(autoApproval ? Palette.warning : Palette.secondary)
+                        }
+                    }
+                    .toggleStyle(.codync)
+                    .disabled(busy || store.connection != .online)
+                    .transition(.opacity)
+                }
+            }
+            CardSection("Devices that can use \(store.hostName)") {
                 if let devices {
                     if devices.isEmpty {
-                        Text("None yet. Pair an iPhone, or approve one from your account.").appFont(.caption).foregroundStyle(Palette.secondary)
+                        Text("None yet. Pair an iPhone, or approve one from your account.").foregroundStyle(Palette.secondary)
                     }
                     ForEach(devices) { device in deviceRow(device).transition(.opacity.combined(with: .move(edge: .top))) }
                 } else {
@@ -343,7 +357,6 @@ private struct ManagedComputerCard: View {
                 }
             }
         }
-        .card()
         .animation(Motion.reduced(Motion.layout, reduceMotion), value: devices?.map(\.key))
         .animation(Motion.reduced(Motion.layout, reduceMotion), value: cloud?.owner == nil)
         .task(id: "\(store.computer.id)/\(store.connection == .online)/\(store.accessRequests.count)") { await loadDevices() }
@@ -410,7 +423,7 @@ private struct ManagedComputerCard: View {
                 .foregroundStyle(Palette.secondary)
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 1) {
-                Text(device.name).appFont(.callout)
+                Text(device.name)
                 Text(detail(device)).appFont(.caption).foregroundStyle(Palette.tertiary)
             }
             Spacer()
@@ -628,10 +641,17 @@ private struct SSHProfileEditor: View {
 }
 
 private extension View {
+    /// A section's title row (the CardSection heading).
+    func sectionHeader() -> some View {
+        frame(minHeight: 24).padding(.leading, 2).padding(.bottom, 10)
+    }
+
+    /// One filled group, like a CardSection's.
     func card() -> some View {
-        padding(12)
+        padding(16)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Palette.surface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .background(Palette.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .padding(.bottom, 8)
     }
 }
 

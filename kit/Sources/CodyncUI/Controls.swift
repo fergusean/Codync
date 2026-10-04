@@ -492,7 +492,7 @@ public struct ChoicePicker<ID: Hashable>: View {
     var fill: Color
     var fitsAvailableWidth: Bool
 
-    public init(selection: Binding<ID>, options: [(id: ID, label: String)], fill: Color = Palette.bubbleUser, fitsAvailableWidth: Bool = false) {
+    public init(selection: Binding<ID>, options: [(id: ID, label: String)], fill: Color = .clear, fitsAvailableWidth: Bool = false) {
         _selection = selection
         self.options = options
         self.fill = fill
@@ -510,6 +510,12 @@ public struct ChoicePicker<ID: Hashable>: View {
             .appFont(AppFont.compactBody)
             .foregroundStyle(Palette.text)
             .pill(fill: fill)
+            .overlay {
+                // Unfilled, it's outlined like ChatGPT's settings dropdowns (outline or fill, never both).
+                if fill == .clear {
+                    RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(Palette.border)
+                }
+            }
         }
         .fixedSize(horizontal: !fitsAvailableWidth, vertical: true)
         .help(options.first { $0.id == selection }?.label ?? "Choose")
@@ -603,7 +609,7 @@ public struct CardForm<Content: View>: View {
 
     public var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: InterfaceMetrics.value(mac: 14, mobile: 22)) {
+            VStack(alignment: .leading, spacing: InterfaceMetrics.value(mac: 28, mobile: 32)) {
                 content
             }
             .appFont(AppFont.compactBody)
@@ -615,7 +621,9 @@ public struct CardForm<Content: View>: View {
     }
 }
 
-/// A titled card of rows: the replacement for `Section`.
+/// A titled group of rows: the replacement for `Section`. Modeled on ChatGPT's desktop settings:
+/// a small bold heading over a filled, rounded group whose rows are split by inset hairlines
+/// (references in `docs/design/reference/`).
 public struct CardSection<Content: View>: View {
     let title: String?
     let footer: String?
@@ -628,20 +636,53 @@ public struct CardSection<Content: View>: View {
     }
 
     public var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: InterfaceMetrics.value(mac: 10, mobile: 10)) {
             if let title {
-                Text(title).appFont(AppFont.compactSecondary).foregroundStyle(Palette.secondary).padding(.leading, 4)
+                Text(title)
+                    .appFont(.system(size: InterfaceMetrics.value(mac: 13, mobile: 15), weight: .semibold))
+                    .foregroundStyle(Palette.text)
+                    .padding(.leading, 2)
+                    .accessibilityAddTraits(.isHeader)
             }
-            VStack(alignment: .leading, spacing: InterfaceMetrics.value(mac: 12, mobile: 16)) {
-                content
+            VStack(alignment: .leading, spacing: 0) {
+                _VariadicView.Tree(HairlineRows()) { content }
             }
-            .padding(.horizontal, InterfaceMetrics.value(mac: 12, mobile: 16))
-            .padding(.vertical, InterfaceMetrics.value(mac: 12, mobile: 16))
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Palette.bubbleAgent, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .background(Palette.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
             if let footer {
-                Text(footer).appFont(.caption).foregroundStyle(Palette.tertiary).padding(.horizontal, 4)
+                Text(footer)
+                    .appFont(.caption)
+                    .foregroundStyle(Palette.secondary)
+                    .lineSpacing(2)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, 2)
             }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+/// A 1-pixel separator line in the border color.
+public struct Hairline: View {
+    @Environment(\.displayScale) private var scale
+
+    public init() {}
+
+    public var body: some View {
+        Rectangle().fill(Palette.border).frame(height: 1 / scale)
+    }
+}
+
+/// Lays a section's rows out one under another with an inset hairline between each pair.
+private struct HairlineRows: _VariadicView_MultiViewRoot {
+    func body(children: _VariadicView.Children) -> some View {
+        let inset = InterfaceMetrics.value(mac: 16, mobile: 16)
+        ForEach(children) { child in
+            child
+                .frame(maxWidth: .infinity, minHeight: InterfaceMetrics.value(mac: 28, mobile: 32), alignment: .leading)
+                .padding(.horizontal, inset)
+                .padding(.vertical, InterfaceMetrics.value(mac: 12, mobile: 14))
+            if child.id != children.last?.id { Hairline().padding(.horizontal, inset) }
         }
     }
 }
@@ -649,21 +690,33 @@ public struct CardSection<Content: View>: View {
 /// Label on the left, value on the right: the replacement for `LabeledContent`.
 public struct ValueRow<Value: View>: View {
     let label: String
+    let detail: String?
     let value: Value
 
-    public init(_ label: String, @ViewBuilder value: () -> Value) {
+    public init(_ label: String, detail: String? = nil, @ViewBuilder value: () -> Value) {
         self.label = label
+        self.detail = detail
         self.value = value()
     }
 
-    public init(_ label: String, value: String) where Value == Text {
+    public init(_ label: String, detail: String? = nil, value: String) where Value == Text {
         self.label = label
+        self.detail = detail
         self.value = Text(value)
     }
 
     public var body: some View {
-        HStack {
-            Text(label).foregroundStyle(Palette.text)
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(label).foregroundStyle(Palette.text)
+                if let detail {
+                    Text(detail)
+                        .appFont(.caption)
+                        .foregroundStyle(Palette.secondary)
+                        .lineSpacing(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
             Spacer(minLength: 12)
             value.foregroundStyle(Palette.secondary)
         }

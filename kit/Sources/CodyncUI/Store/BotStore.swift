@@ -108,6 +108,8 @@ public final class BotStore {
         let botId: String
         let startRev: Int64
         let speak: @MainActor (String) -> Void
+        /// A notice from the computer (approval needed), as opposed to the bot's reply.
+        let announce: @MainActor (String) -> Void
         let end: @MainActor () -> Void
     }
     @ObservationIgnored private var voiceCalls: [UUID: VoiceCall] = [:]
@@ -279,9 +281,9 @@ public final class BotStore {
 
     /// Audio owns this subscription, so background calls don't depend on SwiftUI updates.
     func beginVoiceCall(_ id: UUID, botId: String, speak: @escaping @MainActor (String) -> Void,
-                        end: @escaping @MainActor () -> Void) {
+                        announce: (@MainActor (String) -> Void)? = nil, end: @escaping @MainActor () -> Void) {
         guard !retired, voiceCalls[id] == nil else { return }
-        voiceCalls[id] = VoiceCall(botId: botId, startRev: rev, speak: speak, end: end)
+        voiceCalls[id] = VoiceCall(botId: botId, startRev: rev, speak: speak, announce: announce ?? speak, end: end)
         if streamTask == nil { restartStream() }
     }
 
@@ -541,7 +543,7 @@ public final class BotStore {
             if bot.unread > 0 { acknowledgeVisibleConversations(bot.id) }
             if bot.needsInput && !neededInput {
                 for call in Array(voiceCalls.values) where call.botId == bot.id {
-                    call.speak("\(bot.name) needs your approval in the chat.")
+                    call.announce("\(bot.name) needs your approval in the chat.")
                 }
             }
         case let .botDeleted(id, r):
