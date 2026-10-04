@@ -203,22 +203,17 @@ private struct CodyncItemSheet<Item: Identifiable, Sheet: View>: ViewModifier {
 }
 
 #if os(iOS)
+/// The system sheet: its own slide, grabber and swipe down, nothing hand-built.
 private struct CodyncSheet<Sheet: View>: ViewModifier {
     @Binding var isPresented: Bool
     let sheet: () -> Sheet
-    /// Outlives `isPresented` by the slide-out, so closing from outside the sheet
-    /// (clearing the binding) animates like the grabber and `dismissModal` do.
-    @State private var covered = false
 
     func body(content: Content) -> some View {
-        content
-            .fullScreenCover(isPresented: $covered) {
-                BottomSheet(isPresented: $isPresented, removed: { covered = false }, content: sheet)
-                    .presentationBackground(.clear)
-            }
-            .onChange(of: isPresented, initial: true) { if isPresented { covered = true } }
-            // Our own slide replaces the system one.
-            .transaction(value: covered) { $0.disablesAnimations = true }
+        content.sheet(isPresented: $isPresented) {
+            sheet()
+                .environment(\.dismissModal, DismissModalAction { isPresented = false })
+                .presentationDragIndicator(.visible)
+        }
     }
 }
 
@@ -258,121 +253,6 @@ private struct FadeLayer<Layer: View>: View {
             t.disablesAnimations = true
             withTransaction(t) { close() }
         }
-    }
-}
-
-/// Where the iPhone sheet sits. Only the offset and dim read it, so a drag frame
-/// doesn't re-render the sheet's content.
-@MainActor @Observable
-private final class SheetMotion {
-    var shown = false
-    var drag: CGFloat = 0
-    var height: CGFloat = 1000
-
-    /// 1 fully up, 0 off screen: the dim follows the finger.
-    var progress: CGFloat { shown ? max(0, 1 - drag / max(height, 1)) : 0 }
-}
-
-private struct SheetOffset: ViewModifier {
-    let motion: SheetMotion
-
-    func body(content: Content) -> some View {
-        content.offset(y: motion.shown ? motion.drag : motion.height)
-    }
-}
-
-private struct SheetDim: View {
-    let motion: SheetMotion
-
-    var body: some View {
-        Color.black.opacity(0.4 * motion.progress)
-    }
-}
-
-/// The iPhone modal: slides up over a dim, drags down (from the grabber) to close.
-/// Closing slides it out first and only then clears the binding, so the screen
-/// underneath re-renders once, after the animation, not in its first frame.
-private struct BottomSheet<Content: View>: View {
-    @Binding var isPresented: Bool
-    let removed: () -> Void
-    @ViewBuilder let content: () -> Content
-    @State private var motion = SheetMotion()
-    @State private var closing = false
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    var body: some View {
-        ZStack(alignment: .bottom) {
-            SheetDim(motion: motion)
-                .ignoresSafeArea()
-                .onTapGesture { close() }
-                .accessibilityHidden(true)
-            VStack(spacing: 0) {
-                Capsule().fill(Palette.tertiary.opacity(0.6)).frame(width: 36, height: 5)
-                    .frame(maxWidth: .infinity, minHeight: 22)
-                    .contentShape(Rectangle())
-                    .gesture(dragToClose)
-                    .accessibilityHidden(true)
-                content()
-                    .environment(\.dismissModal, DismissModalAction { close() })
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            }
-            .background(Palette.background)
-            .clipShape(UnevenRoundedRectangle(topLeadingRadius: 28, topTrailingRadius: 28, style: .continuous))
-            .padding(.top, 10)
-            .ignoresSafeArea(.container, edges: .bottom)
-            // Its own height (plus the home indicator) takes it fully off screen; the keyboard going away doesn't move the target.
-            .onGeometryChange(for: CGFloat.self) { $0.size.height + $0.safeAreaInsets.bottom + 10 } action: { motion.height = $0 }
-            .modifier(SheetOffset(motion: motion))
-        }
-        .onAppear(perform: slideIn)
-        // Closed from outside (the binding cleared): slide out the same way.
-        .onChange(of: isPresented) { if isPresented { slideIn() } else { close() } }
-        .accessibilityAction(.escape) { close() }
-    }
-
-    private var dragToClose: some Gesture {
-        // Global space: the grabber moves with the sheet, so local translation would feed back and jitter.
-        DragGesture(coordinateSpace: .global)
-            .onChanged { motion.drag = max(0, $0.translation.height) }
-            .onEnded { value in
-                let velocity = value.velocity.height
-                if value.translation.height > 120 || value.predictedEndTranslation.height > 320 {
-                    close(velocity: velocity)
-                } else {
-                    withAnimation(spring(from: motion.drag, to: 0, velocity: velocity)) { motion.drag = 0 }
-                }
-            }
-    }
-
-    private func slideIn() {
-        closing = false
-        withAnimation(Motion.reduced(Motion.layout, reduceMotion)) { motion.shown = true }
-    }
-
-    /// Slides out (carrying the finger's speed), then clears the binding and removes the cover.
-    private func close(velocity: CGFloat = 0) {
-        guard !closing else { return }
-        closing = true
-        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-        let animation = reduceMotion ? nil : spring(from: motion.drag, to: motion.height, velocity: velocity)
-        withAnimation(animation) {
-            motion.shown = false
-        } completion: {
-            guard closing else { return }
-            var t = Transaction()
-            t.disablesAnimations = true
-            withTransaction(t) {
-                if isPresented { isPresented = false }
-                removed()
-            }
-        }
-    }
-
-    /// `Motion.layout`, starting at the finger's speed so a flick doesn't stall on release.
-    private func spring(from: CGFloat, to: CGFloat, velocity: CGFloat) -> Animation {
-        let distance = to - from
-        guard abs(distance) > 1 else { return Motion.layout }
-        return .interpolatingSpring(Spring(duration: 0.3, bounce: 0), initialVelocity: velocity / distance)
     }
 }
 
