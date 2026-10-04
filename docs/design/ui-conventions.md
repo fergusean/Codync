@@ -59,6 +59,8 @@ Other custom screens use `Chrome.swift` and `Controls.swift`:
 
 Avoid adding stock `Menu`, `Picker`, `Form`/`List` styling, switch toggles, alerts, `ProgressView`, `TabView` or system sheets to these flows. System presentation APIs inside the shared chrome implementation are implementation details, not permission to bypass the components in feature screens. Native WidgetKit/ActivityKit containers and OS authentication/permission flows remain system integrations.
 
+No scroll bars: scroll indicators never show, on either platform (`.scrollIndicators(.never)` on each app's root, so every scroll view inherits it).
+
 Anything with a background fill gets no extra drawn border. Use `Palette`, `InterfaceMetrics` and `Motion`; visibility changes animate and honor Reduce Motion. Icon-only actions have an accessibility label and desktop help where applicable. Reserve text for actions an icon cannot clearly express.
 
 ## Motion and status
