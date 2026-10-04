@@ -3,10 +3,10 @@ name: codync-host
 on:
   push:
     branches: [main, v2]
-    paths: ["host/**", "apps/linux/**", "packaging/updates/**", "docs/reference/fixtures/remote-relay-vectors.json", ".github/workflows/host.yml"]
-    tags: ["v*"]  # one version tag ships the Mac app, the host and the Linux app
+    paths: ["host/**", "packaging/updates/**", "docs/reference/fixtures/remote-relay-vectors.json", ".github/workflows/host.yml"]
+    tags: ["v*"]  # one version tag ships the host and the desktop app (release-desktop.yml)
   pull_request:
-    paths: ["host/**", "apps/linux/**", "packaging/updates/**", "docs/reference/fixtures/remote-relay-vectors.json"]
+    paths: ["host/**", "packaging/updates/**", "docs/reference/fixtures/remote-relay-vectors.json"]
 
 jobs:
   test:
@@ -27,62 +27,6 @@ jobs:
       - run: cargo fmt --check
       - run: cargo clippy --all-targets -- -D warnings
       - run: cargo test
-
-  linux-app:
-    strategy:
-      matrix:
-        include:
-          - { os: ubuntu-24.04, target: x86_64-unknown-linux-gnu, name: linux-x86_64 }
-          - { os: ubuntu-24.04-arm, target: aarch64-unknown-linux-gnu, name: linux-arm64 }
-    runs-on: ${{ matrix.os }}
-    permissions:
-      contents: write
-    defaults:
-      run:
-        working-directory: apps/linux
-    steps:
-      - uses: actions/checkout@v4
-      - run: sudo apt-get update && sudo apt-get install -y libgtk-4-dev libadwaita-1-dev libvte-2.91-gtk4-dev xvfb dbus-x11 imagemagick
-      - name: Install Rust (rust-toolchain.toml)
-        run: rustup toolchain install
-      - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: apps/linux
-      - name: Version matches the host
-        # The host's minApp is compared with this app's version (docs/reference/compatibility.md).
-        run: |
-          read_version() { python3 -c 'import sys, tomllib; print(tomllib.load(open(sys.argv[1], "rb"))["package"]["version"])' "$1"; }
-          test "$(read_version Cargo.toml)" = "$(read_version ../../host/Cargo.toml)" || { echo 'apps/linux and host versions must match'; exit 1; }
-      - run: cargo clippy -- -D warnings
-      - run: cargo test
-      - name: Verify native UI flows
-        env:
-          GTK_A11Y: none
-          CODYNC_UI_ARTIFACTS: ${{ github.workspace }}/build/ui-parity
-        run: xvfb-run -a dbus-run-session -- python3 tests/ui_fixture.py
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: native-ui-${{ matrix.name }}
-          path: build/ui-parity/
-      - name: Package
-        if: startsWith(github.ref, 'refs/tags/v')
-        run: |
-          # <product>-<os>-<arch>, no version: the website links to releases/latest/download/<name>.
-          NAME=codync-${{ matrix.name }}
-          cargo build --release
-          mkdir -p $NAME/share/applications $NAME/share/icons/hicolor/scalable/apps $NAME/bin
-          cp target/release/codync $NAME/bin/
-          cp data/com.pokai.Codync.desktop $NAME/share/applications/
-          cp data/com.pokai.Codync.svg $NAME/share/icons/hicolor/scalable/apps/
-          tar czf $GITHUB_WORKSPACE/$NAME.tar.gz $NAME
-          cd $GITHUB_WORKSPACE && shasum -a 256 $NAME.tar.gz > $NAME.tar.gz.sha256
-      - uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/v')
-        with:
-          files: |
-            codync-linux-*.tar.gz
-            codync-linux-*.tar.gz.sha256
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')
