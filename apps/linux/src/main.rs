@@ -113,6 +113,9 @@ const CSS: &str = r#"
 @define-color accent_fg_color @cd_on_accent;
 @define-color accent_color @cd_text;
 switch:checked > slider { background: @cd_on_accent; }
+/* Settings groups, like the Mac's CardSection: a filled rounded group, no outline. */
+list.boxed-list { background: @cd_surface; box-shadow: none; border-radius: 16px; }
+list.boxed-list > row { background: transparent; }
 
 window { font-size: 12px; }
 .surface { background: @cd_surface; }

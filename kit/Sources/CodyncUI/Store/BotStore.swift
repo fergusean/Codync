@@ -114,6 +114,8 @@ public final class BotStore {
         let botId: String
         let startRev: Int64
         let speak: @MainActor (String) -> Void
+        /// A notice from the computer (approval needed), as opposed to the bot's reply.
+        let announce: @MainActor (String) -> Void
         let end: @MainActor () -> Void
     }
     @ObservationIgnored private var voiceCalls: [UUID: VoiceCall] = [:]
@@ -287,9 +289,9 @@ public final class BotStore {
 
     /// Audio owns this subscription, so background calls don't depend on SwiftUI updates.
     func beginVoiceCall(_ id: UUID, botId: String, speak: @escaping @MainActor (String) -> Void,
-                        end: @escaping @MainActor () -> Void) {
+                        announce: (@MainActor (String) -> Void)? = nil, end: @escaping @MainActor () -> Void) {
         guard !retired, voiceCalls[id] == nil else { return }
-        voiceCalls[id] = VoiceCall(botId: botId, startRev: rev, speak: speak, end: end)
+        voiceCalls[id] = VoiceCall(botId: botId, startRev: rev, speak: speak, announce: announce ?? speak, end: end)
         if streamTask == nil { restartStream() }
     }
 
@@ -519,7 +521,7 @@ public final class BotStore {
     private func noteHostVersion(_ new: HostVersion) {
         let cached = cacheStamp.map { $0 != "\(Self.appBuild)/\(new.version)" } ?? false
         if cached || (hostVersion.map { $0.version != new.version } ?? false) {
-            // A different host version: its data may carry new fields, so fetch it all again.
+            // A different host version or app build: data may carry new fields, so fetch it all again.
             rev = 0
             rewound = false
             unreadable = false
@@ -549,7 +551,7 @@ public final class BotStore {
             if bot.unread > 0 { acknowledgeVisibleConversations(bot.id) }
             if bot.needsInput && !neededInput {
                 for call in Array(voiceCalls.values) where call.botId == bot.id {
-                    call.speak("\(bot.name) needs your approval in the chat.")
+                    call.announce("\(bot.name) needs your approval in the chat.")
                 }
             }
         case let .botDeleted(id, r):
@@ -1173,10 +1175,11 @@ public final class BotStore {
     }
 
     private func loadCache() {
+        // A cache from another app build still shows at once; the stamp mismatch makes the next
+        // hello fetch everything again underneath it.
         guard let data = try? Data(contentsOf: cacheURL),
-              let cache = try? JSONDecoder().decode(Cache.self, from: data),
-              cache.stamp?.hasPrefix(Self.appBuild + "/") == true else { return }
-        cacheStamp = cache.stamp
+              let cache = try? JSONDecoder().decode(Cache.self, from: data) else { return }
+        cacheStamp = cache.stamp ?? ""
         hostId = cache.hostId
         rev = cache.rev
         bots = Dictionary(cache.bots.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })

@@ -1,11 +1,13 @@
 # Voice call
 
-A hands-free call with one bot from the iPhone chat (the waveform button in an empty composer).
+A hands-free call with one bot from the iPhone or Mac chat (the waveform button in an empty composer).
+Linux and the terminal UI have no calls: neither has an audio stack (GTK app, TUI); they show the
+"Voice chat · 00:16" notice like every client.
 The bot is the same agent on the computer; the call only changes how you talk to it.
 
-## Implemented: on the phone
+## On-device voice
 
-- `kit/Sources/CodyncUI/Call/`: `CallSession` (audio loop) + `CallView` (the call bar).
+- `kit/Sources/CodyncUI/Call/`: `CallView` (the call bar) over a `VoiceEngine`; `OnDeviceEngine` is the default audio loop.
 - UI follows Grok Bot: a floating capsule over the top of the chat (`ThreadView` overlay), and the
   chat stays readable and usable underneath. Left to right: the bot's avatar (pulses while
   speaking; tap it to interrupt), a dotted level line (your voice while listening, a ripple while
@@ -17,7 +19,7 @@ The bot is the same agent on the computer; the call only changes how you talk to
 - Each new final reply (`data.final`) is read aloud with `AVSpeechSynthesizer` in the reply's own
   language; markdown and code blocks are dropped (`SpokenText`). The mic pauses while it speaks.
   An approval request is announced, answered in the chat.
-- Gear: pause length before sending (1 / 1.5 / 2.5 s) and reading speed; kept on the phone.
+- Gear: voice engine (below), and for On device the pause length before sending (1 / 1.5 / 2.5 s) and reading speed; kept on the phone.
 - Ending the call calls `logCall {botId, seconds}`; the host adds a notice (`callSeconds`) that
   every client shows as "Voice chat · 00:16".
 - The host receives recognized text; the Cloudflare transport sees encrypted channel frames.
@@ -68,67 +70,115 @@ evidence Apple requested. A `simctl io ... recordVideo` probe on 2026-09-30
 produced an H.264 video track with no audio track. Transport regression tests
 verify background reply delivery and retirement, not iOS audio behavior.
 
-## Design: realtime voice with your own key (not implemented)
+## Realtime voice with your own key
 
 Better recognition (mixed Chinese/English, code terms) and a real conversation (barge-in, "what are
-you doing?" answered from the transcript) need a realtime speech model. Users bring their own
-provider key; Codync never resells minutes for it.
+you doing?" answered from the transcript) need a realtime speech model. Codync is free, so users
+bring their own provider key; Codync never pays for or resells minutes.
 
 ### Engines
 
-The gear's first section becomes **Voice engine**:
+The gear's first section is **Voice engine** (applies from the next call):
 
-| Engine | Needs | Transport |
-| --- | --- | --- |
-| On device (default) | nothing | what ships today |
-| OpenAI Realtime | OpenAI API key | WebRTC, phone ↔ OpenAI |
-| Gemini Live | Google AI Studio key | WebSocket, phone ↔ Google |
+| Engine | Needs | Transport | Code |
+| --- | --- | --- | --- |
+| On device (default) | nothing | Apple speech, as above | `OnDeviceEngine` |
+| OpenAI | OpenAI API key on the computer | WebRTC, device ↔ OpenAI (default `gpt-realtime-2.1`) | `OpenAIRealtimeEngine` |
+| Gemini | Google AI Studio key on the computer | WebSocket, device ↔ Google (default `gemini-3.8-live`) | `GeminiLiveEngine` |
 
-Picking a cloud engine without a key opens its key form: a secure field, a link to the provider's
-key page, **Test** (one cheap authenticated call; shows "Key works" or the provider's error), and a
-voice picker. The call bar shows the provider's small wordmark-free label ("OpenAI") next to the
-dots whenever audio leaves the phone.
+Each cloud engine has two **modes**:
+
+- **Realtime**: a live conversation with the provider's realtime model (below), talk over replies.
+- **Speech** (`CloudSpeechEngine`): the on-device loop with the provider's models instead of Apple's.
+  The microphone is cut into utterances at a pause (energy VAD; under 0.4 s of voice is dropped as
+  noise, and 0.4 s after playback is ignored as echo), each one goes to the provider's
+  speech-to-text and is sent as an ordinary message; replies are read with its text-to-speech. Both
+  run on the computer (`voiceTranscribe`, `voiceSpeak`), so the key never leaves it; utterances stop
+  at 20 s and replies are spoken in clips (OpenAI 600 characters as AAC, Gemini 150 as WAV) so every
+  request and answer fits one 1 MiB channel message. Speech-to-text gets the app's and
+  the bots' names as hints (gpt-transcribe also as `keywords`). gpt-transcribe returns Chinese in
+  Simplified characters whatever the prompt says, so the client turns it into Traditional
+  (`Hans-Hant`) for a reader whose first Chinese language, or region, is Traditional. Only a
+  model the user picks is saved; the default isn't, so a newer default reaches everyone.
+
+**Default models follow the provider.** Nothing pins a model version: once a day (and whenever a
+key is saved or the model list is opened) the host reads each keyed provider's model list and
+keeps its newest model per mode (`voice::newest`, stored as `voice-defaults.<provider>`), and
+`voiceStatus` / `voiceModels` report them as `defaults`. OpenAI's list is dated, so its newest
+generation wins, full models over `mini`; Gemini's names carry the version, plain names over
+`-lite` / variants; dated snapshots and previews never become defaults. Clients remember the
+last `defaults` they saw (`callDefaults.<provider>`) and refresh them at every call. The ids
+built into the host and the app (today `gpt-realtime-2.1`, `gpt-transcribe`, `gpt-4o-mini-tts`;
+`gemini-3.8-live`, `gemini-3.8-flash`, `gemini-3.8-flash-tts`) are used only until the first
+list arrives.
+
+Voice settings (`VoiceChatSettingsView`) open from the call bar's gear and from settings: on the
+iPhone, **Computers & settings → Voice chat**; on the Mac, **Account → Voice chat** (this Mac's
+computer) or the waveform button on a computer's card in **Computers & devices**. Keys are entered
+on the computer only: the host takes `setVoiceKey` from loopback, and the iPhone shows whether a key
+is there and can test it. Picking a cloud engine shows its key form instead of the on-device settings: a secure field, a link
+to the provider's key page, **Test** (the computer checks a new key with the provider and keeps it
+only if it works, otherwise the provider's error is shown; with a key saved, it mints a call
+credential for the chosen model and voice), a model picker, a voice picker, and minutes used this month.
+Speech mode adds speech-to-text and text-to-speech pickers and the pause length. The model list comes from the provider through the computer (`voiceModels`: OpenAI `GET /v1/models`
+ids sorted into realtime, transcribe and tts models; Gemini `GET v1beta/models` by
+`bidiGenerateContent` / `generateContent` and name; translation and diarization models left out), fetched after a successful test and each time the form opens. The call bar
+shows the provider's name next to the dots whenever audio leaves the device.
 
 ### Where the key lives
 
-- On the iPhone only, in the Keychain (`kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`, not
-  synced). It is never sent to the host, the relay or our cloud, and never written to logs.
-- The long-lived key is used for one thing: minting a short-lived client credential at call start
-  (OpenAI `POST /v1/realtime/client_secrets`, Gemini ephemeral auth tokens). The audio session only
-  ever sees that credential.
-- Rejected: key on the host with audio proxied through it. Audio would cross the encrypted channel
-  and the relay (latency, relay bandwidth), and a Linux server host has no microphone reason to
-  hold it.
+- On the computer, in the host's vault (`host/src/voice.rs`, slot `voice`: encrypted in
+  `codync.db` with the vault key from Keychain / Secret Service), so one key serves the iPhone and the
+  Mac. It reaches the host once, over the encrypted channel, and never leaves it again; it is never
+  logged and never sent to the relay or our cloud.
+- Host methods (control scope): `voiceStatus` (which providers have a key), `setVoiceKey
+  {provider, key}` (checked with one credential mint before it's kept; empty removes it),
+  `voiceSession {provider, model, voice}` → `{credential}`, `voiceModels {provider}` → `{models,
+  transcribe, speech}`, `voiceTranscribe {provider, model, audio}` (base64 16 kHz WAV) → `{text}`,
+  `voiceSpeak {provider, model, voice, text}` → `{audio, format}`.
+- The long-lived key is used for minting a short-lived credential at call start (OpenAI
+  `POST /v1/realtime/client_secrets`, 10 minutes; Gemini `POST v1alpha/auth_tokens`, one use) and
+  listing models. The client's audio session only ever sees that credential.
+- Audio is not proxied through the host: it would cross the encrypted channel and the relay
+  (latency, relay bandwidth). The device streams to the provider directly.
 
 ### How the call works
 
-The realtime model is an operator in front of the bot, not a replacement for it:
+The realtime model is an operator in front of the bot, not a replacement for it (`CallOperator`):
 
 - Session instructions: who the bot is (name, description), that coding is done by the bot, reply
   in the user's language, keep spoken answers short.
-- Tools the phone implements locally against `BotStore`: `send_to_bot(text)` (an ordinary message,
-  same path as today), `bot_status()` (idle/working, activity line, pending approval),
+- Tools the client implements against `BotStore`: `send_to_bot(text)` (an ordinary message, same path
+  as on-device calls), `bot_status()` (status, activity line, pending approval and its options),
   `recent_messages(count)` (chat-visible entries only), `answer_approval(option)` (only after the
-  user said which).
-- Each new final reply is pushed into the realtime conversation as a context item; the model speaks
-  it (shortened for speech). Barge-in is the provider's own voice activity detection.
+  user said which; matched by option name).
+- Each new final reply is added to the realtime conversation as `[<bot> replied] …` and an approval
+  as `[Notice] …` (`BotStore` hands them over as `speak` / `announce`); the model says them,
+  shortened for speech. They wait while the model is talking, so they don't cut it off.
+- Barge-in is the provider's voice activity detection (OpenAI semantic VAD; Gemini's automatic
+  VAD, with the voice-processing input cancelling the device's own playback). Tapping the avatar
+  cancels the response locally.
+- Gemini connections are replaced before the server's limit: `goAway` closes the socket and the
+  session resumes on a fresh token with its resumption handle; context window compression lifts the
+  15-minute audio session cap.
 - The chat stays the record: only `send_to_bot` messages and the bot's replies are entries. The
   operator's small talk isn't saved; the call still ends with the "Voice chat" notice.
 
 ### Failure and cost
 
-- Invalid key, quota or network failure at start → the call falls back to On device with a one-line
-  notice under the bar; mid-call failure does the same without dropping the call.
-- Usage is billed by the provider to the user. The gear shows minutes used this month (counted on
-  the phone) next to the engine, as an estimate, not a bill.
+- No key on the computer, invalid key, quota or network failure at start, or a dropped connection mid-call: the
+  call switches to On device without hanging up, with a one-line notice under the bar.
+- Usage is billed by the provider to the user. The key form shows minutes used this month
+  (`VoiceUsage`, counted on each device while a cloud engine is live) as an estimate, not a bill.
 
-### Code layout
+### Verification
 
-- `kit/Sources/CodyncUI/Call/VoiceEngine.swift`: `protocol VoiceEngine` (start, end, mute,
-  interrupt, `phase`, `level`, `onUserMessage`, `speak(reply:)`); `OnDeviceEngine` is today's
-  `CallSession`; `OpenAIRealtimeEngine` (WebRTC, the app already links WebRTC for Remote screen)
-  and `GeminiLiveEngine` (URLSessionWebSocketTask).
-- `kit/Sources/CodyncKit/Client/VoiceKeys.swift`: Keychain storage + credential minting.
-- `CallView` only talks to `VoiceEngine`; nothing on the host changes.
-- A later Codync Pro plan can add a second credential source (our server mints the client token after
-  checking the entitlement) behind the same engines.
+On 2026-10-04 the OpenAI path was checked with a real key from a Mac (aiortc driving the same
+client secret → `/v1/realtime/calls` SDP → `oai-events` sequence): session update with the four tools,
+a spoken reply, and `send_to_bot` called for a Chinese request. The iOS Simulator's voice-processing
+audio unit can abort with an RPC timeout when WebRTC starts its audio; use a physical iPhone for audio.
+
+`StoreTests` cover the operator's tools against a scripted host (send, status with an approval,
+option matching, recent messages) and approvals reaching a call as notices. Provider audio isn't
+simulated: on a physical iPhone, check both engines with a real key (talk over a reply, ask "what
+are you doing?", approve by voice, and turn off Wi-Fi mid-call to see the fallback).

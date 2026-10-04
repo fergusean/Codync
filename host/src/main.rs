@@ -15,6 +15,7 @@ mod store;
 mod tui;
 mod update;
 mod usage;
+mod voice;
 
 use agent::{backends, registry};
 use remote::{identity, relay};
@@ -502,6 +503,7 @@ async fn serve(bind: &str, port: u16) -> Result<()> {
     let hub = hub::Hub::new(store, host_id, identity, token, port);
     hub.start()?;
     tokio::spawn(registry::refresh_loop());
+    tokio::spawn(voice::refresh_loop(hub.clone()));
     tokio::spawn(backends::refresh_sign_in());
     tokio::spawn(usage::poll(hub.clone()));
     tokio::spawn(update::automatic_loop(hub.clone()));

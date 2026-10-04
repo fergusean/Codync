@@ -25,6 +25,8 @@ Run from the repository root unless a command changes directories:
 
 Always stop the old Mac app, host and iPhone process before running a new build (old host = old protocol, old app = old UI); commands in [docs/guides/development.md](docs/guides/development.md#apple-apps).
 
+Keep only the latest build: in this checkout, Apple builds go to `build/dd` only (no other `-derivedDataPath`, no copies in scratchpads, `/tmp` or Xcode's DerivedData); delete any older Codync build right away, so macOS never launches a stale copy. A git worktree may keep its own single build inside that worktree.
+
 ## Versioning & releases
 
 - **Every source change ships as a release.** A version bump on `main` is the only release trigger (Auto Tag → DMG, host, Linux app, Homebrew, in-app update), so any change to shipped code (`apps/`, `kit/`, `host/`, `packaging/`) bumps the version before it reaches `main`, without being asked. Docs, `web/`, `cloud/`, `relay/` and CI-only changes don't bump.
@@ -38,7 +40,7 @@ Use four-space indentation for Swift and Rust. Follow Swift 6 strict concurrency
 
 Name Swift files after their main `UpperCamelCase` type; use `snake_case.rs` and `kebab-case.ts`. Follow role suffixes such as `View`, `Row`, and `Store`. See `docs/architecture/file-structure.md` and `CLAUDE.md` for architectural conventions.
 
-- UI controls default to the shared custom components. Explicit exception: iOS BotListView and ThreadView use native navigation/toolbar items and automatic back navigation for system Liquid Glass, as specified in `docs/design/ui-conventions.md`. The macOS menu bar also uses native `MenuBarExtra(.menu)`, menus, pickers and toggles. Keep system authentication and widget containers native. Outside these exceptions, avoid: no `Menu`/`Picker`, `.switch` toggles, `Form`/`List` styling, `confirmationDialog`/`alert`, `ProgressView`, `.sheet`/`.popover`/`.fullScreenCover`, `.toolbar`/navigation bars, `TabView`, `ContentUnavailableView`. Use `kit/Sources/CodyncUI/Controls.swift` + `Chrome.swift` (`.codyncSheet`, `ModalHeader`, `ScreenHeader`, `TabBar`, `.codyncMenu`, `.codyncDialog`, `ToggleStyle.codync`). Every tap that shows/hides something animates (`Motion`). Anything with a background fill gets no border line.
+- UI controls default to the shared custom components. Explicit exception: iOS BotListView and ThreadView use native navigation/toolbar items and automatic back navigation for system Liquid Glass, as specified in `docs/design/ui-conventions.md`. The macOS menu bar also uses native `MenuBarExtra(.menu)`, menus, pickers and toggles. Keep system authentication and widget containers native. On iOS `.codyncSheet` presents the system sheet (grabber, swipe down). Outside these exceptions, avoid: no `Menu`/`Picker`, `.switch` toggles, `Form`/`List` styling, `confirmationDialog`/`alert`, `ProgressView`, `.sheet`/`.popover`/`.fullScreenCover`, `.toolbar`/navigation bars, `TabView`, `ContentUnavailableView`. Use `kit/Sources/CodyncUI/Controls.swift` + `Chrome.swift` (`.codyncSheet`, `ModalHeader`, `ScreenHeader`, `TabBar`, `.codyncMenu`, `.codyncDialog`, `ToggleStyle.codync`). Every tap that shows/hides something animates (`Motion`). Anything with a background fill gets no border line.
 
 ## Cross-platform UI changes
 
@@ -46,6 +48,7 @@ Name Swift files after their main `UpperCamelCase` type; use `snake_case.rs` and
 - Keep shared features, actions, terminology, displayed information, and loading, empty, error, and permission states consistent. Adapt layout, controls, and input to each platform, including terminal keyboard interaction, while preserving the same user-facing behavior.
 - Inspect every client's corresponding implementation before finishing a UI task. Implement applicable changes together; do not silently defer another client. For a platform-only change or an unsupported capability, document which clients are unaffected and the concrete reason in the change summary.
 - Validate each affected client with its relevant build/tests and UI checks. Report any checks that could not run and why.
+- Shared SwiftUI (`kit/`) builds into both iPhone and Mac: never change a shared view's or control's defaults for one platform, and keep one-platform chrome in platform files ([ui-conventions](docs/design/ui-conventions.md#shared-code-across-iphone-and-mac)).
 
 ## Testing Guidelines
 
@@ -58,7 +61,7 @@ Use Swift Testing (`@Test`, `#expect`), Rust unit tests, and the relay’s Node 
 - Body (after a blank line, wrapped at 72 columns) when the change isn't obvious from the subject: what and why, not how. Bullets are fine.
 - One logical change per commit. Don't mix unrelated work, and stage only your own hunks when others have uncommitted changes in the tree.
 - Breaking changes: `!` after the type/scope, or a `BREAKING CHANGE:` footer.
-- English only; no `Co-Authored-By` or other AI attribution trailers (the commit-msg hook rejects them).
+- English only.
 
 PRs should explain behavior changes, link relevant issues, list validation performed, and include screenshots for UI changes. Fill the template's *What's New* bullets (zh-Hant + en-US) for iOS changes users can see; they become the App Store notes when `apps/ios/WhatsNew.md` has no section for the release. Update affected documentation in the same change.
 

@@ -18,9 +18,12 @@ struct RoutinesView: View {
     @State private var loadError: String?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: close == nil ? 10 : 16) {
             HStack {
-                Text("Routines").appFont(.system(size: 13, weight: .semibold))
+                Text("Routines")
+                    .appFont(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Palette.text)
+                    .padding(.leading, 2)
                 Spacer(minLength: 0)
                 askInChat
                 IconButton("Set up a routine", systemImage: "plus") { open(nil) }
@@ -66,18 +69,22 @@ struct RoutinesView: View {
         VStack(alignment: .leading, spacing: 0) {
             if routines.isEmpty {
                 Text(loaded ? "No routines yet. Ask the bot for one, or set it up yourself with +." : "Loading routines…")
-                    .appFont(.caption)
+                    .appFont(.system(size: 12))
+                    .lineSpacing(3)
                     .foregroundStyle(Palette.secondary)
                     .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(14)
+                    .background(Palette.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
             } else {
                 VStack(spacing: 0) {
                     ForEach(routines) { routine in
-                        if routine.id != routines.first?.id { Divider() }
+                        if routine.id != routines.first?.id { Hairline() }
                         row(routine)
                     }
                 }
                 .padding(.horizontal, 14)
-                .background(Palette.surface, in: RoundedRectangle(cornerRadius: 12))
+                .background(Palette.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
             }
         }
     }

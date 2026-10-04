@@ -8,16 +8,16 @@ The conversation keeps the native glass buttons over the chat with a soft top sc
 
 Do not wrap those toolbar controls in `IconButtonStyle`, hand-sized rounded backgrounds or another glass effect. The account avatar is toolbar content, with the system supplying the enclosing surface. This is the explicit exception to the custom-chrome rule below.
 
-Connecting and reconnecting are background work. `BotStore` gives initial offline reports 1 second to recover and holds drops from online (including relay "computer offline" reports) for 5 seconds. "No access" shows immediately. Automatic read acknowledgements never open an error dialog and visible conversations are acknowledged again after reconnecting. An action taken during a reconnect (back in the foreground, a new network, a drop still inside its grace) waits for the link, up to 20 seconds, instead of failing; while one waits, headers read `Connecting…` and the conversation's connection label shows a spinner. Calls that are safe to repeat (send, stop, approvals, pin, hide, mark as read, delete) are tried again when the link drops under them. Tapping while the header says Offline because the computer can't be reached starts a fresh connection attempt and waits for it, instead of failing until the backoff gets there; a computer the relay reports as off fails at once, since the relay says when it is back. A permission card shows a spinner on the chosen option, dims the others and takes no second answer until the computer has it. The Linux app and the TUI follow the same rule over loopback: a command the host can't be reached for is retried for up to 20 seconds behind their "Reconnecting…" indicator (the `hello` probe that explains an unreachable host still answers at once), and their permission cards spin on the chosen option. The "Something went wrong" dialog is left for a computer that is off, a refused device, the computer's own answers, and reconnects that outlast the wait. Background work (cloud refresh, device registration, automatic access requests) logs connection, busy-cloud and stale-token failures instead of showing them. The iOS app disconnects only in `.background`, not `.inactive`. Connection status lives only in headers and their menus. The roster header shows a small summary (`1 connected`, `1/2 connected`, `2 offline`, or `Connecting…`). Its computer menu supports multiple selections, Show only, All computers, reconnect, and management. At least one available computer stays selected; if saved exclusions would hide every computer, the list falls back to all. Filters persist on the device. Bots sort pinned first, then by recency. On iPhone, when more than one computer is shown, each computer gets a light heading (badge, name, connection, and "No bots yet" when empty) above its own bots; with one computer the list stays flat. Long-press a heading and drag it onto another computer's section to reorder computers (VoiceOver: Move up / Move down); the order is saved on the device (`AccountStore.move`). The Mac shows a flat roster. There are no connection banners. The compact Mac rail uses a computer icon for the same menu. Conversation headers show a small connection label, with the computer name available in the header menu or help text. Pull-to-refresh remains available on iPhone. Computer setup and access requests live under Manage computers.
+Connecting and reconnecting are background work. `BotStore` gives initial offline reports 1 second to recover and holds drops from online (including relay "computer offline" reports) for 5 seconds. "No access" shows immediately. Automatic read acknowledgements never open an error dialog and visible conversations are acknowledged again after reconnecting. An action taken during a reconnect (back in the foreground, a new network, a drop still inside its grace) waits for the link, up to 20 seconds, instead of failing; while one waits, headers read `Connecting…` and the conversation's connection label shows a spinner. Calls that are safe to repeat (send, stop, approvals, pin, hide, mark as read, delete) are tried again when the link drops under them. Tapping while the header says Offline because the computer can't be reached starts a fresh connection attempt and waits for it, instead of failing until the backoff gets there; a computer the relay reports as off fails at once, since the relay says when it is back. A permission card shows a spinner on the chosen option, dims the others and takes no second answer until the computer has it. The Linux app and the TUI follow the same rule over loopback: a command the host can't be reached for is retried for up to 20 seconds behind their "Reconnecting…" indicator (the `hello` probe that explains an unreachable host still answers at once), and their permission cards spin on the chosen option. The "Something went wrong" dialog is left for a computer that is off, a refused device, the computer's own answers, and reconnects that outlast the wait. Background work (cloud refresh, device registration, automatic access requests) logs connection, busy-cloud and stale-token failures instead of showing them. The iOS app disconnects only in `.background`, not `.inactive`. Connection status lives only in headers and their menus. The roster header shows a small summary (`1 connected`, `1/2 connected`, `2 offline`, or `Connecting…`). Its computer menu supports multiple selections, Show only, All computers, reconnect, and management. At least one available computer stays selected; if saved exclusions would hide every computer, the list falls back to all. Filters persist on the device. Bots sort pinned first, then by recency. On iPhone, when more than one computer is shown, each computer gets a light heading (badge, name, connection, and "No bots yet" when empty) above its own bots; with one computer the list stays flat. Tapping a heading folds that computer's bots away (chevron; saved on the device). Long-press a heading to lift the whole section and drag it up or down; the other sections slide out of its way and the order is saved on the device on release (`AccountStore.move`; VoiceOver: Move up / Move down). The Mac shows a flat roster. There are no connection banners. The compact Mac rail uses a computer icon for the same menu. Conversation headers show a small connection label, with the computer name available in the header menu or help text. Pull-to-refresh remains available on iPhone. Computer setup and access requests live under Manage computers.
 
-Sources: `apps/ios/Views/BotListView.swift`, `AccountSwitcherView.swift`, `kit/Sources/CodyncUI/Thread/ThreadView.swift`, `Bots/ComputerFilterHeader.swift`, `Store/ComputerSelection.swift`, `Bots/BotRow.swift`.
+Sources: `apps/ios/Views/BotListView.swift`, `AccountSwitcherView.swift`, `kit/Sources/CodyncUI/Thread/ThreadView+iOS.swift`, `Bots/ComputerFilterHeader.swift`, `Store/ComputerSelection.swift`, `Bots/BotRow.swift`.
 
 ## macOS menu bar
 
 Release update controls live in the native Settings → Updates menu; the chat
-window's account menu repeats the one action (**Check for updates**, which becomes
-**Update to <version>** once a release is found). GTK's account menu opens Host
-updates in Computers & devices and the TUI action list has **Check for updates**.
+window's Settings has the same controls on its Updates page (**Check for updates**,
+which becomes **Update to <version>** once a release is found). GTK's Settings has
+Host updates on its Updates page and the TUI action list has **Check for updates**.
 Sparkle's standard update/install windows are a native system-integration exception; keep
 signature errors, progress and relaunch in its supported user driver.
 
@@ -26,9 +26,22 @@ Use `MenuBarExtra` with `.menuBarExtraStyle(.menu)`. Its commands, submenus, che
 The menu retains host installation/restart, bot conversation/stop actions, approval review, usage limits, remote-screen permissions, launch-at-login and quit. Pairing opens a separate titled window because its QR needs a persistent scanning surface. The chat window retains its own UI conventions.
 
 Usage limits appear directly in the top-level menu, grouped by provider with native section headers. Show each window's percentage, reset time when available, and the provider's last update; do not hide them in submenus. The account menu's
-Usage row shows no number; its sheet lists the same per-provider bars (`UsageLimits`).
+Usage row shows no number; it opens Settings' Usage page with the same per-provider bars (`UsageLimits`).
+
+## Account menu and Settings (Mac, Linux)
+
+The chat window's account menu copies Grok Bot's: Usage, Get Codync for mobile, Support, Settings, then the signed-in account and Sign out. Everything else is a page of **Settings**, laid out like ChatGPT's desktop settings (references in `reference/chatgpt-settings-*.png`): a sidebar of pages under small group labels (Personal: General, Voice chat, Usage; This Mac: Computers, Updates) and a large page title over the page's sections. Manage computers and approval badges lead to the Computers page. Linux uses `adw::PreferencesDialog` with Computers, Usage and Updates pages (it has no account or voice chat); the iPhone keeps its Computers & settings sheet. Source: `apps/macos/Views/SettingsView.swift`, `apps/linux/src/dialogs.rs` (`settings_page`).
 
 Source: `apps/macos/App/CodyncMacApp.swift`.
+
+## Shared code across iPhone and Mac
+
+`CodyncUI` is compiled into both apps, so editing a shared view or a control's default changes both. To keep a change for one platform from leaking into the other:
+
+- A shared view or control must look the same on both platforms, apart from `InterfaceMetrics.value(mac:mobile:)` sizes. A one-platform look goes in that value's own side, or in a platform file; never change a shared default (fill, spacing, font) for one platform.
+- Where a screen's chrome differs, it lives in a whole-file platform extension (`ThreadView+iOS.swift`, `ThreadView+macOS.swift`: `platformBody`, `platformChrome`, `header`), not in `#if os()` branches inside the shared body.
+- The conversation itself is per platform too: `transcript` (a chat's messages) and `messages` (a thread's replies) live in `ThreadView+…` / `RepliesView+…`. The Mac keeps every loaded message in a lazy stack and scrolls to the newest as it changes. iPhone renders the newest page first and earlier ones as the reader scrolls up, follows the newest message until they scroll away (`ConversationFollow+iOS.swift`, with a round "Jump to latest" button), and reveals a reply steadily as it's written (`ChatRows+iOS.swift`, `MarkdownText+iOS.swift`). Logic both can use stays shared: `ChatItem.build`, `MarkdownBlocks`.
+- A commit that touches `kit/` is scoped `kit`, not `macos` or `ios`, and is checked on both platforms.
 
 ## Shared application controls
 
@@ -36,15 +49,17 @@ Other custom screens use `Chrome.swift` and `Controls.swift`:
 
 | Need | Component |
 |---|---|
-| Modal or full-window overlay | `.codyncSheet`, `.codyncOverlay` |
+| Modal or full-window overlay | `.codyncSheet` (system sheet on iPhone, centered card on Mac), `.codyncOverlay` |
 | Header outside the native bot navigation flow | `ModalHeader`, `ScreenHeader` |
 | Icon action | `IconButton` |
 | Tab selection | `TabBar` |
 | Menu / confirmation | `.codyncMenu` (macOS), `DropdownMenu` / `.contextActions` (system menus on iOS), `.codyncDialog` |
 | Toggle | `ToggleStyle.codync` |
-| Form-like content | `CardForm`, `CardSection` |
+| Form-like content | `CardForm`, `CardSection` (a small bold heading over a filled, rounded group; rows split by inset hairlines; a row is `ValueRow` with an optional one-line `detail`, and its picker is an outlined `ChoicePicker`) |
 
 Avoid adding stock `Menu`, `Picker`, `Form`/`List` styling, switch toggles, alerts, `ProgressView`, `TabView` or system sheets to these flows. System presentation APIs inside the shared chrome implementation are implementation details, not permission to bypass the components in feature screens. Native WidgetKit/ActivityKit containers and OS authentication/permission flows remain system integrations.
+
+No scroll bars: scroll indicators never show, on either platform (`.scrollIndicators(.never)` on each app's root, so every scroll view inherits it).
 
 Anything with a background fill gets no extra drawn border. Use `Palette`, `InterfaceMetrics` and `Motion`; visibility changes animate and honor Reduce Motion. Icon-only actions have an accessibility label and desktop help where applicable. Reserve text for actions an icon cannot clearly express.
 
@@ -60,7 +75,7 @@ Model discovery keeps loading and refresh in one fixed-size slot beside the Mode
 
 ## macOS conversation details
 
-The details inspector uses a compact device summary instead of an empty screen preview. Keep the computer name, remote-screen state, and iPhone hint together; show the hint only when screen capture is ready. Use 16-point horizontal insets, 28-point section gaps, and 12-point corner radii on flat surfaces, without borders.
+The details inspector uses a compact device summary instead of an empty screen preview. Keep the computer name, remote-screen state, and iPhone hint together; show the hint only when screen capture is ready. Use 16-point horizontal insets and 28-point section gaps. Its sections (computer, Routines, Agent) and the Settings tab (`BotSettingsForm`: Profile, Agent, Activity, Connectors, Skills, Memory) use the `CardSection` look: filled 16-point groups without borders, hairline-split rows, a note under each option.
 
 Routines are a compact grouped list: name, a one-line schedule (or the live run state), and an on/off switch per row; tapping a row opens the same form as +, filled in, with delete and test run beside Save. On the Mac the form card fits its content. The header's chat button asks the bot (puts "I want a routine that " in the composer); + opens the form, where When to run is a type choice and cron is typed directly. The empty state is one line of text. A saved webhook routine's form shows the public URL and key as filled monospaced rows with copy, show/hide and replace-key (confirmed) icon buttons, and one caption on how to send and that deliveries pass through the Codync cloud. Agent metadata uses Runtime and Workspace labels for personal bots, or Project folder for explicitly configured projects; project paths remain selectable and wrap. Personal workspace paths stay out of the default details UI. Keep status and section headings readable in both appearances through `Palette`.
 

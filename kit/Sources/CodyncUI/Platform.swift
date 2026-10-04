@@ -40,6 +40,15 @@ extension View {
 }
 
 extension View {
+    /// Grok's desktop floating surfaces (title pill, call bar): a dark frosted fill that lets the chat
+    /// show through faintly, not Liquid Glass's clear lens. No border: the fill carries the edge.
+    func frosted(in shape: some Shape) -> some View {
+        background(Color(light: 0xF4F4F4, dark: 0x232323).opacity(0.82), in: shape)
+            .background(.ultraThinMaterial, in: shape)
+    }
+}
+
+extension View {
     /// The message box: Liquid Glass on iPhone; on the Mac a filled box with a
     /// soft shadow (as in Grok Bot's desktop app).
     @ViewBuilder func composerSurface(in shape: some Shape) -> some View {

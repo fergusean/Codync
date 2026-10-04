@@ -1,73 +1,78 @@
+#if os(macOS)
 import CodyncKit
 import SwiftUI
 
-/// Small block-level Markdown renderer: paragraphs, headings, lists, quotes and
-/// fenced code; inline styling comes from `AttributedString(markdown:)`.
-public struct MarkdownText: View {
-    let blocks: [Block]
+/// The Mac's Markdown renderer for messages (`MarkdownBlocks`: tables, rules, nested lists
+/// too); inline styling comes from `AttributedString(markdown:)`.
+/// Equatable so a reply that didn't change skips its body; each block is equatable too, so
+/// while text streams only the block being written renders again.
+public struct MarkdownText: View, Equatable {
+    let source: String
+    /// Text is still arriving: the open end hides half-written syntax.
     let streaming: Bool
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.conversationTypography) private var typography
-
-    private var contentTransition: ContentTransition {
-        streaming && !reduceMotion ? .interpolate : .identity
-    }
-
-    private var textAnimation: Animation? {
-        streaming ? Motion.reduced(Motion.fade, reduceMotion) : nil
-    }
 
     public init(_ source: String, streaming: Bool = false) {
-        blocks = Self.parse(source)
+        self.source = source
         self.streaming = streaming
     }
 
-    enum Block: Hashable {
-        case paragraph(String)
-        case heading(String, level: Int)
-        case bullet(String, marker: String)
-        case quote(String)
-        case code(String, language: String)
-    }
-
     public var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        let blocks = MarkdownBlocks.parse(source, streaming: streaming)
+        VStack(alignment: .leading, spacing: 10) {
             ForEach(Array(blocks.enumerated()), id: \.offset) { _, block in
-                view(for: block)
+                MarkdownBlock(block: block).equatable()
             }
         }
         .textSelection(.enabled)
     }
 
-    @ViewBuilder private func view(for block: Block) -> some View {
+    /// Inline styling; inline code gets a soft tint behind it.
+    static func inline(_ s: String) -> AttributedString {
+        guard var text = try? AttributedString(markdown: s, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace))
+        else { return AttributedString(s) }
+        for run in text.runs where run.inlinePresentationIntent?.contains(.code) == true {
+            text[run.range].backgroundColor = Palette.text.opacity(0.08)
+        }
+        return text
+    }
+}
+
+/// Completed blocks keep their attributed text while the open block changes.
+private struct MarkdownBlock: View, @MainActor Equatable {
+    let block: MarkdownBlocks.Block
+    @Environment(\.conversationTypography) private var typography
+
+    nonisolated static func == (a: Self, b: Self) -> Bool { a.block == b.block }
+
+    var body: some View {
+        content.lineSpacing(4 * typography.scale)
+    }
+
+    @ViewBuilder private var content: some View {
         switch block {
         case let .paragraph(t):
-            Text(Self.inline(t))
+            Text(MarkdownText.inline(t))
                 .font(typography.body)
                 .foregroundStyle(Palette.text)
-                .contentTransition(contentTransition)
-                .animation(textAnimation, value: t)
         case let .heading(t, level):
-            Text(Self.inline(t))
+            Text(MarkdownText.inline(t))
                 .font(typography.heading(level: level))
                 .foregroundStyle(Palette.text)
-                .contentTransition(contentTransition)
-                .animation(textAnimation, value: t)
-        case let .bullet(t, marker):
+        case let .bullet(t, marker, depth):
             HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Text(marker).foregroundStyle(Palette.secondary).monospacedDigit()
-                Text(Self.inline(t))
-                    .foregroundStyle(Palette.text)
-                    .contentTransition(contentTransition)
-                    .animation(textAnimation, value: t)
+                Text(MarkdownText.inline(t)).foregroundStyle(Palette.text)
             }
             .font(typography.body)
+            .padding(.leading, CGFloat(depth) * 16)
+        case .rule:
+            Rectangle().fill(Palette.border).frame(height: 1).padding(.vertical, 4)
+        case let .table(header, rows):
+            MarkdownTable(header: header, rows: rows)
         case let .quote(t):
-            Text(Self.inline(t))
+            Text(MarkdownText.inline(t))
                 .font(typography.body)
                 .foregroundStyle(Palette.secondary)
-                .contentTransition(contentTransition)
-                .animation(textAnimation, value: t)
                 .padding(.leading, 10)
                 .overlay(alignment: .leading) { Rectangle().fill(Palette.border).frame(width: 3) }
         case let .code(t, _):
@@ -80,63 +85,38 @@ public struct MarkdownText: View {
             .background(Palette.codeBackground, in: RoundedRectangle(cornerRadius: 8))
         }
     }
+}
 
-    static func inline(_ s: String) -> AttributedString {
-        (try? AttributedString(markdown: s, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace))) ?? AttributedString(s)
-    }
+/// A Markdown table: a bold header and hairlines between rows, scrolling sideways when wide.
+private struct MarkdownTable: View {
+    let header: [String]
+    let rows: [[String]]
+    @Environment(\.conversationTypography) private var typography
 
-    static func parse(_ source: String) -> [Block] {
-        var blocks: [Block] = []
-        var paragraph: [String] = []
-        var code: [String]?
-        var language = ""
-
-        func flush() {
-            if !paragraph.isEmpty {
-                blocks.append(.paragraph(paragraph.joined(separator: "\n")))
-                paragraph = []
-            }
-        }
-
-        for raw in source.components(separatedBy: "\n") {
-            let line = raw.trimmingCharacters(in: .whitespaces)
-            if line.hasPrefix("```") {
-                if let c = code {
-                    blocks.append(.code(c.joined(separator: "\n"), language: language))
-                    code = nil
-                } else {
-                    flush()
-                    code = []
-                    language = String(line.dropFirst(3))
+    var body: some View {
+        let columns = max(header.count, rows.map(\.count).max() ?? 0)
+        ScrollView(.horizontal, showsIndicators: false) {
+            Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 7) {
+                GridRow {
+                    ForEach(0 ..< columns, id: \.self) { i in
+                        Text(MarkdownText.inline(i < header.count ? header[i] : "")).fontWeight(.semibold)
+                    }
                 }
-                continue
+                ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
+                    Rectangle().fill(Palette.border).frame(height: 1).gridCellUnsizedAxes(.horizontal)
+                    GridRow {
+                        ForEach(0 ..< columns, id: \.self) { i in
+                            Text(MarkdownText.inline(i < row.count ? row[i] : ""))
+                        }
+                    }
+                }
             }
-            if code != nil {
-                code?.append(raw)
-                continue
-            }
-            if line.isEmpty {
-                flush()
-            } else if let hashes = line.firstIndex(where: { $0 != "#" }), line.hasPrefix("#"), line[hashes] == " " {
-                flush()
-                let level = line.distance(from: line.startIndex, to: hashes)
-                blocks.append(.heading(String(line[hashes...]).trimmingCharacters(in: .whitespaces), level: level))
-            } else if line.hasPrefix("- ") || line.hasPrefix("* ") || line.hasPrefix("• ") {
-                flush()
-                blocks.append(.bullet(String(line.dropFirst(2)), marker: "•"))
-            } else if let dot = line.firstIndex(of: "."), line[..<dot].allSatisfy(\.isNumber), !line[..<dot].isEmpty,
-                      line[line.index(after: dot)...].hasPrefix(" ") {
-                flush()
-                blocks.append(.bullet(String(line[line.index(dot, offsetBy: 2)...]), marker: String(line[...dot])))
-            } else if line.hasPrefix("> ") {
-                flush()
-                blocks.append(.quote(String(line.dropFirst(2))))
-            } else {
-                paragraph.append(raw)
-            }
+            .font(typography.body)
+            .foregroundStyle(Palette.text)
+            .fixedSize()
+            .padding(.vertical, 2)
         }
-        if let c = code { blocks.append(.code(c.joined(separator: "\n"), language: language)) }
-        flush()
-        return blocks
     }
 }
+
+#endif

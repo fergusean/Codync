@@ -957,10 +957,11 @@ fn recheck_versions(ui: &App) {
     });
 }
 
-/// Still compatible, but one side is behind a release the other already runs: a toast
-/// (gone on its own or when closed) offers the update, once per pair of versions.
+/// Still compatible, but this app is behind the host's release: a toast (gone on its own or
+/// when closed) offers the update, once per pair of versions. A host behind this app updates
+/// itself, so it gets no reminder.
 fn remind_updates(ui: &App) {
-    let (host_version, host) = {
+    let host_version = {
         let mut st = ui.state.borrow_mut();
         let host_version = st.hello["version"].as_str().unwrap_or_default().to_owned();
         let key = format!("{host_version}/{}", env!("CARGO_PKG_VERSION"));
@@ -968,51 +969,21 @@ fn remind_updates(ui: &App) {
             return;
         }
         st.reminded = Some(key);
-        let host = st.hello["name"]
-            .as_str()
-            .unwrap_or("this computer")
-            .to_owned();
-        (host_version, host)
+        host_version
     };
-    let own = env!("CARGO_PKG_VERSION");
-    let (title, button, host_side) = if crate::compat::below(&host_version, own) {
-        (
-            format!("Codync {own} is available for {host} (it runs {host_version})"),
-            "Update host",
-            true,
-        )
-    } else if crate::compat::below(own, &host_version) {
-        (
-            format!("Codync {host_version} is available for this app"),
-            "Get update",
-            false,
-        )
-    } else {
+    if !crate::compat::below(env!("CARGO_PKG_VERSION"), &host_version) {
         return;
-    };
+    }
     let reminder = adw::Toast::builder()
-        .title(title)
-        .button_label(button)
+        .title(format!("Codync {host_version} is available for this app"))
+        .button_label("Get update")
         .timeout(10)
         .build();
-    let ui2 = ui.clone();
-    reminder.connect_button_clicked(move |_| {
-        if host_side {
-            let ui3 = ui2.clone();
-            client::call(
-                "installHostUpdate",
-                json!({"force": false}),
-                move |r| match r {
-                    Ok(_) => toast(&ui3, "Updating the host; reconnecting when it's ready…"),
-                    Err(e) => toast(&ui3, &e),
-                },
-            );
-        } else {
-            let _ = gtk::gio::AppInfo::launch_default_for_uri(
-                "https://github.com/leepokai/Codync/releases/latest",
-                None::<&gtk::gio::AppLaunchContext>,
-            );
-        }
+    reminder.connect_button_clicked(|_| {
+        let _ = gtk::gio::AppInfo::launch_default_for_uri(
+            "https://github.com/leepokai/Codync/releases/latest",
+            None::<&gtk::gio::AppLaunchContext>,
+        );
     });
     ui.toasts.add_toast(reminder);
 }

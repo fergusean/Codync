@@ -88,10 +88,4 @@ public enum UpdateReminder {
         guard let store, AppVersion.isBelow(current, store), store != dismissed else { return nil }
         return store
     }
-
-    /// This app is newer than the host, so that release exists for it; not dismissed for it.
-    public static func host(app: String, host: String?, dismissed: String?) -> Bool {
-        guard let host, AppVersion.isBelow(host, app) else { return false }
-        return dismissed != app
-    }
 }
