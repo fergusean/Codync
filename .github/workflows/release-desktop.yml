@@ -162,8 +162,8 @@ jobs:
     strategy:
       matrix:
         include:
-          - { os: ubuntu-24.04, arch: x64, name: linux-x86_64, target: x86_64-unknown-linux-musl }
-          - { os: ubuntu-24.04-arm, arch: arm64, name: linux-arm64, target: aarch64-unknown-linux-musl }
+          - { os: ubuntu-24.04, arch: x64, name: linux-x86_64 }
+          - { os: ubuntu-24.04-arm, arch: arm64, name: linux-arm64 }
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -172,16 +172,8 @@ jobs:
           node-version: 24
           cache: npm
           cache-dependency-path: apps/desktop/package-lock.json
-      - name: Install Rust (rust-toolchain.toml)
-        run: rustup toolchain install
-      - run: rustup target add ${{ matrix.target }} && sudo apt-get update && sudo apt-get install -y musl-tools rpm
-      - name: Host
-        env:
-          CFLAGS_aarch64_unknown_linux_musl: -mno-outline-atomics
-        run: |
-          cargo build --release --manifest-path host/Cargo.toml --target ${{ matrix.target }}
-          mkdir -p apps/desktop/build/native
-          cp host/target/${{ matrix.target }}/release/codync-host apps/desktop/build/native/
+      # The Linux app uses the installed codync-host (codync-host-linux-*.tar.gz, host.yml).
+      - run: sudo apt-get update && sudo apt-get install -y rpm
       - name: Build
         working-directory: apps/desktop
         run: |
