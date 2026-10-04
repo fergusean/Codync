@@ -103,7 +103,7 @@ public struct BotSettingsPanel: View {
     }
 }
 
-/// Grok Bot-style bot settings: a big avatar, labeled fields, and one card of options.
+/// Bot settings: a big avatar (Grok Bot's), then sections in the Settings style (`CardSection`).
 struct BotSettingsForm: View {
     @Binding var draft: BotDraft
     let error: String?
@@ -117,7 +117,7 @@ struct BotSettingsForm: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: InterfaceMetrics.value(mac: 12, mobile: 18)) {
+            VStack(alignment: .leading, spacing: InterfaceMetrics.value(mac: 24, mobile: 30)) {
                 VStack(spacing: InterfaceMetrics.value(mac: 12, mobile: 16)) {
                     #if os(macOS)
                     Button { pickingAvatar.toggle() } label: {
@@ -145,55 +145,55 @@ struct BotSettingsForm: View {
                 }
                 .frame(maxWidth: .infinity)
 
-                // A new bot is named from its first conversations (Grok Bot's flow); rename it any time after.
-                if draft.id != nil {
-                    Field("Name") {
-                        TextField("Name", text: $draft.name).fieldBox()
-                    }
-                }
-                Field("Standing instructions") {
-                    TextField("e.g. Reviews PRs. Never pushes without asking.", text: $draft.description, axis: .vertical)
-                        .lineLimit(3...8)
-                        .fieldBox()
-                    Text("Rules that always apply. Put task-specific requests in the chat instead.")
-                        .appFont(.caption)
-                        .foregroundStyle(Palette.tertiary)
-                }
-
-                // Grok-style option card: no dividers, values in outlined pills.
-                VStack(alignment: .leading, spacing: InterfaceMetrics.value(mac: 12, mobile: 20)) {
-                    OptionRow("Computer") {
-                        if let computer {
-                            ChoicePicker(selection: computer, options: computers, fill: Palette.background,
-                                         fitsAvailableWidth: true)
-                                .accessibilityLabel("Computer")
-                        } else {
-                            Text(model.hostName)
-                                .lineLimit(1)
-                                .foregroundStyle(Palette.secondary)
+                CardSection("Profile") {
+                    // A new bot is named from its first conversations (Grok Bot's flow); rename it any time after.
+                    if draft.id != nil {
+                        Field("Name") {
+                            TextField("Name", text: $draft.name).fieldBox()
                         }
                     }
-                    if computer != nil, model.connection != .online {
-                        Text("Connect this computer to create the bot, or choose another computer.")
-                            .appFont(.caption).foregroundStyle(Palette.warning)
-                    }
-                    OptionRow("Agent") {
-                        ChoicePicker(selection: $draft.backend,
-                                 options: (model.hello?.backends ?? []).map { ($0.id, $0.available ? $0.name : "\($0.name) (not installed)") } + [("custom", "Custom command")],
-                                 fill: Palette.background)
-                    }
-                    if let b = model.hello?.backends.first(where: { $0.id == draft.backend }), !b.available {
-                        Text(b.installHint).appFont(.caption).foregroundStyle(Palette.warning)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                    if draft.backend == "custom" {
-                        TextField("ACP command, e.g. my-agent --acp", text: Binding(get: { draft.command ?? "" }, set: { draft.command = $0.isEmpty ? nil : $0 }))
-                            .appFont(.callout.monospaced())
-                            .plainTextInput()
+                    Field("Standing instructions", detail: "Rules that always apply. Put task-specific requests in the chat instead.") {
+                        TextField("e.g. Reviews PRs. Never pushes without asking.", text: $draft.description, axis: .vertical)
+                            .lineLimit(3...8)
                             .fieldBox()
                     }
+                }
+
+                CardSection("Agent") {
+                    VStack(alignment: .leading, spacing: 6) {
+                        ValueRow("Computer") {
+                            if let computer {
+                                ChoicePicker(selection: computer, options: computers, fitsAvailableWidth: true)
+                                    .accessibilityLabel("Computer")
+                            } else {
+                                Text(model.hostName).lineLimit(1)
+                            }
+                        }
+                        if computer != nil, model.connection != .online {
+                            Text("Connect this computer to create the bot, or choose another computer.")
+                                .appFont(.caption).foregroundStyle(Palette.warning)
+                        }
+                    }
+                    VStack(alignment: .leading, spacing: 8) {
+                        ValueRow("Agent") {
+                            ChoicePicker(selection: $draft.backend,
+                                         options: (model.hello?.backends ?? []).map { ($0.id, $0.available ? $0.name : "\($0.name) (not installed)") } + [("custom", "Custom command")])
+                        }
+                        if let b = model.hello?.backends.first(where: { $0.id == draft.backend }), !b.available {
+                            Text(b.installHint).appFont(.caption).foregroundStyle(Palette.warning)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        if draft.backend == "custom" {
+                            TextField("ACP command, e.g. my-agent --acp", text: Binding(get: { draft.command ?? "" }, set: { draft.command = $0.isEmpty ? nil : $0 }))
+                                .appFont(.callout.monospaced())
+                                .plainTextInput()
+                                .fieldBox()
+                        }
+                    }
                     AgentModelPicker(backend: draft.backend, selection: $draft.model)
-                    OptionRow("Workspace") {
+                    ValueRow("Workspace", detail: draft.cwd.isEmpty
+                             ? "This bot has its own space for files. It can work in other folders when you ask."
+                             : "This project is the default starting folder. The bot can work elsewhere when you ask.") {
                         DropdownMenu {
                             [
                                 MenuItem("Personal workspace", selected: draft.cwd.isEmpty) {
@@ -206,44 +206,30 @@ struct BotSettingsForm: View {
                         } label: {
                             HStack(spacing: 6) {
                                 Text(draft.cwd.isEmpty ? "Personal" : (draft.cwd as NSString).lastPathComponent).lineLimit(1)
-                                Image(systemName: "chevron.down").appFont(.caption2.weight(.semibold))
+                                Image(systemName: "chevron.down").appFont(.caption2.weight(.semibold)).foregroundStyle(Palette.secondary)
                             }
-                            .pill()
+                            .foregroundStyle(Palette.text)
+                            .outlinedPill()
                         }
                         .help(draft.cwd.isEmpty ? "A persistent workspace allocated for this bot" : draft.cwd)
                     }
-                    Text(draft.cwd.isEmpty
-                         ? "This bot has its own space for files. It can work in other folders when you ask."
-                         : "This project is the default starting folder. The bot can work elsewhere when you ask.")
-                        .appFont(.caption)
-                        .foregroundStyle(Palette.secondary)
-                    OptionRow("Permissions") {
-                        ChoicePicker(selection: $draft.permission, options: [("ask", "Ask me"), ("auto", "Approve automatically")],
-                                 fill: Palette.background)
-                    }
-                    Toggle(isOn: Binding(get: { draft.notify ?? true }, set: { draft.notify = $0 })) {
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text("Notifications").foregroundStyle(Palette.text)
-                            Text("Get notified when this bot finishes or needs you").appFont(AppFont.compactSecondary).foregroundStyle(Palette.secondary)
-                        }
-                    }
-                    .toggleStyle(.codync)
-                    if model.screen != nil {
-                        Toggle(isOn: Binding(get: { draft.computer ?? false }, set: { draft.computer = $0 })) {
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text("Use the computer").foregroundStyle(Palette.text)
-                                Text(model.screen?.enabled == true
-                                    ? "Let this bot see the screen and use the mouse and keyboard. You can watch and take over from your phone."
-                                    : "Let this bot see the screen and use the mouse and keyboard. Turn on Remote screen in Codync's menu on the computer first.")
-                                    .appFont(AppFont.compactSecondary).foregroundStyle(Palette.secondary)
-                            }
-                        }
-                        .toggleStyle(.codync)
+                    ValueRow("Permissions", detail: draft.permission == "auto"
+                             ? "Tool requests are approved automatically. Your agent's own settings (like Claude Code's permission rules) still apply."
+                             : "You'll get an approval card and a notification whenever the agent asks.") {
+                        ChoicePicker(selection: $draft.permission, options: [("ask", "Ask me"), ("auto", "Approve automatically")])
                     }
                 }
-                .padding(.horizontal, InterfaceMetrics.value(mac: 12, mobile: 18))
-                .padding(.vertical, InterfaceMetrics.value(mac: 14, mobile: 20))
-                .background(Palette.bubbleAgent, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+
+                CardSection("Activity") {
+                    SwitchRow("Notifications", detail: "Get notified when this bot finishes or needs you",
+                              isOn: Binding(get: { draft.notify ?? true }, set: { draft.notify = $0 }))
+                    if model.screen != nil {
+                        SwitchRow("Use the computer", detail: model.screen?.enabled == true
+                            ? "Let this bot see the screen and use the mouse and keyboard. You can watch and take over from your phone."
+                            : "Let this bot see the screen and use the mouse and keyboard. Turn on Remote screen in Codync's menu on the computer first.",
+                                  isOn: Binding(get: { draft.computer ?? false }, set: { draft.computer = $0 }))
+                    }
+                }
 
                 PluginToggles(
                     title: "Connectors",
@@ -260,12 +246,6 @@ struct BotSettingsForm: View {
                 if let id = draft.id {
                     MemoryCard(botId: id)
                 }
-
-                Text(draft.permission == "auto"
-                    ? "Tool requests are approved automatically. Your agent's own settings (like Claude Code's permission rules) still apply."
-                    : "You'll get an approval card and a notification whenever the agent asks.")
-                    .appFont(.caption)
-                    .foregroundStyle(Palette.tertiary)
 
                 if let error {
                     Text(error).appFont(.footnote).foregroundStyle(Palette.danger)
@@ -292,38 +272,55 @@ struct BotSettingsForm: View {
     }
 }
 
+/// A labeled input inside a section row: label (and an optional note) over the field.
 struct Field<Content: View>: View {
     let label: String
+    var detail: String?
     @ViewBuilder let content: Content
 
-    init(_ label: String, @ViewBuilder content: () -> Content) {
+    init(_ label: String, detail: String? = nil, @ViewBuilder content: () -> Content) {
         self.label = label
+        self.detail = detail
         self.content = content()
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(label).appFont(AppFont.compactSecondary).foregroundStyle(Palette.secondary).padding(.leading, 4)
+        VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(label).foregroundStyle(Palette.text)
+                if let detail {
+                    Text(detail).appFont(.caption).foregroundStyle(Palette.secondary).lineSpacing(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
             content
         }
     }
 }
 
-struct OptionRow<Content: View>: View {
-    let label: String
-    @ViewBuilder let content: Content
+/// An on/off row: title and a short note, the switch on the right.
+struct SwitchRow: View {
+    let title: String
+    var detail: String?
+    @Binding var isOn: Bool
 
-    init(_ label: String, @ViewBuilder content: () -> Content) {
-        self.label = label
-        self.content = content()
+    init(_ title: String, detail: String? = nil, isOn: Binding<Bool>) {
+        self.title = title
+        self.detail = detail
+        _isOn = isOn
     }
 
     var body: some View {
-        HStack {
-            Text(label).foregroundStyle(Palette.text)
-            Spacer(minLength: 12)
-            content
+        Toggle(isOn: $isOn) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title).foregroundStyle(Palette.text)
+                if let detail {
+                    Text(detail).appFont(.caption).foregroundStyle(Palette.secondary).lineSpacing(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
         }
+        .toggleStyle(.codync)
     }
 }
 
@@ -335,33 +332,19 @@ private struct PluginToggles: View {
     @Binding var selection: [String]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(title).appFont(AppFont.compactSecondary).foregroundStyle(Palette.secondary).padding(.leading, 4)
-            VStack(alignment: .leading, spacing: InterfaceMetrics.value(mac: 12, mobile: 16)) {
-                if items.isEmpty {
-                    Text(empty).appFont(AppFont.compactSecondary).foregroundStyle(Palette.secondary)
-                }
-                ForEach(items, id: \.id) { item in
-                    Toggle(isOn: Binding(
-                        get: { selection.contains(item.id) },
-                        set: { on in
-                            selection.removeAll { $0 == item.id }
-                            if on { selection.append(item.id) }
-                        }
-                    )) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(item.name).foregroundStyle(Palette.text)
-                            if !item.detail.isEmpty {
-                                Text(item.detail).appFont(.caption).foregroundStyle(Palette.secondary).lineLimit(2)
-                            }
-                        }
-                    }
-                    .toggleStyle(.codync)
-                }
+        CardSection(title) {
+            if items.isEmpty {
+                Text(empty).foregroundStyle(Palette.secondary)
             }
-            .padding(InterfaceMetrics.value(mac: 12, mobile: 18))
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Palette.bubbleAgent, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            ForEach(items, id: \.id) { item in
+                SwitchRow(item.name, detail: item.detail.isEmpty ? nil : item.detail, isOn: Binding(
+                    get: { selection.contains(item.id) },
+                    set: { on in
+                        selection.removeAll { $0 == item.id }
+                        if on { selection.append(item.id) }
+                    }
+                ))
+            }
         }
     }
 }

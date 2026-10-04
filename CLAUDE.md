@@ -52,6 +52,8 @@ Bot-based remote for coding agents: persistent named bots on your computer, mess
 
 Always stop the old Mac app, host and iPhone process before running a new build (old host = old protocol, old app = old UI); commands in [docs/guides/development.md](docs/guides/development.md#apple-apps).
 
+Keep only the latest build: in this checkout, Apple builds go to `build/dd` only (no other `-derivedDataPath`, no copies in scratchpads, `/tmp` or Xcode's DerivedData); delete any older Codync build right away, so macOS never launches a stale copy. A git worktree may keep its own single build inside that worktree.
+
 ## Project generation
 
 - `apps/project.yml` + `xcodegen generate --spec apps/project.yml` produce `apps/Codync.xcodeproj`. Edit `project.yml`, not the pbxproj.
@@ -88,7 +90,7 @@ Folder layout, file naming and shared terms: [docs/architecture/file-structure.m
 - Body (after a blank line, wrapped at 72 columns) when the change isn't obvious from the subject: what and why, not how. Bullets are fine.
 - One logical change per commit. Don't mix unrelated work, and stage only your own hunks when others have uncommitted changes in the tree.
 - Breaking changes: `!` after the type/scope, or a `BREAKING CHANGE:` footer.
-- English only; no `Co-Authored-By` or other AI attribution trailers (the commit-msg hook rejects them).
+- English only.
 - PRs: fill the template's *What's New* bullets (zh-Hant + en-US) for user-visible iOS changes; they become the App Store notes when `apps/ios/WhatsNew.md` has no section for the release.
 
 ## Keeping this file short

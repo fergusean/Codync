@@ -42,48 +42,38 @@ struct MemoryCard: View {
     @State private var confirmClear = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                Text("Memory").appFont(AppFont.compactSecondary).foregroundStyle(Palette.secondary).padding(.leading, 4)
-                Spacer()
-                if !facts.isEmpty {
-                    Button("Forget everything", systemImage: "trash") { confirmClear = true }
+        CardSection("Memory") {
+            if facts.isEmpty {
+                Text(loaded
+                    ? "Nothing yet. The bot remembers who you are and what you work on as you chat."
+                    : "Loading…")
+                    .foregroundStyle(Palette.secondary)
+            }
+            ForEach(facts) { fact in
+                HStack(alignment: .firstTextBaseline, spacing: 10) {
+                    Image(systemName: fact.kind == "profile" ? "person" : "clock")
+                        .appFont(.caption)
+                        .foregroundStyle(Palette.tertiary)
+                        .help(fact.kind == "profile" ? "About you" : "History")
+                    Text(fact.content)
+                        .foregroundStyle(Palette.text)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    Button("Forget", systemImage: "xmark") { forget(fact) }
                         .labelStyle(.iconOnly)
                         .buttonStyle(.plain)
-                        .foregroundStyle(Palette.secondary)
-                        .help("Forget everything")
+                        .appFont(.caption)
+                        .foregroundStyle(Palette.tertiary)
+                        .help("Forget")
                 }
             }
-            VStack(alignment: .leading, spacing: InterfaceMetrics.value(mac: 10, mobile: 14)) {
-                if facts.isEmpty {
-                    Text(loaded
-                        ? "Nothing yet. The bot remembers who you are and what you work on as you chat."
-                        : "Loading…")
-                        .appFont(AppFont.compactSecondary)
-                        .foregroundStyle(Palette.secondary)
-                }
-                ForEach(facts) { fact in
-                    HStack(alignment: .firstTextBaseline, spacing: 10) {
-                        Image(systemName: fact.kind == "profile" ? "person" : "clock")
-                            .appFont(.caption)
-                            .foregroundStyle(Palette.tertiary)
-                            .help(fact.kind == "profile" ? "About you" : "History")
-                        Text(fact.content)
-                            .foregroundStyle(Palette.text)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                        Button("Forget", systemImage: "xmark") { forget(fact) }
-                            .labelStyle(.iconOnly)
-                            .buttonStyle(.plain)
-                            .appFont(.caption)
-                            .foregroundStyle(Palette.tertiary)
-                            .help("Forget")
-                    }
-                }
+        } accessory: {
+            if !facts.isEmpty {
+                Button("Forget everything", systemImage: "trash") { confirmClear = true }
+                    .labelStyle(.iconOnly)
+                    .buttonStyle(.plain)
+                    .foregroundStyle(Palette.secondary)
+                    .help("Forget everything")
             }
-            .padding(.horizontal, InterfaceMetrics.value(mac: 12, mobile: 18))
-            .padding(.vertical, InterfaceMetrics.value(mac: 12, mobile: 16))
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Palette.bubbleAgent, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         }
         .task(id: botId) { await load() }
         .codyncDialog("Forget everything this bot remembers?", isPresented: $confirmClear) {
