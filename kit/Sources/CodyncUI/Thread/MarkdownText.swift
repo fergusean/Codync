@@ -1,6 +1,8 @@
+#if os(macOS)
 import CodyncKit
 import SwiftUI
 
+/// The Mac's Markdown renderer (the iPhone's is `MarkdownText+iOS.swift`).
 /// Small block-level Markdown renderer: paragraphs, headings, lists, quotes and
 /// fenced code; inline styling comes from `AttributedString(markdown:)`.
 public struct MarkdownText: View {
@@ -140,3 +142,4 @@ public struct MarkdownText: View {
         return blocks
     }
 }
+#endif

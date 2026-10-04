@@ -28,7 +28,19 @@ public struct ThreadView: View {
     @State var showRoutines = false
     @State var routineId: String?
     @State var routineRequest = UUID()
-    @State var isAtBottom = true
+    #if os(macOS)
+        @State var isAtBottom = true
+    #else
+        /// iPhone: the chat stays on the newest message until the reader scrolls away.
+        @State var following = true
+        /// The oldest message rendered (nil: the latest page).
+        @State var firstShown: String?
+        @State var loadingEarlier = false
+        /// Earlier messages are going in above: this one keeps its place on screen.
+        @State var keepingPlace: String?
+        /// The top of the rendered messages is within reach.
+        @State var topVisible = false
+    #endif
     @Environment(\.accessibilityReduceMotion) var reduceMotion
     #if os(macOS)
         @Environment(\.conversationTypography) var typography
@@ -42,79 +54,10 @@ public struct ThreadView: View {
         withAnimation(Motion.reduced(Motion.layout, reduceMotion)) { openThread = nil }
     }
 
-    /// The messages and the composer, without the platform's top chrome.
-    @ViewBuilder private var chat: some View {
-        let thread = model.chat(botId)
-        let items = ChatItem.build(thread, streaming: bot?.isWorking(in: botId, thread: nil) == true && !model.isOffline)
-        ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: 0) {
-                    if !model.historyComplete.contains(botId), thread.count >= 50 {
-                        Button("Load earlier messages") { Task { await model.loadOlder(botId) } }
-                            .buttonStyle(.plain)
-                            .appFont(.footnote)
-                            .foregroundStyle(Palette.secondary)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
-                    }
-                    if items.isEmpty, let bot {
-                        if bot.isGroup { GroupIntroCard(group: bot).padding(.top, 40) } else { IntroCard(bot: bot).padding(.top, 40) }
-                    }
-                    ForEach(items) { item in
-                        row(item)
-                            .id(item.id)
-                            .transition(item.id == items.last?.id
-                                ? .asymmetric(insertion: .move(edge: .bottom).combined(with: .opacity), removal: .opacity)
-                                : .identity)
-                    }
-                    // Offline, "working" is only what the computer last said; don't show it as live.
-                    if let bot, bot.isWorking(in: botId, thread: nil), !model.isOffline {
-                        WorkingIndicator(bot: bot, thinking: model.currentThinking(botId, thread: nil))
-                            .padding(.top, 6)
-                            .id("working")
-                    }
-                    Color.clear.frame(height: 8).id("bottom")
-                }
-                .padding(.horizontal, 16)
-                .padding(.top, 8)
-                .animation(Motion.reduced(Motion.conversation, reduceMotion), value: items.last?.id)
-                #if os(macOS)
-                    .frame(maxWidth: 820)
-                    .frame(maxWidth: .infinity)
-                #endif
-            }
-            .conversationInitialBottomAnchor()
-            .scrollDismissesKeyboard(.interactively)
-            .conversationScrollEdges()
-            .conversationBottomObserver($isAtBottom)
-            #if os(iOS)
-                .simultaneousGesture(TapGesture().onEnded { dismissChatKeyboard() })
-            #endif
-            .onChange(of: items.last?.id) { _, _ in
-                guard isAtBottom || items.last?.isUserMessage == true else { return }
-                withAnimation(Motion.reduced(Motion.conversation, reduceMotion)) {
-                    proxy.scrollTo("bottom", anchor: .bottom)
-                }
-            }
-            .onChange(of: items.last?.textContent) { _, _ in
-                guard isAtBottom else { return }
-                withAnimation(Motion.reduced(Motion.conversation, reduceMotion)) {
-                    proxy.scrollTo("bottom", anchor: .bottom)
-                }
-            }
-            .onChange(of: bot?.isWorking) { _, _ in
-                guard isAtBottom else { return }
-                withAnimation(Motion.reduced(Motion.conversation, reduceMotion)) {
-                    proxy.scrollTo("bottom", anchor: .bottom)
-                }
-            }
-            #if os(macOS)
-                .onChange(of: typography.pointSize) { _, _ in
-                    guard isAtBottom else { return }
-                    proxy.scrollTo("bottom", anchor: .bottom)
-                }
-            #endif
-        }
+    /// The messages (each platform's own `transcript`, in its `ThreadView+` file) and the
+    /// composer, without the platform's top chrome.
+    private var chat: some View {
+        transcript
         .background(Palette.background)
         .safeAreaInset(edge: .bottom) {
             VStack(spacing: 6) {
@@ -185,7 +128,7 @@ public struct ThreadView: View {
 
     // MARK: rows
 
-    @ViewBuilder private func row(_ item: ChatItem) -> some View {
+    @ViewBuilder func row(_ item: ChatItem) -> some View {
         switch item.kind {
         case .separator(let date):
             Text(RelativeTime.separator(date))
@@ -208,6 +151,9 @@ public struct ThreadView: View {
                 } openThread: { root in
                     withAnimation(Motion.reduced(Motion.layout, reduceMotion)) { openThread = ThreadTarget(id: root.id) }
                 }
+                #if os(iOS)
+                    .equatable()
+                #endif
             }
         }
     }
@@ -322,14 +268,24 @@ struct ChatItem: Identifiable {
     /// `streaming`: a turn is running in this chat, so the text being generated right now
     /// (the lane's last entry, still `final == false`) shows in place and never pops in later.
     /// Earlier segments of the turn, tool calls in between, and a room pass stay trace-only.
-    static func build(_ entries: [Entry], streaming: Bool = false) -> [ChatItem] {
+    /// `steady` (iPhone): the turn's newest text stays while the agent works on (tools,
+    /// thinking) until newer text replaces it, and a reply is one item per author and turn,
+    /// from its first words to the final message, so its bubble never pops out and back in.
+    static func build(_ entries: [Entry], streaming: Bool = false, steady: Bool = false) -> [ChatItem] {
         var out: [ChatItem] = []
+        var used = Set<String>()
         var lastDate: Date?
         var lastAuthor: String?
-        let live = streaming ? entries.last.flatMap { $0.kind == "agent" && $0.data.final == false ? $0.id : nil } : nil
+        let live = !streaming ? nil
+            : steady ? liveText(entries)
+            : entries.last.flatMap { $0.kind == "agent" && $0.data.final == false ? $0.id : nil }
         for e in entries where e.isChat || (e.id == live && !(e.data.text ?? "").isEmpty && e.data.text != "(pass)") {
             let date = e.date
-            let id = e.kind == "user" ? e.data.clientNonce.map { "user-\($0)" } ?? e.id : e.id
+            var id = e.kind == "user" ? e.data.clientNonce.map { "user-\($0)" } ?? e.id : e.id
+            if steady, e.kind == "agent", !used.contains("reply-\(e.data.author ?? "")-\(e.turn)") {
+                id = "reply-\(e.data.author ?? "")-\(e.turn)"
+            }
+            used.insert(id)
             if lastDate.map({ date.timeIntervalSince($0) > 3600 }) ?? true {
                 out.append(ChatItem(id: "sep-\(id)", kind: .separator(date)))
                 lastAuthor = nil
@@ -343,6 +299,17 @@ struct ChatItem: Identifiable {
         return out
     }
 
+    /// The running turn's newest text, if any since the last message or final reply.
+    static func liveText(_ entries: [Entry]) -> String? {
+        for e in entries.reversed() {
+            if e.kind == "user" || (e.kind == "agent" && e.data.final == true) { return nil }
+            if e.kind == "agent", let text = e.data.text, !text.isEmpty {
+                return text == "(pass)" ? nil : e.id
+            }
+        }
+        return nil
+    }
+
     var isUserMessage: Bool {
         if case let .entry(entry, _) = kind { entry.kind == "user" } else { false }
     }
@@ -353,7 +320,7 @@ struct ChatItem: Identifiable {
 }
 
 /// The start of an empty group chat: who's in it and how the room works.
-private struct GroupIntroCard: View {
+struct GroupIntroCard: View {
     let group: Bot
     @Environment(BotStore.self) private var model
 
@@ -382,7 +349,7 @@ private struct GroupIntroCard: View {
     }
 }
 
-private struct IntroCard: View {
+struct IntroCard: View {
     let bot: Bot
     @Environment(BotStore.self) private var model
 
@@ -411,7 +378,7 @@ private struct IntroCard: View {
     }
 }
 
-private extension View {
+extension View {
     @ViewBuilder func conversationInitialBottomAnchor() -> some View {
         if #available(iOS 18, macOS 15, *) {
             defaultScrollAnchor(.bottom, for: .initialOffset)

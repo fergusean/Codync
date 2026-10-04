@@ -42,6 +42,76 @@ extension ThreadView {
         }
     }
 
+    /// The Mac's messages: every loaded message in a lazy stack, brought to the newest as it
+    /// changes while the reader is at the bottom.
+    @ViewBuilder var transcript: some View {
+        let thread = model.chat(botId)
+        let items = ChatItem.build(thread, streaming: bot?.isWorking(in: botId, thread: nil) == true && !model.isOffline)
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 0) {
+                    if !model.historyComplete.contains(botId), thread.count >= 50 {
+                        Button("Load earlier messages") { Task { await model.loadOlder(botId) } }
+                            .buttonStyle(.plain)
+                            .appFont(.footnote)
+                            .foregroundStyle(Palette.secondary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                    }
+                    if items.isEmpty, let bot {
+                        if bot.isGroup { GroupIntroCard(group: bot).padding(.top, 40) } else { IntroCard(bot: bot).padding(.top, 40) }
+                    }
+                    ForEach(items) { item in
+                        row(item)
+                            .id(item.id)
+                            .transition(item.id == items.last?.id
+                                ? .asymmetric(insertion: .move(edge: .bottom).combined(with: .opacity), removal: .opacity)
+                                : .identity)
+                    }
+                    // Offline, "working" is only what the computer last said; don't show it as live.
+                    if let bot, bot.isWorking(in: botId, thread: nil), !model.isOffline {
+                        WorkingIndicator(bot: bot, thinking: model.currentThinking(botId, thread: nil))
+                            .padding(.top, 6)
+                            .id("working")
+                    }
+                    Color.clear.frame(height: 8).id("bottom")
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+                .animation(Motion.reduced(Motion.conversation, reduceMotion), value: items.last?.id)
+                .frame(maxWidth: 820)
+                .frame(maxWidth: .infinity)
+            }
+            .scrollIndicators(.never)
+            .conversationInitialBottomAnchor()
+            .scrollDismissesKeyboard(.interactively)
+            .conversationScrollEdges()
+            .conversationBottomObserver($isAtBottom)
+            .onChange(of: items.last?.id) { _, _ in
+                guard isAtBottom || items.last?.isUserMessage == true else { return }
+                withAnimation(Motion.reduced(Motion.conversation, reduceMotion)) {
+                    proxy.scrollTo("bottom", anchor: .bottom)
+                }
+            }
+            .onChange(of: items.last?.textContent) { _, _ in
+                guard isAtBottom else { return }
+                withAnimation(Motion.reduced(Motion.conversation, reduceMotion)) {
+                    proxy.scrollTo("bottom", anchor: .bottom)
+                }
+            }
+            .onChange(of: bot?.isWorking) { _, _ in
+                guard isAtBottom else { return }
+                withAnimation(Motion.reduced(Motion.conversation, reduceMotion)) {
+                    proxy.scrollTo("bottom", anchor: .bottom)
+                }
+            }
+            .onChange(of: typography.pointSize) { _, _ in
+                guard isAtBottom else { return }
+                proxy.scrollTo("bottom", anchor: .bottom)
+            }
+        }
+    }
+
     func platformChrome(_ content: some View) -> some View {
         content
             // Grok's desktop chat: no title bar. The chat blurs and fades as it scrolls up, with the bot

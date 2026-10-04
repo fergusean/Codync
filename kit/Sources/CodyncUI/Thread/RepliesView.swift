@@ -9,14 +9,17 @@ struct RepliesView: View {
     let botId: String
     let rootId: String
     let close: () -> Void
-    @Environment(BotStore.self) private var model
-    @State private var showTrace = false
+    @Environment(BotStore.self) var model
+    @State var showTrace = false
+    #if os(iOS)
+        @State var following = true
+        @Environment(\.accessibilityReduceMotion) var reduceMotion
+    #endif
 
-    private var chat: Bot? { model.bots[botId] }
-    private var root: Entry? { model.allEntries(botId).first { $0.id == rootId } }
+    var chat: Bot? { model.bots[botId] }
+    var root: Entry? { model.allEntries(botId).first { $0.id == rootId } }
 
     var body: some View {
-        let replies = model.replies(botId, root: rootId)
         VStack(spacing: 0) {
             HStack(spacing: 8) {
                 VStack(alignment: .leading, spacing: 0) {
@@ -32,43 +35,17 @@ struct RepliesView: View {
             .frame(height: InterfaceMetrics.value(mac: 48, mobile: 56))
             Rectangle().fill(Palette.border).frame(height: 0.5)
 
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: 0) {
-                    if let root {
-                        ChatRow(entry: root, groupStart: true, chat: chat) { showTrace = true }
-                        HStack(spacing: 10) {
-                            Text(replies.isEmpty ? "No replies yet" : replies.count == 1 ? "1 reply" : "\(replies.count) replies")
-                                .appFont(.caption)
-                                .foregroundStyle(Palette.tertiary)
-                                .fixedSize()
-                            Rectangle().fill(Palette.border).frame(height: 1)
-                        }
-                        .padding(.vertical, 12)
+            // The replies: each platform's own `messages`, in its `RepliesView+` file.
+            messages
+                .safeAreaInset(edge: .bottom) {
+                    if let mismatch = model.mismatch {
+                        UpdateNeededCard(store: model, mismatch: mismatch)
+                            .padding(.horizontal, 16)
+                            .padding(.bottom, 8)
+                    } else {
+                        Composer(botId: botId, thread: rootId)
                     }
-                    ForEach(ChatItem.build(replies, streaming: chat?.isWorking(in: botId, thread: rootId) == true && !model.isOffline)) { item in
-                        if case let .entry(e, groupStart) = item.kind {
-                            ChatRow(entry: e, groupStart: groupStart, chat: chat) { showTrace = true }
-                        }
-                    }
-                    if let chat, chat.isWorking(in: botId, thread: rootId), !model.isOffline {
-                        WorkingIndicator(bot: chat, thinking: model.currentThinking(botId, thread: rootId)).padding(.top, 6)
-                    }
-                    Color.clear.frame(height: 8)
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, 8)
-            }
-            .defaultScrollAnchor(.bottom)
-            .scrollDismissesKeyboard(.interactively)
-            .safeAreaInset(edge: .bottom) {
-                if let mismatch = model.mismatch {
-                    UpdateNeededCard(store: model, mismatch: mismatch)
-                        .padding(.horizontal, 16)
-                        .padding(.bottom, 8)
-                } else {
-                    Composer(botId: botId, thread: rootId)
-                }
-            }
         }
         .background(Palette.background)
         .task(id: rootId) { await model.loadThread(botId, root: rootId) }

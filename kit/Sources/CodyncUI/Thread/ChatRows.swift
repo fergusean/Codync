@@ -215,10 +215,25 @@ struct AgentBubble: View {
     var reply: (() -> Void)?
     @Environment(BotStore.self) private var model
     @State private var hovering = false
+    #if os(iOS)
+        @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    #endif
+
+    /// The reply's text. iPhone: revealed steadily as it's written; the turn's next text
+    /// segment takes the bubble over with a cross-fade instead of retyping.
+    @ViewBuilder private var text: some View {
+        #if os(iOS)
+            StreamingMarkdown(text: entry.data.text ?? "", live: entry.data.final == false)
+                .id(entry.id)
+                .transition(.opacity)
+        #else
+            MarkdownText(entry.data.text ?? "", streaming: entry.data.final == false)
+        #endif
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            MarkdownText(entry.data.text ?? "", streaming: entry.data.final == false)
+            text
                 .padding(.horizontal, InterfaceMetrics.value(mac: 12, mobile: 16))
                 .padding(.vertical, InterfaceMetrics.value(mac: 8, mobile: 10))
                 .background(Palette.bubbleAgent, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
@@ -249,6 +264,7 @@ struct AgentBubble: View {
         #if os(macOS)
             .padding(.trailing, 64)
         #else
+            .animation(Motion.reduced(Motion.layout, reduceMotion), value: entry.id)
             .padding(.trailing, 40)
         #endif
     }

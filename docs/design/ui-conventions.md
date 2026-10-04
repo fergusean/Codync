@@ -40,6 +40,7 @@ Source: `apps/macos/App/CodyncMacApp.swift`.
 
 - A shared view or control must look the same on both platforms, apart from `InterfaceMetrics.value(mac:mobile:)` sizes. A one-platform look goes in that value's own side, or in a platform file; never change a shared default (fill, spacing, font) for one platform.
 - Where a screen's chrome differs, it lives in a whole-file platform extension (`ThreadView+iOS.swift`, `ThreadView+macOS.swift`: `platformBody`, `platformChrome`, `header`), not in `#if os()` branches inside the shared body.
+- The conversation itself is per platform too: `transcript` (a chat's messages) and `messages` (a thread's replies) live in `ThreadView+…` / `RepliesView+…`. The Mac keeps every loaded message in a lazy stack and scrolls to the newest as it changes. iPhone renders the newest page first and earlier ones as the reader scrolls up, follows the newest message until they scroll away (`ConversationFollow+iOS.swift`, with a round "Jump to latest" button), and reveals a reply steadily as it's written (`ChatRows+iOS.swift`, `MarkdownText+iOS.swift`). Logic both can use stays shared: `ChatItem.build`, `MarkdownBlocks`.
 - A commit that touches `kit/` is scoped `kit`, not `macos` or `ios`, and is checked on both platforms.
 
 ## Shared application controls
