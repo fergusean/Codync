@@ -97,6 +97,9 @@ struct Composer: View {
 
     private var fieldPadding: CGFloat { InterfaceMetrics.value(mac: 7, mobile: 10) }
     private var buttonSize: CGFloat { InterfaceMetrics.value(mac: 28, mobile: 34) }
+    private var boxPadding: CGFloat { InterfaceMetrics.value(mac: 4, mobile: 6) }
+    /// The one-line field's height; the + circle matches it.
+    private var fieldHeight: CGFloat { max(textLineHeight + 2 * fieldPadding, buttonSize) + 2 * boxPadding }
     private var textLineHeight: CGFloat {
         #if os(macOS)
         ceil(typography.pointSize * 1.25)
@@ -230,7 +233,7 @@ struct Composer: View {
         }
         .padding(.leading, InterfaceMetrics.value(mac: 14, mobile: 18))
         .padding(.trailing, 6)
-        .padding(.vertical, InterfaceMetrics.value(mac: 4, mobile: 6))
+        .padding(.vertical, boxPadding)
         .onChange(of: model.routineDrafts[botId]) { _, value in
             guard thread == nil, let value else { return }
             draft = draft.isEmpty ? value : draft + "\n" + value
@@ -263,8 +266,7 @@ struct Composer: View {
         Image(systemName: "plus")
             .appFont(.system(size: InterfaceMetrics.value(mac: 13, mobile: 18), weight: .medium))
             .foregroundStyle(Palette.text)
-            .frame(width: buttonSize + 2 * InterfaceMetrics.value(mac: 4, mobile: 6),
-                   height: buttonSize + 2 * InterfaceMetrics.value(mac: 4, mobile: 6))
+            .frame(width: fieldHeight, height: fieldHeight)
             .composerSurface(in: Circle())
             .contentShape(Circle())
     }

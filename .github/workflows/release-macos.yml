@@ -80,8 +80,13 @@ jobs:
           # Preserve the framework helpers' sandbox entitlements while resigning.
           find "$APP_PATH" -type f -name Autoupdate -print0 | while IFS= read -r -d '' f; do sign "$f"; done
           sign "$APP_PATH/Contents/MacOS/codync-host"
-          find "$APP_PATH" -depth \( -name '*.xpc' -o -name '*.app' -o -name '*.framework' \) -print0 |
+          find "$APP_PATH" -mindepth 1 -depth \( -name '*.xpc' -o -name '*.app' -o -name '*.framework' \) -print0 |
             while IFS= read -r -d '' f; do sign "$f"; done
+          # The build ran unsigned, so there are no entitlements to preserve: pass the app's own.
+          codesign --force --options runtime --timestamp --entitlements apps/macos/Resources/macOS.entitlements \
+            --sign "Developer ID Application" "$APP_PATH"
+          codesign -d --entitlements - "$APP_PATH" | grep -q com.apple.security.device.audio-input ||
+            { echo "audio-input entitlement missing"; exit 1; }
           codesign --verify --deep --strict --verbose=2 "$APP_PATH"
           cp -R "$APP_PATH" "$RUNNER_TEMP/Codync.app"
 
