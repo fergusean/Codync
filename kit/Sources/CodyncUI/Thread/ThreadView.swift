@@ -205,8 +205,8 @@ public struct ThreadView: View {
             }
         #endif
         #if os(macOS)
-            // Grok's desktop chat: no title bar. The chat scrolls up under a soft blur, with the bot
-            // in a floating glass pill and the actions as glass buttons on the right.
+            // Grok's desktop chat: no title bar. The chat blurs and fades as it scrolls up, with the bot
+            // in a floating solid pill and the actions as glass buttons on the right.
             .safeAreaInset(edge: .top, spacing: 0) {
                 ZStack {
                     HStack(spacing: 8) {
@@ -222,11 +222,11 @@ public struct ThreadView: View {
                         header
                         if model.shownConnection != .online || model.mismatch != nil { connectionSubtitle }
                     }
-                    .padding(.leading, 8)
+                    .padding(.leading, 10)
                     .padding(.trailing, 16)
-                    .padding(.vertical, 7)
-                    .frosted(in: Capsule())
-                    .shadow(color: .black.opacity(0.3), radius: 14, y: 5)
+                    .padding(.vertical, 9)
+                    .background(Palette.background, in: Capsule())
+                    .shadow(color: .black.opacity(0.12), radius: 16, y: 4)
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 10)
@@ -400,11 +400,11 @@ public struct ThreadView: View {
     private var title: some View {
         HStack(spacing: 7) {
             if let bot {
-                let size = InterfaceMetrics.value(mac: 26, mobile: 22)
+                let size: CGFloat = 22
                 if bot.isGroup { GroupAvatar(members: model.members(of: bot), size: size) } else { CharacterAvatar(bot: bot, size: size) }
             }
             Text(bot?.name ?? "")
-                .appFont(.system(size: InterfaceMetrics.value(mac: 15, mobile: 13), weight: .semibold))
+                .appFont(.system(size: InterfaceMetrics.value(mac: 14, mobile: 13), weight: .semibold))
                 .foregroundStyle(Palette.text)
                 .lineLimit(1)
         }
@@ -845,26 +845,18 @@ private extension View {
 }
 
 #if os(macOS)
-    /// The top edge of the chat: messages blur and fade out as they scroll under the title pill.
+    /// The top edge of the chat: messages fade out gradually as they scroll under the title pill,
+    /// readable behind the pill and gone only at the very top.
     private struct TopFade: View {
         var body: some View {
-            // macOS 26 blurs the scroll edge itself (`scrollEdgeEffectStyle(.soft)`); before that, a fade.
-            if #available(macOS 26, *) {
-                Color.clear
-            } else {
-                fade
-            }
-        }
-
-        private var fade: some View {
             ZStack {
                 Rectangle().fill(.ultraThinMaterial)
-                LinearGradient(colors: [Palette.background.opacity(0.85), Palette.background.opacity(0)],
+                    .mask(LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .center))
+                LinearGradient(stops: [.init(color: Palette.background, location: 0),
+                                       .init(color: Palette.background.opacity(0.6), location: 0.35),
+                                       .init(color: Palette.background.opacity(0), location: 1)],
                                startPoint: .top, endPoint: .bottom)
             }
-            .mask(LinearGradient(stops: [.init(color: .black, location: 0), .init(color: .black, location: 0.55),
-                                         .init(color: .clear, location: 1)],
-                                 startPoint: .top, endPoint: .bottom))
             .ignoresSafeArea(edges: .top)
             .allowsHitTesting(false)
         }
