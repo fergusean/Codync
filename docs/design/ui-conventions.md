@@ -48,7 +48,7 @@ Other custom screens use `Chrome.swift` and `Controls.swift`:
 
 | Need | Component |
 |---|---|
-| Modal or full-window overlay | `.codyncSheet`, `.codyncOverlay` |
+| Modal or full-window overlay | `.codyncSheet` (system sheet on iPhone, centered card on Mac), `.codyncOverlay` |
 | Header outside the native bot navigation flow | `ModalHeader`, `ScreenHeader` |
 | Icon action | `IconButton` |
 | Tab selection | `TabBar` |
