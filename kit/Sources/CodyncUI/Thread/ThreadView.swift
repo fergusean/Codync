@@ -171,17 +171,24 @@ public struct ThreadView: View {
                         .padding(.bottom, 8)
                         .transition(.opacity)
                 } else {
-                    #if os(iOS)
-                        Composer(botId: botId,
-                                 onCall: !calling && bot?.isGroup == false ? { calling = true } : nil,
-                                 onInterrupt: callSpeaking ? interruptCall : nil)
-                    #else
-                        Composer(botId: botId)
-                    #endif
+                    Composer(botId: botId,
+                             onCall: !calling && bot?.isGroup == false ? { calling = true } : nil,
+                             onInterrupt: callSpeaking ? interruptCall : nil)
                 }
             }
             .animation(Motion.reduced(Motion.layout, reduceMotion), value: model.mismatch)
         }
+        // Grok Bot's call: a bar floating over the chat, which stays readable and usable.
+        .overlay(alignment: .top) {
+            if calling {
+                CallView(botId: botId, isSpeaking: $callSpeaking, interrupt: $interruptCall) {
+                    withAnimation(Motion.reduced(Motion.layout, reduceMotion)) { calling = false }
+                }
+                    .padding(.top, 4)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            }
+        }
+        .animation(Motion.reduced(Motion.layout, reduceMotion), value: calling)
         #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar(.visible, for: .navigationBar)
@@ -196,41 +203,35 @@ public struct ThreadView: View {
                     ToolbarItem(placement: .topBarTrailing) { computerButton }
                 }
             }
-            // Grok Bot's call: a bar floating over the chat, which stays readable and usable.
-            .overlay(alignment: .top) {
-                if calling {
-                    CallView(botId: botId, isSpeaking: $callSpeaking, interrupt: $interruptCall) {
-                        withAnimation(Motion.reduced(Motion.layout, reduceMotion)) { calling = false }
-                    }
-                        .padding(.top, 4)
-                        .transition(.move(edge: .top).combined(with: .opacity))
-                }
-            }
-            .animation(Motion.reduced(Motion.layout, reduceMotion), value: calling)
         #endif
         #if os(macOS)
+            // Grok's desktop chat: no title bar. The chat scrolls up under a soft blur, with the bot
+            // in a floating glass pill and the actions as glass buttons on the right.
             .safeAreaInset(edge: .top, spacing: 0) {
-                VStack(spacing: 0) {
-                    HStack {
-                        header
-                        connectionSubtitle
-                        Spacer(minLength: 8)
-                        if let bot, !bot.isGroup {
-                            IconButton("Create template", systemImage: "square.and.arrow.up") {
-                                templateRequest = EditorRequest(BotDraft(bot))
-                            }
-                        }
+                ZStack {
+                    HStack(spacing: 8) {
+                        Spacer(minLength: 0)
                         if !showSettings || availableWidth < 680 {
-                            IconButton("Conversation details", systemImage: "chevron.right.2") { toggleDetails() }
+                            IconButton("Conversation details", systemImage: "chevron.left.2") { toggleDetails() }
                                 .keyboardShortcut("i", modifiers: [.command, .option])
+                                .frosted(in: Circle())
                                 .transition(.opacity)
                         }
                     }
-                    .padding(.horizontal, 16)
-                    .frame(height: 44)
-                    Rectangle().fill(Palette.border).frame(height: 0.5)
+                    VStack(spacing: 2) {
+                        header
+                        if model.shownConnection != .online || model.mismatch != nil { connectionSubtitle }
+                    }
+                    .padding(.leading, 8)
+                    .padding(.trailing, 16)
+                    .padding(.vertical, 7)
+                    .frosted(in: Capsule())
+                    .shadow(color: .black.opacity(0.3), radius: 14, y: 5)
                 }
-                .background(Palette.background)
+                .padding(.horizontal, 16)
+                .padding(.top, 10)
+                .padding(.bottom, 14)
+                .background(alignment: .top) { TopFade() }
             }
         #endif
         .readingConversation(botId)
@@ -399,10 +400,11 @@ public struct ThreadView: View {
     private var title: some View {
         HStack(spacing: 7) {
             if let bot {
-                if bot.isGroup { GroupAvatar(members: model.members(of: bot), size: 22) } else { CharacterAvatar(bot: bot, size: 22) }
+                let size = InterfaceMetrics.value(mac: 26, mobile: 22)
+                if bot.isGroup { GroupAvatar(members: model.members(of: bot), size: size) } else { CharacterAvatar(bot: bot, size: size) }
             }
             Text(bot?.name ?? "")
-                .appFont(.system(size: 13, weight: .semibold))
+                .appFont(.system(size: InterfaceMetrics.value(mac: 15, mobile: 13), weight: .semibold))
                 .foregroundStyle(Palette.text)
                 .lineLimit(1)
         }
@@ -419,7 +421,11 @@ public struct ThreadView: View {
 
         /// Its own view so it stays live inside the compact modal (which captures its content).
         private var detailsPanel: some View {
-            DetailsPanel(botId: botId, routineId: routineId, editing: $editingDetails, editGroup: { editingGroup = true }) {
+            DetailsPanel(botId: botId, routineId: routineId, editing: $editingDetails, editGroup: { editingGroup = true },
+                         share: {
+                             compactDetails = false
+                             if let bot { templateRequest = EditorRequest(BotDraft(bot)) }
+                         }) {
                 withAnimation(Motion.reduced(Motion.layout, reduceMotion)) { showSettings = false }
                 compactDetails = false
             }
@@ -618,6 +624,8 @@ private struct DetailsPanel: View {
     let routineId: String?
     @Binding var editing: Bool
     let editGroup: () -> Void
+    /// Shares the bot as a template.
+    let share: () -> Void
     let close: () -> Void
     @Environment(BotStore.self) private var model
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -626,25 +634,26 @@ private struct DetailsPanel: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack(spacing: 10) {
+            HStack(spacing: 8) {
                 if editing {
-                    IconButton("Back to details", systemImage: "chevron.left") { setEditing(false) }
-                    Text("Settings").appFont(.system(size: 13, weight: .semibold)).foregroundStyle(Palette.text)
+                    roundButton("Back to details", "chevron.left") { setEditing(false) }
+                    panelTitle("Settings")
                     Spacer()
                 } else if bot?.isGroup == true {
                     panelTitle("Members")
                     Spacer()
-                    IconButton("Edit group", systemImage: "gearshape", action: editGroup)
+                    roundButton("Edit group", "gearshape", action: editGroup)
                 } else {
                     panelTitle("Details")
                     Spacer()
-                    IconButton("Bot settings", systemImage: "gearshape") { setEditing(true) }
+                    roundButton("Create template", "square.and.arrow.up", action: share)
+                    roundButton("Bot settings", "gearshape") { setEditing(true) }
                 }
-                IconButton("Close details", systemImage: "chevron.right.2", action: close)
+                roundButton("Close details", "chevron.right.2", action: close)
                     .keyboardShortcut("i", modifiers: [.command, .option])
             }
             .padding(.horizontal, 12)
-            .frame(height: 44)
+            .frame(height: 54)
             ZStack {
                 if let bot, bot.isGroup {
                     GroupMembersList(group: bot)
@@ -668,9 +677,31 @@ private struct DetailsPanel: View {
 
     private func panelTitle(_ title: String) -> some View {
         Text(title)
-            .appFont(.system(size: 12, weight: .medium))
-            .foregroundStyle(Palette.secondary)
+            .appFont(.system(size: 15, weight: .semibold))
+            .foregroundStyle(Palette.text)
             .padding(.leading, 4)
+    }
+
+    /// Grok's section label: a quiet heading above its rows.
+    private func sectionLabel(_ title: String) -> some View {
+        Text(title)
+            .appFont(.system(size: 13, weight: .medium))
+            .foregroundStyle(Palette.secondary)
+    }
+
+    /// A round action in the panel's header, frosted like the chat's title pill (Grok's style).
+    private func roundButton(_ label: String, _ symbol: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .appFont(.system(size: 13, weight: .medium))
+                .foregroundStyle(Palette.text)
+                .frame(width: 32, height: 32)
+                .frosted(in: Circle())
+                .contentShape(Circle())
+        }
+        .buttonStyle(PressScale())
+        .accessibilityLabel(label)
+        .help(label)
     }
 
     private var details: some View {
@@ -681,7 +712,7 @@ private struct DetailsPanel: View {
                 if let bot { agentSummary(bot) }
             }
             .padding(.horizontal, 16)
-            .padding(.top, 8)
+            .padding(.top, 4)
             .padding(.bottom, 24)
         }
     }
@@ -693,23 +724,23 @@ private struct DetailsPanel: View {
                 ComputerBadge(model.computer, size: 32)
                 VStack(alignment: .leading, spacing: 4) {
                     Text(model.hostName)
-                        .appFont(.system(size: 13, weight: .semibold))
+                        .appFont(.system(size: 15, weight: .medium))
                         .foregroundStyle(Palette.text)
                         .lineLimit(2)
                     Text("Remote screen")
-                        .appFont(.system(size: 11))
+                        .appFont(.system(size: 13))
                         .foregroundStyle(Palette.secondary)
                 }
             }
             if !model.isOffline {
                 Label(computerStatus, systemImage: computerStatusSymbol)
-                    .appFont(.system(size: 12, weight: .medium))
+                    .appFont(.system(size: 13))
                     .foregroundStyle(Palette.text)
                     .fixedSize(horizontal: false, vertical: true)
             }
             if screenReady {
                 Text("View and control this Mac from your iPhone.")
-                    .appFont(.system(size: 11))
+                    .appFont(.system(size: 12))
                     .foregroundStyle(Palette.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, -8)
@@ -717,37 +748,49 @@ private struct DetailsPanel: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
-        .background(Palette.surface, in: RoundedRectangle(cornerRadius: 12))
+        // Grok's cards are outlined, not filled.
+        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(Palette.border))
     }
 
     private func agentSummary(_ bot: Bot) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text("Agent")
-                .appFont(.system(size: 13, weight: .semibold))
-                .foregroundStyle(Palette.text)
-            HStack {
-                Text("Runtime").foregroundStyle(Palette.secondary)
-                Spacer(minLength: 12)
-                Text(model.backendName(bot.backend)).foregroundStyle(Palette.text)
+        VStack(alignment: .leading, spacing: 10) {
+            sectionLabel("Agent")
+            VStack(spacing: 12) {
+                infoRow("Runtime") {
+                    HStack(spacing: 6) {
+                        AgentIcon(registry: model.hello?.backends.first { $0.id == bot.backend }?.registry, size: 14)
+                        Text(model.backendName(bot.backend))
+                    }
+                }
+                infoRow(bot.managedWorkspace ? "Workspace" : "Folder") {
+                    Text(bot.managedWorkspace ? "Personal" : bot.folderName)
+                        .truncationMode(.middle)
+                        .help(bot.managedWorkspace ? "Personal workspace, managed by Codync" : bot.cwd)
+                }
+                if let chosen = bot.model, !chosen.isEmpty {
+                    infoRow("Model") { Text(chosen).truncationMode(.middle) }
+                }
             }
-            .appFont(.system(size: 12))
-            VStack(alignment: .leading, spacing: 6) {
-                Label(bot.managedWorkspace ? "Workspace" : "Project folder", systemImage: "folder")
-                    .appFont(.system(size: 11))
-                    .foregroundStyle(Palette.secondary)
-                Text(bot.managedWorkspace ? "Personal · managed by Codync" : bot.cwd)
-                    .appFont(.system(size: 11))
-                    .foregroundStyle(Palette.text)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .textSelection(.enabled)
-            }
+            .padding(14)
+            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(Palette.border))
             if !bot.description.isEmpty {
                 Text(bot.description)
                     .appFont(.system(size: 12))
+                    .lineSpacing(3)
                     .foregroundStyle(Palette.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
+    }
+
+    /// Label on the left, value on the right, one line.
+    private func infoRow(_ label: String, @ViewBuilder value: () -> some View) -> some View {
+        HStack(spacing: 12) {
+            Text(label).foregroundStyle(Palette.secondary)
+            Spacer(minLength: 8)
+            value().foregroundStyle(Palette.text).lineLimit(1)
+        }
+        .appFont(.system(size: 13))
     }
 
     private var screenReady: Bool {
@@ -794,13 +837,36 @@ private extension View {
 
     @ViewBuilder func conversationScrollEdges() -> some View {
         if #available(iOS 26, macOS 26, *) {
-            #if os(iOS)
-                scrollEdgeEffectStyle(.soft, for: .top)
-            #else
-                self
-            #endif
+            scrollEdgeEffectStyle(.soft, for: .top)
         } else {
             self
         }
     }
 }
+
+#if os(macOS)
+    /// The top edge of the chat: messages blur and fade out as they scroll under the title pill.
+    private struct TopFade: View {
+        var body: some View {
+            // macOS 26 blurs the scroll edge itself (`scrollEdgeEffectStyle(.soft)`); before that, a fade.
+            if #available(macOS 26, *) {
+                Color.clear
+            } else {
+                fade
+            }
+        }
+
+        private var fade: some View {
+            ZStack {
+                Rectangle().fill(.ultraThinMaterial)
+                LinearGradient(colors: [Palette.background.opacity(0.85), Palette.background.opacity(0)],
+                               startPoint: .top, endPoint: .bottom)
+            }
+            .mask(LinearGradient(stops: [.init(color: .black, location: 0), .init(color: .black, location: 0.55),
+                                         .init(color: .clear, location: 1)],
+                                 startPoint: .top, endPoint: .bottom))
+            .ignoresSafeArea(edges: .top)
+            .allowsHitTesting(false)
+        }
+    }
+#endif

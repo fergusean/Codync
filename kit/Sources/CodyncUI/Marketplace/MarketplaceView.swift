@@ -28,6 +28,8 @@ public struct MarketplaceView: View {
     @State private var addingConnector = false
     @State private var writingSkill = false
     @State private var agent: Backend?
+    /// Agents shown before "Load more agents" (two rows of the Mac grid).
+    @State private var agentLimit = 10
     @State private var showInstalled = false
     @State private var showCredentials = false
     @Environment(\.dismissModal) private var dismiss
@@ -46,8 +48,7 @@ public struct MarketplaceView: View {
 
     private var agents: [Backend] {
         let all = (model.hello?.backends ?? []).filter { $0.available || $0.installed == true || $0.curated == true }
-        let hits = query.isEmpty ? all : all.filter { $0.name.localizedCaseInsensitiveContains(query) }
-        return Array(hits.prefix(query.isEmpty ? 8 : 12))
+        return query.isEmpty ? all : all.filter { $0.name.localizedCaseInsensitiveContains(query) }
     }
 
     private var shownSkills: [MarketSkill] {
@@ -96,16 +97,23 @@ public struct MarketplaceView: View {
                         // A swipeable row on the phone, a grid on the Mac.
                         ScrollView(.horizontal, showsIndicators: false) {
                             LazyHStack(spacing: 10) {
-                                ForEach(agents) { b in agentCard(b).frame(width: 128) }
+                                ForEach(agents.prefix(agentLimit)) { b in agentCard(b).frame(width: 128) }
                             }
                             .padding(.horizontal, 24)
                         }
                         .padding(.horizontal, -24)
                         #else
                         LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 12)], spacing: 12) {
-                            ForEach(agents) { agentCard($0) }
+                            ForEach(agents.prefix(agentLimit)) { agentCard($0) }
                         }
                         #endif
+                        if agents.count > agentLimit {
+                            Button("Load more agents") {
+                                withAnimation(Motion.fade) { agentLimit += 10 }
+                            }
+                            .buttonStyle(SecondaryButtonStyle())
+                            .frame(maxWidth: .infinity)
+                        }
                     }
                 }
                 MarketSection(title: query.isEmpty ? "Connectors" : "Connectors") {
@@ -254,6 +262,7 @@ public struct MarketplaceView: View {
                 .textFieldStyle(.plain)
                 .plainTextInput()
                 .onSubmit { searchToken += 1; Task { await loadConnectors() } }
+                .onChange(of: search) { agentLimit = 10 }
             if !search.isEmpty {
                 Button { search = ""; searchToken += 1; Task { await loadConnectors() } } label: {
                     Image(systemName: "xmark.circle.fill").foregroundStyle(Palette.tertiary)
