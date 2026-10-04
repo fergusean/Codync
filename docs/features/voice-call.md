@@ -95,12 +95,22 @@ Each cloud engine has two **modes**:
   speech-to-text and is sent as an ordinary message; replies are read with its text-to-speech. Both
   run on the computer (`voiceTranscribe`, `voiceSpeak`), so the key never leaves it; utterances stop
   at 20 s and replies are spoken in clips (OpenAI 600 characters as AAC, Gemini 150 as WAV) so every
-  request and answer fits one 1 MiB channel message. Defaults: `gpt-transcribe` +
-  `gpt-4o-mini-tts`, `gemini-3.8-flash` + `gemini-3.8-flash-tts`. Speech-to-text gets the app's and
+  request and answer fits one 1 MiB channel message. Speech-to-text gets the app's and
   the bots' names as hints (gpt-transcribe also as `keywords`). gpt-transcribe returns Chinese in
   Simplified characters whatever the prompt says, so the client turns it into Traditional
   (`Hans-Hant`) for a reader whose first Chinese language, or region, is Traditional. Only a
   model the user picks is saved; the default isn't, so a newer default reaches everyone.
+
+**Default models follow the provider.** Nothing pins a model version: once a day (and whenever a
+key is saved or the model list is opened) the host reads each keyed provider's model list and
+keeps its newest model per mode (`voice::newest`, stored as `voice-defaults.<provider>`), and
+`voiceStatus` / `voiceModels` report them as `defaults`. OpenAI's list is dated, so its newest
+generation wins, full models over `mini`; Gemini's names carry the version, plain names over
+`-lite` / variants; dated snapshots and previews never become defaults. Clients remember the
+last `defaults` they saw (`callDefaults.<provider>`) and refresh them at every call. The ids
+built into the host and the app (today `gpt-realtime-2.1`, `gpt-transcribe`, `gpt-4o-mini-tts`;
+`gemini-3.8-live`, `gemini-3.8-flash`, `gemini-3.8-flash-tts`) are used only until the first
+list arrives.
 
 Voice settings (`VoiceChatSettingsView`) open from the call bar's gear and from settings: on the
 iPhone, **Computers & settings → Voice chat**; on the Mac, **Account → Voice chat** (this Mac's

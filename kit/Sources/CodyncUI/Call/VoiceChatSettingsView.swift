@@ -144,12 +144,12 @@ private struct ProviderVoiceSettings: View {
         Color.clear.frame(height: 0)
             .task { await load() }
             .onChange(of: voice) { _, v in UserDefaults.standard.set(v, forKey: VoiceSettings.voiceKey(provider)) }
-            .onChange(of: model) { _, m in VoiceSettings.save(m, default: provider.model, forKey: VoiceSettings.modelKey(provider)) }
+            .onChange(of: model) { _, m in VoiceSettings.save(m, default: VoiceSettings.defaults(provider).realtime, forKey: VoiceSettings.modelKey(provider)) }
             .onChange(of: transcribeModel) { _, m in
-                VoiceSettings.save(m, default: provider.transcribeModel, forKey: VoiceSettings.transcribeKey(provider))
+                VoiceSettings.save(m, default: VoiceSettings.defaults(provider).transcribe, forKey: VoiceSettings.transcribeKey(provider))
             }
             .onChange(of: speechModel) { _, m in
-                VoiceSettings.save(m, default: provider.speechModel, forKey: VoiceSettings.speechKey(provider))
+                VoiceSettings.save(m, default: VoiceSettings.defaults(provider).speech, forKey: VoiceSettings.speechKey(provider))
             }
     }
 
@@ -249,7 +249,9 @@ private struct ProviderVoiceSettings: View {
             return
         }
         do {
-            saved = try await client.voiceStatus().configured(provider)
+            let status = try await client.voiceStatus()
+            VoiceSettings.remember(status)
+            saved = status.configured(provider)
         } catch {
             saved = false
             result = (false, error.localizedDescription)
@@ -261,6 +263,11 @@ private struct ProviderVoiceSettings: View {
     private func loadModels(_ client: HostClient) async {
         guard let list = try? await client.voiceModels(provider) else { return }
         models = list
+        // A newer default moves every choice the user hasn't made themselves.
+        VoiceSettings.remember(list.defaults, for: provider)
+        model = VoiceSettings.model(provider)
+        transcribeModel = VoiceSettings.transcribeModel(provider)
+        speechModel = VoiceSettings.speechModel(provider)
         UserDefaults.standard.set(try? JSONEncoder().encode(list), forKey: VoiceSettings.modelsKey(provider))
     }
 

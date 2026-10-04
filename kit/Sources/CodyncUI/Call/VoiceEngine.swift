@@ -53,7 +53,24 @@ enum VoiceSettings {
     static func modelsKey(_ provider: VoiceProvider) -> String { "callModels.\(provider.rawValue)" }
 
     static func model(_ provider: VoiceProvider) -> String {
-        UserDefaults.standard.string(forKey: modelKey(provider)) ?? provider.model
+        UserDefaults.standard.string(forKey: modelKey(provider)) ?? defaults(provider).realtime
+    }
+
+    static func defaultsKey(_ provider: VoiceProvider) -> String { "callDefaults.\(provider.rawValue)" }
+
+    /// The newest models as the computer last reported them, or the app's own until it has.
+    static func defaults(_ provider: VoiceProvider) -> VoiceDefaults {
+        UserDefaults.standard.data(forKey: defaultsKey(provider)).flatMap { try? JSONDecoder().decode(VoiceDefaults.self, from: $0) }
+            ?? VoiceDefaults(realtime: provider.model, transcribe: provider.transcribeModel, speech: provider.speechModel)
+    }
+
+    static func remember(_ defaults: VoiceDefaults?, for provider: VoiceProvider) {
+        guard let defaults, let data = try? JSONEncoder().encode(defaults) else { return }
+        UserDefaults.standard.set(data, forKey: defaultsKey(provider))
+    }
+
+    static func remember(_ status: VoiceStatus) {
+        for entry in status.providers { remember(entry.defaults, for: entry.provider) }
     }
 
     /// `realtime` (a live conversation) or `speech` (speech to text, then the reply read aloud).
@@ -67,11 +84,11 @@ enum VoiceSettings {
     static func speechKey(_ provider: VoiceProvider) -> String { "callSpeechModel.\(provider.rawValue)" }
 
     static func transcribeModel(_ provider: VoiceProvider) -> String {
-        UserDefaults.standard.string(forKey: transcribeKey(provider)) ?? provider.transcribeModel
+        UserDefaults.standard.string(forKey: transcribeKey(provider)) ?? defaults(provider).transcribe
     }
 
     static func speechModel(_ provider: VoiceProvider) -> String {
-        UserDefaults.standard.string(forKey: speechKey(provider)) ?? provider.speechModel
+        UserDefaults.standard.string(forKey: speechKey(provider)) ?? defaults(provider).speech
     }
 
     /// Keeps a model the user picked; the default isn't stored, so a newer default reaches them.
