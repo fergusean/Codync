@@ -57,7 +57,7 @@ This runner does not validate a deployed Worker, actual Google consent, APNs or 
 
 - **Direct works, relay fails:** compare cloud URLs, cloud enablement, registration status and host logs.
 - **Signed in, no access:** check account ownership and the host's pending approval; compare the displayed code before approving.
-- **Old UI/protocol:** stop stale Mac/host copies and relaunch the installed phone process.
+- **Old UI/protocol:** stop stale desktop app/host copies and relaunch the installed phone process.
 - **Chat works, push fails:** inspect notification permission and APNs configuration separately.
 - **Release fails while Debug works:** inspect the main environment's empty configuration before diagnosing networking.
 

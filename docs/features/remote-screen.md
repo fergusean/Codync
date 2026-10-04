@@ -23,15 +23,15 @@ held and the system rotation lock. The Rotate button remains available for an
 explicit override. Closing the last viewer restores the app's portrait layout.
 The video fits the available bounds, and touch coordinates use the resized viewport.
 
-The iPad already supports all orientations. macOS, Linux GTK and the TUI do not
+The iPad already supports all orientations. The desktop app and the TUI do not
 use the iPhone viewer or its orientation policy; the capture helpers stream the
 computer display without choosing the phone's orientation.
 
 ## Boundaries
 
 - `host/src/screen.rs` coordinates access to the local helper and owns viewer sessions. Another device cannot renegotiate or close a session it does not own.
-- `apps/screen-macos/` is the macOS capture/input helper, installed through `SMAppService` and responsible for the OS permissions.
-- `apps/screen-linux/` implements the Linux helper using desktop portals and GStreamer, including ICE URL conversion and TURN transport configuration.
+- `apps/screen-macos/` is the macOS capture/input helper (Xcode `Screen` target, `CodyncScreen.app`). The desktop app bundles it and registers it through `SMAppService` (`apps/desktop/src/main/screen.ts`); it is responsible for the OS permissions.
+- `apps/screen-linux/` implements the Linux helper using desktop portals and GStreamer, including ICE URL conversion and TURN transport configuration. The host starts it.
 - Helpers communicate locally through `~/.codync/screen.sock`. SDP is non-trickle; input uses the `input` and `input-fast` data channels.
 - Screen access is off by default. Enabling through `setScreenEnabled` requires a loopback caller. Interactive OS permission prompts must be completed on the computer.
 - Bots with their computer capability enabled receive the built-in `computer` MCP tools (`host/src/mcp.rs`). Their permission policy still applies. An interactive phone can take over; bots may still look.
@@ -56,7 +56,7 @@ References: [Cloudflare credential issuance](https://developers.cloudflare.com/r
 
 ## Verification
 
-Run cloud tests/type checking, host formatting/Clippy/tests, Swift package tests, and builds of the iOS app and Mac screen helper. Run Linux helper tests in a Linux environment with GStreamer and PipeWire development packages.
+Run cloud tests/type checking, host formatting/Clippy/tests, iOS Kit package tests, and builds of the iOS app and the macOS `Screen` helper target. Run Linux helper tests in a Linux environment with GStreamer and PipeWire development packages.
 
 Live acceptance requires the configured Worker and fresh host/helper/phone builds:
 

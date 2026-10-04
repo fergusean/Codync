@@ -19,31 +19,35 @@ Codync/
 │   │   ├── market/            # Marketplace, Composio, MCP OAuth
 │   │   └── tui/               # Terminal client (manage.rs + sheets.rs: settings; connections.rs: secure connection requests)
 │   └── tests/                 # Host integration tests and scripted ACP agents
-├── kit/                       # Shared Swift package
-│   ├── Sources/
-│   │   ├── CodyncKit/          # Wire models, transports, design; widget-safe
-│   │   │   ├── Client/
-│   │   │   ├── Models/
-│   │   │   ├── Design/
-│   │   │   └── Resources/
-│   │   └── CodyncUI/           # Stores, shared screens and custom controls
-│   │       ├── Store/
-│   │       ├── Bots/
-│   │       ├── Thread/
-│   │       ├── Call/
-│   │       ├── Screen/
-│   │       ├── Marketplace/
-│   │       ├── Usage/
-│   │       └── Resources/
-│   └── Tests/                 # CodyncKitTests and CodyncUITests
 ├── apps/
 │   ├── project.yml            # XcodeGen source of truth for every Apple target
 │   ├── Codync.xcodeproj/      # Generated Xcode project
 │   ├── shared/                # AccountSession, ComputerStatus, Config/{dev,main}.plist
 │   ├── ios/                   # App/, Views/, Resources/, Widgets/, NotificationService/
-│   ├── macos/                 # App/, Views/, Resources/, LaunchAgents/
-│   ├── linux/                 # GTK 4/libadwaita desktop client
-│   ├── screen-macos/          # macOS screen helper
+│   │   └── Kit/               # The iPhone app's Swift package
+│   │       ├── Sources/
+│   │       │   ├── CodyncKit/  # Wire models, transports, design; widget-safe
+│   │       │   │   ├── Client/
+│   │       │   │   ├── Models/
+│   │       │   │   ├── Design/
+│   │       │   │   └── Resources/
+│   │       │   └── CodyncUI/   # Stores, screens and custom controls
+│   │       │       ├── Store/
+│   │       │       ├── Bots/
+│   │       │       ├── Thread/
+│   │       │       ├── Call/
+│   │       │       ├── Screen/
+│   │       │       ├── Marketplace/
+│   │       │       ├── Routines/
+│   │       │       ├── Usage/
+│   │       │       └── Resources/
+│   │       └── Tests/         # CodyncKitTests and CodyncUITests
+│   ├── desktop/               # Electron app for macOS and Linux (see desktop-app.md)
+│   │   ├── src/main/          # Host service, tray, account, updates, SSH, screen, speech
+│   │   ├── src/preload/       # window.codync bridge
+│   │   ├── src/renderer/      # React UI: store/, components/, views/
+│   │   └── native/            # codync-speech (macOS on-device speech helper)
+│   ├── screen-macos/          # macOS screen helper (Xcode Screen target)
 │   └── screen-linux/          # Linux portal/GStreamer screen helper
 ├── cloud/                     # Account API + encrypted relay Worker and Durable Object
 │   ├── src/
@@ -58,7 +62,7 @@ Codync/
 └── .github/workflows/         # CI, signing and release automation
 ```
 
-`build/`, `kit/.build/`, Cargo `target/`, `node_modules/` and Wrangler local state are generated working data. They are not source modules and should not become documentation locations. Edit `apps/project.yml` and run `xcodegen generate --spec apps/project.yml`; never hand-edit `project.pbxproj`.
+`build/`, `apps/ios/Kit/.build/`, `apps/desktop/out/`, `apps/desktop/dist/`, Cargo `target/`, `node_modules/` and Wrangler local state are generated working data. They are not source modules and should not become documentation locations. Edit `apps/project.yml` and run `xcodegen generate --spec apps/project.yml`; never hand-edit `project.pbxproj`.
 
 ## Where to make a change
 
@@ -75,22 +79,23 @@ Codync/
 | Agent discovery, sign-in, setup terminal | `host/src/agent/backends.rs`, `registry.rs`, `auth.rs`, `term.rs` |
 | Marketplace, Composio, connector OAuth | `host/src/market/` |
 | Screen bridge and built-in MCP tools | `host/src/screen.rs`, `mcp.rs` |
-| Swift transport and cloud API | `kit/Sources/CodyncKit/Client/` |
-| Account aggregation / one host mirror | `kit/Sources/CodyncUI/Store/AccountStore.swift` / `BotStore.swift` |
-| Chat, replies, composer and trace | `kit/Sources/CodyncUI/Thread/` |
-| Reusable Apple UI chrome | `kit/Sources/CodyncUI/Chrome.swift`, `Controls.swift`, `Platform.swift` |
+| Swift transport and cloud API | `apps/ios/Kit/Sources/CodyncKit/Client/` |
+| Account aggregation / one host mirror | `apps/ios/Kit/Sources/CodyncUI/Store/AccountStore.swift` / `BotStore.swift` |
+| iPhone chat, replies, composer and trace | `apps/ios/Kit/Sources/CodyncUI/Thread/` |
+| Reusable iPhone UI chrome | `apps/ios/Kit/Sources/CodyncUI/Chrome.swift`, `Controls.swift`, `Platform.swift` |
 | iOS navigation, pairing, account settings | `apps/ios/Views/RootView.swift`, `BotListView.swift`, `PairingView.swift`, `AccountSwitcherView.swift`, `SettingsView.swift` |
 | Apple account sessions / public environment config | `apps/shared/AccountSession.swift`, `apps/shared/Config/` |
-| Mac local host / SSH lifecycle | `apps/macos/App/HostController.swift`, `SSHTunnel.swift` |
+| Desktop local host / SSH lifecycle | `apps/desktop/src/main/host-controller.ts`, `ssh.ts` |
+| Desktop store, chat and controls | `apps/desktop/src/renderer/store/bot-store.ts`, `views/thread/`, `components/` |
 | Cloud routes / authentication / relay | `cloud/src/index.ts`, `api.ts`, `auth.ts`, `relay.ts` |
 | Push encryption / APNs delivery / decryption | `host/src/remote/push.rs`, `relay/src/`, `apps/ios/NotificationService/` |
-| Widget and activity rendering | `kit/Sources/CodyncKit/Design/`, `apps/ios/Widgets/` |
+| Widget and activity rendering | `apps/ios/Kit/Sources/CodyncKit/Design/`, `apps/ios/Widgets/` |
 
 ## Dependency rules
 
 - `CodyncKit` owns serializable models, clients and rendering primitives shared with widgets. It must not import `CodyncUI` or ClerkKit.
-- `CodyncUI` owns observable stores and shared application screens. App-specific lifecycle, OAuth configuration and device hooks belong in `apps/`.
-- Each `BotStore` talks to one computer. `AccountStore` aggregates stores and routes by `BotReference`; bare bot IDs are not globally unique.
+- `CodyncUI` owns the iPhone app's observable stores and screens. App-specific lifecycle, OAuth configuration and device hooks belong in `apps/`.
+- Each `BotStore` (Swift, and its TypeScript port in the desktop app) talks to one computer. `AccountStore` aggregates stores and routes by `BotReference`; bare bot IDs are not globally unique.
 - The host owns routing, reply counts, permissions and group turn scheduling. Clients render these results; they do not reimplement host policy.
 - `cloud/` transports encrypted chat traffic and manages account metadata. `relay/` delivers APNs pushes. The two Workers have separate configuration and tests.
 
@@ -109,8 +114,8 @@ Codync/
 | computer / host | User-facing paired environment / the daemon that serves it |
 | cloud / relay | Account + E2E service / context-dependent transport or APNs Worker; always name the directory when ambiguous |
 
-Use lowercase repository folders; PascalCase folders inside Swift targets. Swift files follow their main type (`UpperCamelCase.swift`), Rust uses `snake_case.rs` (a folder module is `name/mod.rs`), and TypeScript uses `kebab-case.ts`. Prefer one main type per file; small related view siblings can share a plural file such as `ChatRows.swift`.
+Use lowercase repository folders; PascalCase folders inside Swift targets. Swift files follow their main type (`UpperCamelCase.swift`), Rust uses `snake_case.rs` (a folder module is `name/mod.rs`), TypeScript uses `kebab-case.ts`, and React components use `PascalCase.tsx`. Prefer one main type per file; small related view siblings can share a plural file such as `ChatRows.swift`.
 
-Role suffixes: `View`, `Row`, `Card`, `Window`, `Store`, `Controller`; button styles describe the effect (`PressScale`). Keep feature vocabulary aligned across Swift, Rust, Linux and the terminal client.
+Role suffixes: `View`, `Row`, `Card`, `Window`, `Store`, `Controller`; button styles describe the effect (`PressScale`). Keep feature vocabulary aligned across Swift, the desktop app, Rust and the terminal client.
 
-UI-specific rules, including the native iPhone toolbar exception, live in [UI conventions](../design/ui-conventions.md).
+UI-specific rules, including the native iPhone toolbar exception and the desktop controls, live in [UI conventions](../design/ui-conventions.md).

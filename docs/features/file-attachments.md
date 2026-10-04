@@ -1,10 +1,11 @@
 # File attachments
 
-Photos and files sent with a message, from the iPhone and the Mac.
+Photos and files sent with a message, from the iPhone and the desktop app.
 
 - Composer: the **+** button left of the message box. iPhone: a menu with Photos (sent as JPEG) and
-  Files (plus Paste when the clipboard has an image); Mac: an open panel. Files and images can
-  also be dropped on the box or pasted: ⌘V on the Mac takes a copied image or file, and on the
+  Files (plus Paste when the clipboard has an image); desktop: an open panel. Files and images can
+  also be dropped on the box or pasted: ⌘V / Ctrl+V on the desktop takes a copied image or file
+  (`apps/desktop/src/renderer/views/thread/Composer.tsx`), and on the
   iPhone a "Paste image" chip appears above the box while typing after an image was copied.
   HEIC/TIFF/BMP become JPEG (`OutgoingFile.prepared`, `Thread/Attachments.swift`). Picked files show as chips above
   the text and can be removed; a message can be files only. Not in group chats (a group has no
@@ -24,8 +25,7 @@ Photos and files sent with a message, from the iPhone and the Mac.
 - Chat: images show as pictures (tap for full size), other files as cards. Other devices fetch a
   sent file with `readUpload {botId, uploadId, offset}` (384 KiB chunks) and cache it; the sender
   caches its own copy at upload.
-- Linux app: the paperclip in the composer (file chooser) or files dropped on the box; sent files
-  show as name/size cards (no image previews yet). Terminal UI: dragging a file onto the terminal
-  pastes its path, which becomes an attachment (⌫ on an empty draft removes the last one); sent
-  files show as `▤ name size` lines. Both upload with the same `upload` chunks.
+- Terminal UI: dragging a file onto the terminal pastes its path, which becomes an attachment (⌫ on
+  an empty draft removes the last one); sent files show as `▤ name size` lines. It uploads with the
+  same `upload` chunks.
 - A files-only message previews in the roster as its file names.

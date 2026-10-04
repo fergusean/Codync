@@ -1,20 +1,20 @@
 # Client and host compatibility
 
-Clients (iPhone, Mac window, Linux app, terminal client) and the host update on different
-schedules: the iPhone app waits for App Review, Mac and standalone hosts update when their
-owner (or the opt-in automatic updater) installs a release, and the Linux desktop app is
-package-managed. Any client can meet an older or a newer host.
+Clients (iPhone, desktop app on macOS and Linux, terminal client) and the host update on
+different schedules: the iPhone app waits for App Review, the desktop app and standalone hosts
+update when their owner (or the opt-in automatic updater) installs a release. Any client can
+meet an older or a newer host.
 
 ## Rule
 
 Each side names the **oldest version of the other side** it still works with. Versions are
-the ordinary release versions (`MARKETING_VERSION`, `host/Cargo.toml`, `apps/linux/Cargo.toml`,
+the ordinary release versions (`MARKETING_VERSION`, `host/Cargo.toml`, `apps/desktop/package.json`,
 always equal). There is no separate protocol number.
 
 | Floor | Lives in | Meaning |
 |---|---|---|
 | `minApp` | `host/src/compat.rs` `MIN_APP`, sent in `hello` | The oldest client this host serves correctly. |
-| `minHost` | `kit/.../Models/Compatibility.swift` `VersionMismatch.minHost`, `apps/linux/src/compat.rs` `MIN_HOST`, `host/src/compat.rs` `MIN_HOST` (terminal client) | The oldest host this client works with. |
+| `minHost` | `apps/ios/Kit/.../Models/Compatibility.swift` `VersionMismatch.minHost`, `apps/desktop/src/shared/compat.ts` `MIN_HOST`, `host/src/compat.rs` `MIN_HOST` (terminal client) | The oldest host this client works with. |
 
 On every (re)connect the client reads `hello` and decides, in this order:
 
@@ -29,17 +29,17 @@ floor applies to them.
 
 ## What each client does
 
-| | Apple apps (`BotStore.mismatch`) | Linux app | Terminal client |
-|---|---|---|---|
-| Notice | `UpdateNeededCard` above the computer's bots and in place of the composer; status reads *Needs update* | Banner over the roster | *needs update* in the status line, with the reason |
-| Update this app | iPhone: App Store page. Mac: Sparkle | Opens the GitHub release page (the desktop app is package-managed) | Text only |
-| Update the host | Mac: its own host is reinstalled from the app bundle. iPhone: instructions for that computer | `installHostUpdate` | `^k` → Check for updates |
-| Sync while mismatched | Stopped; `hello` is asked again every 30 s and on every reconnect | Continues (JSON is read leniently); sending is blocked | Continues; sending is blocked |
+| | iPhone and desktop (`BotStore.mismatch`) | Terminal client |
+|---|---|---|
+| Notice | `UpdateNeededCard` above the computer's bots and in place of the composer; status reads *Needs update* | *needs update* in the status line, with the reason |
+| Update this app | iPhone: App Store page. Desktop: electron-updater check (`apps/desktop/src/main/updates.ts`) | Text only |
+| Update the host | Desktop: its own host is reinstalled (**Restart host**). iPhone: instructions for that computer | `^k` → Check for updates |
+| Sync while mismatched | Stopped; `hello` is asked again every 30 s and on every reconnect | Continues; sending is blocked |
 
 Drafts are kept while sending is blocked. A host update restarts the host, so the reconnect
 reads the new `hello` and the notice goes away on its own.
 
-Apple apps also treat **undecodable data from a newer host** as *Update this app*: an event
+The iPhone and desktop apps also treat **undecodable data from a newer host** as *Update this app*: an event
 that stays undecodable after the one rewind, or a `hello` whose other fields can't be decoded
 (its `version` and `minApp` are still read). From an older or equal host it's only logged.
 
@@ -53,7 +53,7 @@ couldn't get the matching side yet.
   Swift fields are optional), new methods, new enum values (kept as strings).
 - **Renaming, removing or changing the meaning** of anything an older client reads or sends:
   change it, set `MIN_APP` to this release (its iPhone part ships with it: the change
-  touches `kit/`, so `Submit iOS` includes it), add a row to the floor history, and re-record
+  touches `apps/ios/Kit/`, so `Submit iOS` includes it), add a row to the floor history, and re-record
   the wire shape snapshot. Hosts hold that release back until the App Store has the iPhone
   app (next section), so nobody is asked for an update that isn't there yet.
 - **Raise `minHost`** when the client's core flows need something older hosts lack. Hosts
@@ -85,15 +85,13 @@ installing such a release:
   (`codync-host compat`) instead. The signed manifest itself is unchanged, as old hosts
   expect it. Waiting shows as phase `waitingForApp` with `requiredApp` and `appStoreVersion`
   in the update status; `codync-host update --skip-app-check` (API
-  `installHostUpdate {"skipAppCheck": true}`, the Linux app's *Update anyway*) installs
-  anyway. With automatic updates on, a waiting host asks the App Store hourly and updates as
+  `installHostUpdate {"skipAppCheck": true}`) installs anyway. With automatic updates on, a waiting host asks the App Store hourly and updates as
   soon as the app is there.
-- **Mac app** (Sparkle): the release workflow adds `<codync:minApp>` to the appcast item
-  (`packaging/updates/annotate-appcast.py`, checked by `verify-appcast.py`), and
-  `UpdatesManager` declines it in `shouldProceedWithUpdate` while the App Store is behind,
-  before Sparkle shows or downloads anything. A check the person starts shows why; one
-  started without an App Store answer goes ahead. While waiting it asks the App Store hourly
-  and starts a background check as soon as the app is there.
+- **Desktop app** (electron-updater): the release workflow adds `minApp` to `latest-mac.yml`,
+  and `Updates.available` (`apps/desktop/src/main/updates.ts`) holds the release while the
+  local host's `minApp` is lower, an iPhone is paired and the App Store is behind, before
+  anything downloads. A check the person starts shows why. While waiting it checks hourly. The Sparkle appcast kept for the
+  SwiftUI Mac app's installs carries `<codync:minApp>` (`packaging/updates/annotate-appcast.py`).
 - Hosts released before 2.5.0 don't have this gate and install any release. Before the first
   real `minApp` raise, most computers should be on 2.5.0 or newer.
 
@@ -110,8 +108,7 @@ trails them (App Store review), so nudging a computer from it would only be nois
 | Client | This app is behind |
 |---|---|
 | iPhone | Card at the top of the bot list (App Store version from the lookup), *Update* opens the App Store |
-| Mac | Sparkle's own update prompts |
-| Linux app | Toast with *Get update* (release page) |
+| Desktop | *Update to <version>* in the menu bar's Settings → Updates and on the Settings Updates page |
 | Terminal client | — (it is the host binary) |
 
 ### Wire shape snapshot
