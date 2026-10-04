@@ -63,7 +63,7 @@ enum VoiceSettings {
         UserDefaults.standard.string(forKey: modeKey(provider)) == "speech"
     }
 
-    static func transcribeKey(_ provider: VoiceProvider) -> String { "callTranscribeModel.\(provider.rawValue)" }
+    static func transcribeKey(_ provider: VoiceProvider) -> String { "callSpeechToText.\(provider.rawValue)" }
     static func speechKey(_ provider: VoiceProvider) -> String { "callSpeechModel.\(provider.rawValue)" }
 
     static func transcribeModel(_ provider: VoiceProvider) -> String {
@@ -72,6 +72,26 @@ enum VoiceSettings {
 
     static func speechModel(_ provider: VoiceProvider) -> String {
         UserDefaults.standard.string(forKey: speechKey(provider)) ?? provider.speechModel
+    }
+
+    /// Keeps a model the user picked; the default isn't stored, so a newer default reaches them.
+    static func save(_ model: String, default fallback: String, forKey key: String) {
+        if model.isEmpty || model == fallback {
+            UserDefaults.standard.removeObject(forKey: key)
+        } else {
+            UserDefaults.standard.set(model, forKey: key)
+        }
+    }
+
+    /// gpt-transcribe writes Chinese in Simplified characters whatever it's told: turn it back
+    /// into Traditional for someone who reads Traditional (their first Chinese language, or a
+    /// Traditional region when none is listed).
+    static func inReadersScript(_ text: String) -> String {
+        let chinese = Locale.preferredLanguages.lazy.map(Locale.Language.init(identifier:)).first { $0.languageCode == .chinese }
+        let traditional = if let chinese { chinese.script == .hanTraditional }
+            else { ["TW", "HK", "MO"].contains(Locale.current.region?.identifier ?? "") }
+        guard traditional else { return text }
+        return text.applyingTransform(StringTransform("Hans-Hant"), reverse: false) ?? text
     }
 
     static func voiceKey(_ provider: VoiceProvider) -> String { "callVoice.\(provider.rawValue)" }

@@ -144,9 +144,13 @@ private struct ProviderVoiceSettings: View {
         Color.clear.frame(height: 0)
             .task { await load() }
             .onChange(of: voice) { _, v in UserDefaults.standard.set(v, forKey: VoiceSettings.voiceKey(provider)) }
-            .onChange(of: model) { _, m in UserDefaults.standard.set(m, forKey: VoiceSettings.modelKey(provider)) }
-            .onChange(of: transcribeModel) { _, m in UserDefaults.standard.set(m, forKey: VoiceSettings.transcribeKey(provider)) }
-            .onChange(of: speechModel) { _, m in UserDefaults.standard.set(m, forKey: VoiceSettings.speechKey(provider)) }
+            .onChange(of: model) { _, m in VoiceSettings.save(m, default: provider.model, forKey: VoiceSettings.modelKey(provider)) }
+            .onChange(of: transcribeModel) { _, m in
+                VoiceSettings.save(m, default: provider.transcribeModel, forKey: VoiceSettings.transcribeKey(provider))
+            }
+            .onChange(of: speechModel) { _, m in
+                VoiceSettings.save(m, default: provider.speechModel, forKey: VoiceSettings.speechKey(provider))
+            }
     }
 
     /// The key is on the computer: say so, and offer test / replace / remove.

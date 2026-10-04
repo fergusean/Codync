@@ -39,7 +39,7 @@ public enum VoiceProvider: String, CaseIterable, Codable, Sendable {
     /// Speech-to-text and text-to-speech defaults for the non-realtime mode.
     public var transcribeModel: String {
         switch self {
-        case .openAI: "gpt-4o-transcribe"
+        case .openAI: "gpt-transcribe"
         case .gemini: "gemini-3.8-flash"
         }
     }
