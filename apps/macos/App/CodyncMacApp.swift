@@ -34,6 +34,8 @@ struct CodyncMacApp: App {
                 .environment(\.conversationTypography, ConversationTypography(pointSize: conversationFontSize))
                 .task { launch() }
                 .modalHost()
+                // No scroll bars anywhere in the app (sheets and panels sit inside the modal host).
+                .scrollIndicators(.never)
                 .appFont(.body)
                 .environment(\.appFontScale, ConversationTypography(pointSize: conversationFontSize).scale)
                 .environment(host)
@@ -86,6 +88,7 @@ struct CodyncMacApp: App {
             }
             .frame(width: 340)
             .appFont(.body)
+            .scrollIndicators(.never)
             .environment(\.appFontScale, ConversationTypography(pointSize: conversationFontSize).scale)
             .environment(host)
         }

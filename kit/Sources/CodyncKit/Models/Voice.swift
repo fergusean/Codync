@@ -28,7 +28,8 @@ public enum VoiceProvider: String, CaseIterable, Codable, Sendable {
         }
     }
 
-    /// Used until the user picks one from the provider's list (the host knows the same default).
+    /// Used until the user picks one, and until the computer has said what's newest
+    /// (`VoiceDefaults`, worked out daily from the provider's list).
     public var model: String {
         switch self {
         case .openAI: "gpt-realtime-2.1"
@@ -39,7 +40,7 @@ public enum VoiceProvider: String, CaseIterable, Codable, Sendable {
     /// Speech-to-text and text-to-speech defaults for the non-realtime mode.
     public var transcribeModel: String {
         switch self {
-        case .openAI: "gpt-4o-transcribe"
+        case .openAI: "gpt-transcribe"
         case .gemini: "gemini-3.8-flash"
         }
     }
@@ -68,10 +69,25 @@ public enum VoiceProvider: String, CaseIterable, Codable, Sendable {
     }
 }
 
+/// The provider's newest model for each voice mode, as the computer last found them.
+public struct VoiceDefaults: Codable, Sendable, Equatable {
+    public var realtime: String
+    public var transcribe: String
+    public var speech: String
+
+    public init(realtime: String, transcribe: String, speech: String) {
+        self.realtime = realtime
+        self.transcribe = transcribe
+        self.speech = speech
+    }
+}
+
 public struct VoiceStatus: Decodable, Sendable {
     public struct Provider: Decodable, Sendable {
         public var provider: VoiceProvider
         public var configured: Bool
+        /// Missing from hosts before 2.6.3.
+        public var defaults: VoiceDefaults?
     }
 
     public var providers: [Provider]
@@ -86,11 +102,14 @@ public struct VoiceModels: Codable, Sendable {
     public var models: [String]
     public var transcribe: [String]
     public var speech: [String]
+    /// Missing from hosts before 2.6.3.
+    public var defaults: VoiceDefaults?
 
-    public init(models: [String], transcribe: [String], speech: [String]) {
+    public init(models: [String], transcribe: [String], speech: [String], defaults: VoiceDefaults? = nil) {
         self.models = models
         self.transcribe = transcribe
         self.speech = speech
+        self.defaults = defaults
     }
 }
 

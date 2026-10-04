@@ -6,7 +6,15 @@ extension ThreadView {
     var platformBody: some View {
         GeometryReader { geometry in
             HStack(spacing: 0) {
-                conversation.frame(maxWidth: .infinity)
+                conversation
+                    // Panel motion must not interpolate every paragraph's line wrapping.
+                    .transaction { transaction in
+                        if transaction.animation == Motion.reduced(Motion.layout, reduceMotion)
+                            || transaction.animation == Motion.reduced(Motion.morph, reduceMotion) {
+                            transaction.animation = nil
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
                 if let openThread, geometry.size.width >= 680 {
                     HStack(spacing: 0) {
                         Rectangle().fill(Palette.border).frame(width: 1)
@@ -14,13 +22,13 @@ extension ThreadView {
                             .frame(width: min(420, geometry.size.width * 0.45))
                     }
                     .id(openThread.id)
-                    .transition(.move(edge: .trailing).combined(with: .opacity))
+                    .transition(.offset(x: 20).combined(with: .opacity))
                 } else if showSettings && geometry.size.width >= 680 {
                     HStack(spacing: 0) {
                         Rectangle().fill(Palette.border).frame(width: 1)
                         detailsPanel.frame(width: 292)
                     }
-                    .transition(.move(edge: .trailing).combined(with: .opacity))
+                    .transition(.offset(x: 20).combined(with: .opacity))
                 }
             }
             .clipped()
@@ -28,10 +36,12 @@ extension ThreadView {
                 $0.size.width
             } action: {
                 availableWidth = $0
+                if $0 >= 680 { compactDetails = false }
             }
         }
         .ignoresSafeArea(.container, edges: .top)
-        .animation(Motion.reduced(Motion.layout, reduceMotion), value: openThread)
+        .animation(Motion.reduced(Motion.morph, reduceMotion), value: openThread)
+        .animation(Motion.reduced(Motion.morph, reduceMotion), value: showSettings)
         .codyncSheet(isPresented: $compactDetails) {
             detailsPanel.frame(width: 340, height: 600)
         }
@@ -42,18 +52,86 @@ extension ThreadView {
         }
     }
 
+    private var streaming: Bool { bot?.isWorking(in: botId, thread: nil) == true && !model.isOffline }
+
+    /// Native momentum scrolling with bounded SwiftUI row hosting.
+    @ViewBuilder var transcript: some View {
+        let thread = model.chat(botId)
+        let all = ChatItem.build(thread, streaming: streaming, steady: true)
+        let start = firstShown.flatMap { id in all.firstIndex { $0.id == id } } ?? max(0, all.count - 40)
+        let items = Array(all[start...])
+        let more = start > 0 || (!model.historyComplete.contains(botId) && thread.count >= 50)
+        let rows: [MacTranscriptItem] = (more ? [.history(loadingEarlier)] : [])
+            + (items.isEmpty ? [.intro] : items.map { .message($0) })
+            + (streaming ? [.working(model.currentThinking(botId, thread: nil))] : [])
+        MacChatList(items: rows, following: $following, revision: bot.map(AnyHashable.init), nearTop: { if more { showEarlier() } }) { item in
+            switch item {
+            case .message(let message):
+                row(message).accessibilityElement(children: .contain)
+            case .history(let loading):
+                Button { showEarlier() } label: {
+                    if loading { Spinner(size: 14) }
+                    else { Text("Load earlier messages").appFont(.footnote) }
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(Palette.secondary)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .disabled(loading)
+            case .intro:
+                if let bot {
+                    if bot.isGroup { GroupIntroCard(group: bot).padding(.top, 40) }
+                    else { IntroCard(bot: bot).padding(.top, 40) }
+                }
+            case .working(let thinking):
+                if let bot { WorkingIndicator(bot: bot, thinking: thinking).padding(.top, 6) }
+            }
+        }
+        .onChange(of: items.last?.id) { _, _ in
+            if items.last?.isUserMessage == true { following = true }
+        }
+        .overlay(alignment: .bottom) {
+            MacJumpToLatest(visible: !following && !items.isEmpty) { following = true }
+        }
+        .onChange(of: items.first?.id, initial: true) { _, id in
+            if firstShown == nil { firstShown = id }
+        }
+    }
+
+    private func showEarlier() {
+        guard !loadingEarlier else { return }
+        loadingEarlier = true
+        Task {
+            var all = ChatItem.build(model.chat(botId), streaming: streaming, steady: true)
+            var start = firstShown.flatMap { id in all.firstIndex { $0.id == id } } ?? max(0, all.count - 40)
+            if start == 0 {
+                let anchor = all.first?.id
+                await model.loadOlder(botId)
+                all = ChatItem.build(model.chat(botId), streaming: streaming, steady: true)
+                start = anchor.flatMap { id in all.firstIndex { $0.id == id } } ?? 0
+            }
+            if start > 0 {
+                firstShown = all[max(0, start - 40)].id
+            }
+            loadingEarlier = false
+        }
+    }
+
     func platformChrome(_ content: some View) -> some View {
         content
+            .environment(\.conversationTypography, ConversationTypography(pointSize: typography.pointSize + 2))
             // Grok's desktop chat: no title bar. The chat blurs and fades as it scrolls up, with the bot
-            // in a floating solid pill and the actions as glass buttons on the right.
-            .safeAreaInset(edge: .top, spacing: 0) {
+            // in a floating solid pill and circular actions on the right.
+            .conversationInset(edge: .top, spacing: 0) {
                 ZStack {
                     HStack(spacing: 8) {
                         Spacer(minLength: 0)
-                        if !showSettings || availableWidth < 680 {
-                            IconButton("Conversation details", systemImage: "chevron.left.2") { toggleDetails() }
+                        if (!showSettings || openThread != nil || availableWidth < 680) && !compactDetails {
+                            Button("Conversation details", systemImage: "chevron.left.2", action: toggleDetails)
+                                .labelStyle(.iconOnly)
+                                .buttonStyle(MacChatButtonStyle(direction: CGSize(width: -1, height: 0)))
                                 .keyboardShortcut("i", modifiers: [.command, .option])
-                                .frosted(in: Circle())
+                                .help("Conversation details")
                                 .transition(.opacity)
                         }
                     }
@@ -64,13 +142,12 @@ extension ThreadView {
                     .padding(.leading, 10)
                     .padding(.trailing, 16)
                     .padding(.vertical, 9)
-                    .background(Palette.background, in: Capsule())
+                    .background(Palette.surface, in: Capsule())
                     .shadow(color: .black.opacity(0.12), radius: 16, y: 4)
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 10)
                 .padding(.bottom, 14)
-                .background(alignment: .top) { TopFade() }
             }
     }
 
@@ -82,10 +159,18 @@ extension ThreadView {
     }
 
     private func toggleDetails() {
-        if availableWidth < 680 {
-            compactDetails.toggle()
-        } else {
-            withAnimation(Motion.reduced(Motion.layout, reduceMotion)) { showSettings.toggle() }
+        withAnimation(Motion.reduced(Motion.morph, reduceMotion)) {
+            if availableWidth < 680 {
+                openThread = nil
+                compactDetails.toggle()
+            } else if openThread != nil {
+                // The thread occupies the inspector slot. << must actually show details,
+                // rather than toggling a flag behind the still-open thread.
+                openThread = nil
+                showSettings = true
+            } else {
+                showSettings.toggle()
+            }
         }
     }
 
@@ -96,8 +181,10 @@ extension ThreadView {
                          compactDetails = false
                          if let bot { templateRequest = EditorRequest(BotDraft(bot)) }
                      }) {
-            withAnimation(Motion.reduced(Motion.layout, reduceMotion)) { showSettings = false }
-            compactDetails = false
+            withAnimation(Motion.reduced(Motion.morph, reduceMotion)) {
+                showSettings = false
+                compactDetails = false
+            }
         }
         .id(routineRequest)
     }
@@ -214,17 +301,11 @@ private struct DetailsPanel: View {
             .padding(.leading, 4)
     }
 
-    /// A round action in the panel's header, frosted like the chat's title pill (Grok's style).
+    /// A single circular surface, shared with the floating transcript controls.
     private func roundButton(_ label: String, _ symbol: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: symbol)
-                .appFont(.system(size: 13, weight: .medium))
-                .foregroundStyle(Palette.text)
-                .frame(width: 32, height: 32)
-                .frosted(in: Circle())
-                .contentShape(Circle())
-        }
-        .buttonStyle(PressScale())
+        Button(label, systemImage: symbol, action: action)
+        .labelStyle(.iconOnly)
+        .buttonStyle(MacChatButtonStyle(direction: CGSize(width: symbol == "chevron.right.2" ? 1 : 0, height: 0)))
         .accessibilityLabel(label)
         .help(label)
     }
@@ -325,20 +406,4 @@ private struct DetailsPanel: View {
     }
 }
 
-/// The top edge of the chat: messages fade out gradually as they scroll under the title pill,
-/// readable behind the pill and gone only at the very top.
-private struct TopFade: View {
-    var body: some View {
-        ZStack {
-            Rectangle().fill(.ultraThinMaterial)
-                .mask(LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .center))
-            LinearGradient(stops: [.init(color: Palette.background, location: 0),
-                                   .init(color: Palette.background.opacity(0.6), location: 0.35),
-                                   .init(color: Palette.background.opacity(0), location: 1)],
-                           startPoint: .top, endPoint: .bottom)
-        }
-        .ignoresSafeArea(edges: .top)
-        .allowsHitTesting(false)
-    }
-}
 #endif

@@ -53,7 +53,24 @@ enum VoiceSettings {
     static func modelsKey(_ provider: VoiceProvider) -> String { "callModels.\(provider.rawValue)" }
 
     static func model(_ provider: VoiceProvider) -> String {
-        UserDefaults.standard.string(forKey: modelKey(provider)) ?? provider.model
+        UserDefaults.standard.string(forKey: modelKey(provider)) ?? defaults(provider).realtime
+    }
+
+    static func defaultsKey(_ provider: VoiceProvider) -> String { "callDefaults.\(provider.rawValue)" }
+
+    /// The newest models as the computer last reported them, or the app's own until it has.
+    static func defaults(_ provider: VoiceProvider) -> VoiceDefaults {
+        UserDefaults.standard.data(forKey: defaultsKey(provider)).flatMap { try? JSONDecoder().decode(VoiceDefaults.self, from: $0) }
+            ?? VoiceDefaults(realtime: provider.model, transcribe: provider.transcribeModel, speech: provider.speechModel)
+    }
+
+    static func remember(_ defaults: VoiceDefaults?, for provider: VoiceProvider) {
+        guard let defaults, let data = try? JSONEncoder().encode(defaults) else { return }
+        UserDefaults.standard.set(data, forKey: defaultsKey(provider))
+    }
+
+    static func remember(_ status: VoiceStatus) {
+        for entry in status.providers { remember(entry.defaults, for: entry.provider) }
     }
 
     /// `realtime` (a live conversation) or `speech` (speech to text, then the reply read aloud).
@@ -63,15 +80,35 @@ enum VoiceSettings {
         UserDefaults.standard.string(forKey: modeKey(provider)) == "speech"
     }
 
-    static func transcribeKey(_ provider: VoiceProvider) -> String { "callTranscribeModel.\(provider.rawValue)" }
+    static func transcribeKey(_ provider: VoiceProvider) -> String { "callSpeechToText.\(provider.rawValue)" }
     static func speechKey(_ provider: VoiceProvider) -> String { "callSpeechModel.\(provider.rawValue)" }
 
     static func transcribeModel(_ provider: VoiceProvider) -> String {
-        UserDefaults.standard.string(forKey: transcribeKey(provider)) ?? provider.transcribeModel
+        UserDefaults.standard.string(forKey: transcribeKey(provider)) ?? defaults(provider).transcribe
     }
 
     static func speechModel(_ provider: VoiceProvider) -> String {
-        UserDefaults.standard.string(forKey: speechKey(provider)) ?? provider.speechModel
+        UserDefaults.standard.string(forKey: speechKey(provider)) ?? defaults(provider).speech
+    }
+
+    /// Keeps a model the user picked; the default isn't stored, so a newer default reaches them.
+    static func save(_ model: String, default fallback: String, forKey key: String) {
+        if model.isEmpty || model == fallback {
+            UserDefaults.standard.removeObject(forKey: key)
+        } else {
+            UserDefaults.standard.set(model, forKey: key)
+        }
+    }
+
+    /// gpt-transcribe writes Chinese in Simplified characters whatever it's told: turn it back
+    /// into Traditional for someone who reads Traditional (their first Chinese language, or a
+    /// Traditional region when none is listed).
+    static func inReadersScript(_ text: String) -> String {
+        let chinese = Locale.preferredLanguages.lazy.map(Locale.Language.init(identifier:)).first { $0.languageCode == .chinese }
+        let traditional = if let chinese { chinese.script == .hanTraditional }
+            else { ["TW", "HK", "MO"].contains(Locale.current.region?.identifier ?? "") }
+        guard traditional else { return text }
+        return text.applyingTransform(StringTransform("Hans-Hant"), reverse: false) ?? text
     }
 
     static func voiceKey(_ provider: VoiceProvider) -> String { "callVoice.\(provider.rawValue)" }

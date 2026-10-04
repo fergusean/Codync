@@ -123,6 +123,22 @@ struct ThreadChip: View {
     }
 }
 
+private var chatAgentFill: Color {
+    #if os(macOS)
+        Color(light: 0xEEEEEE, dark: 0x262626)
+    #else
+        Palette.bubbleAgent
+    #endif
+}
+
+private var chatUserFill: Color {
+    #if os(macOS)
+        Color(light: 0xE2E2E2, dark: 0x545454)
+    #else
+        Palette.bubbleUser
+    #endif
+}
+
 struct UserBubble: View {
     let entry: Entry
     let botWorking: Bool
@@ -138,17 +154,22 @@ struct UserBubble: View {
             }
             if !(entry.data.text ?? "").isEmpty { text }
             #if os(macOS)
-                HStack(spacing: 6) {
-                    if hovering, entry.data.status == nil || entry.data.status == "sent" {
-                        MessageActions(reactions: model.reactionPick(entry), reply: reply) { Pasteboard.copy(entry.data.text) }
-                    }
-                    status
-                }
-                .frame(minHeight: MessageActions.height)
+                if let state = entry.data.status, state != "sent" { status }
             #else
                 status
             #endif
         }
+        #if os(macOS)
+            .overlay(alignment: .bottomLeading) {
+                MessageActions(reactions: model.reactionPick(entry), reply: reply) { Pasteboard.copy(entry.data.text) }
+                    .offset(x: -88)
+                    .opacity(hovering ? 1 : 0)
+                    .allowsHitTesting(hovering)
+                    .accessibilityHidden(!hovering)
+            }
+            .padding(.leading, 88)
+            .help(entry.date.formatted(date: .abbreviated, time: .shortened))
+        #endif
         .hoverTracking($hovering)
         .frame(maxWidth: .infinity, alignment: .trailing)
         .padding(.leading, 56)
@@ -161,7 +182,7 @@ struct UserBubble: View {
                 .textSelection(.enabled)
                 .padding(.horizontal, InterfaceMetrics.value(mac: 12, mobile: 16))
                 .padding(.vertical, InterfaceMetrics.value(mac: 8, mobile: 10))
-                .background(Palette.bubbleUser, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                .background(chatUserFill, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
                 .contextActions(reactions: model.reactionPick(entry)) {
                     var items = [MenuItem("Copy", icon: "square.on.square") { Pasteboard.copy(entry.data.text) }]
                     if let reply { items.append(MenuItem("Reply in thread", icon: "arrowshape.turn.up.left", action: reply)) }
@@ -202,6 +223,7 @@ struct UserBubble: View {
         default:
             #if os(macOS)
                 Text(entry.date, style: .time).appFont(.system(size: 10)).foregroundStyle(Palette.tertiary)
+                    .opacity(hovering ? 1 : 0)
             #else
                 EmptyView()
             #endif
@@ -215,13 +237,29 @@ struct AgentBubble: View {
     var reply: (() -> Void)?
     @Environment(BotStore.self) private var model
     @State private var hovering = false
+    #if os(iOS)
+        @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    #endif
+
+    /// The reply's text. iPhone: revealed steadily as it's written; the turn's next text
+    /// segment takes the bubble over with a cross-fade instead of retyping.
+    @ViewBuilder private var text: some View {
+        #if os(iOS)
+            StreamingMarkdown(text: entry.data.text ?? "", live: entry.data.final == false)
+                .id(entry.id)
+                .transition(.opacity)
+        #else
+            MarkdownText(entry.data.text ?? "", streaming: entry.data.final == false)
+                .equatable()
+        #endif
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            MarkdownText(entry.data.text ?? "", streaming: entry.data.final == false)
+            text
                 .padding(.horizontal, InterfaceMetrics.value(mac: 12, mobile: 16))
                 .padding(.vertical, InterfaceMetrics.value(mac: 8, mobile: 10))
-                .background(Palette.bubbleAgent, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                .background(chatAgentFill, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
                 .contextActions(reactions: model.reactionPick(entry)) {
                     var items = [
                         MenuItem("Copy", icon: "square.on.square") { Pasteboard.copy(entry.data.text) },
@@ -230,29 +268,47 @@ struct AgentBubble: View {
                     if let reply { items.insert(MenuItem("Reply in thread", icon: "arrowshape.turn.up.left", action: reply), at: 1) }
                     return items
                 }
-            #if os(macOS)
-                HStack(spacing: 6) {
-                    Text(entry.date, style: .time)
-                        .appFont(.system(size: 10))
-                        .foregroundStyle(Palette.tertiary)
-                    if hovering {
-                        MessageActions(reactions: model.reactionPick(entry), reply: reply, trace: openTrace) {
-                            Pasteboard.copy(entry.data.text)
-                        }
-                    }
-                }
-                .padding(.leading, 12)
-                .frame(minHeight: MessageActions.height)
-            #endif
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
         #if os(macOS)
-            .padding(.trailing, 64)
-        #else
+            .overlay(alignment: .bottomTrailing) {
+                MessageActions(reactions: model.reactionPick(entry), reply: reply, trace: openTrace) {
+                    Pasteboard.copy(entry.data.text)
+                }
+                .offset(x: 88)
+                .opacity(hovering ? 1 : 0)
+                .allowsHitTesting(hovering)
+                .accessibilityHidden(!hovering)
+            }
+            .padding(.trailing, 88)
+            .help(entry.date.formatted(date: .abbreviated, time: .shortened))
+        #endif
+        .hoverTracking($hovering)
+        #if os(macOS)
+            .modifier(MacAgentBubbleWidth())
+        #endif
+        .frame(maxWidth: .infinity, alignment: .leading)
+        #if os(iOS)
+            .animation(Motion.reduced(Motion.layout, reduceMotion), value: entry.id)
             .padding(.trailing, 40)
         #endif
     }
 }
+
+#if os(macOS)
+private struct MacAgentBubbleWidth: ViewModifier {
+    @Environment(\.macChatWidth) private var nativeWidth
+
+    @ViewBuilder func body(content: Content) -> some View {
+        if let nativeWidth {
+            content.frame(width: max(80, min((nativeWidth + 32) * 0.8 - 32, nativeWidth - 88)) + 88, alignment: .leading)
+        } else {
+            content.containerRelativeFrame(.horizontal, alignment: .leading) { width, _ in
+                max(80, min(min(820, width) * 0.8 - 32, width - 120)) + 88
+            }
+        }
+    }
+}
+#endif
 
 struct NoticeRow: View {
     let entry: Entry
@@ -430,8 +486,7 @@ private struct HoverTracking: ViewModifier {
     }
 }
 
-/// Mac: a message's quick actions, in its footer beside the time while the pointer is over it
-/// (next to the bubble, never on it): reactions, reply in thread, what it did, copy.
+/// Compact actions beside the bubble; showing them never changes a message's height.
 struct MessageActions: View {
     static let height: CGFloat = 26
     let reactions: ReactionPick
@@ -440,21 +495,47 @@ struct MessageActions: View {
     let copy: () -> Void
 
     var body: some View {
-        HStack(spacing: 0) {
-            ReactionStrip(pick: reactions)
-            Rectangle().fill(Palette.text.opacity(0.12)).frame(width: 1, height: 12).padding(.horizontal, 4)
-            if let reply { action("Reply in thread", "arrowshape.turn.up.left", reply) }
-            if let trace { action("Show what it did", "list.bullet", trace) }
-            action("Copy", "square.on.square", copy)
+        HStack(spacing: 2) {
+            #if os(macOS)
+            ReactionMenu(pick: reactions) { symbol("face.smiling", title: "Add reaction") }
+            #else
+            DropdownMenu {
+                reactions.emoji.map { emoji in
+                    MenuItem(emoji, selected: reactions.chosen.contains(emoji)) { reactions.toggle(emoji) }
+                }
+            } label: { symbol("face.smiling", title: "Add reaction") }
+            #endif
+            if let reply {
+                Button("Reply in thread", systemImage: "arrowshape.turn.up.left", action: reply)
+                    .labelStyle(.iconOnly)
+                    .buttonStyle(IconButtonStyle(size: Self.height))
+                    .help("Reply in thread")
+            }
+            DropdownMenu {
+                var items = [MenuItem("Copy", icon: "square.on.square", action: copy)]
+                if let trace { items.append(MenuItem("Show what it did", icon: "list.bullet", action: trace)) }
+                return items
+            } label: { symbol("ellipsis", title: "More message actions") }
         }
         .fixedSize()
-        .transition(.opacity)
     }
 
-    private func action(_ title: String, _ icon: String, _ run: @escaping () -> Void) -> some View {
-        Button(title, systemImage: icon, action: run)
-            .labelStyle(.iconOnly)
-            .buttonStyle(IconButtonStyle(size: Self.height))
+    private func symbol(_ name: String, title: String) -> some View {
+        Image(systemName: name)
+            .font(.system(size: 14))
+            .foregroundStyle(Palette.secondary)
+            .frame(width: Self.height, height: Self.height)
+            .contentShape(Rectangle())
+            .accessibilityLabel(title)
             .help(title)
     }
 }
+
+#if os(macOS)
+extension ChatRow: @MainActor Equatable {
+    static func == (a: Self, b: Self) -> Bool {
+        a.entry == b.entry && a.groupStart == b.groupStart && a.chat?.isGroup == b.chat?.isGroup
+            && a.chat?.isWorking == b.chat?.isWorking && (a.openThread == nil) == (b.openThread == nil)
+    }
+}
+#endif

@@ -110,7 +110,9 @@ struct Composer: View {
 
     private var field: some View {
         HStack(alignment: .bottom, spacing: 8) {
-            if canAttach { addButton }
+            #if os(iOS)
+                if canAttach { addButton }
+            #endif
             VStack(alignment: .leading, spacing: 0) {
                 #if os(iOS)
                     let _ = clipboardTick
@@ -122,7 +124,9 @@ struct Composer: View {
                 box
             }
             .composerSurface(in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-            .animation(Motion.layout, value: draft)
+            #if os(iOS)
+                .animation(Motion.layout, value: draft)
+            #endif
         }
         .animation(Motion.layout, value: files.map(\.id))
         #if os(iOS)
@@ -206,7 +210,7 @@ struct Composer: View {
                 .appFont(.system(size: size, weight: .bold))
                 .contentTransition(.symbolEffect(.replace))
                 .foregroundStyle(ink)
-                .frame(width: state == .call ? buttonSize * 1.35 : buttonSize, height: buttonSize)
+                .frame(width: InterfaceMetrics.value(mac: buttonSize, mobile: state == .call ? buttonSize * 1.35 : buttonSize), height: buttonSize)
                 .background(fill, in: Capsule())
                 .contentShape(Capsule())
         }
@@ -220,6 +224,11 @@ struct Composer: View {
 
     private var box: some View {
         HStack(alignment: .bottom, spacing: 8) {
+            #if os(macOS)
+                if canAttach {
+                    addButton.padding(.bottom, max(0, (textLineHeight + 2 * fieldPadding - buttonSize) / 2))
+                }
+            #endif
             TextField(placeholder, text: $draft, axis: .vertical)
                 .lineLimit(1...8)
                 .font(typography.body)
@@ -231,7 +240,7 @@ struct Composer: View {
                 .padding(.bottom, max(0, (textLineHeight + 2 * fieldPadding - buttonSize) / 2))
                 .animation(Motion.layout, value: isEmpty)
         }
-        .padding(.leading, InterfaceMetrics.value(mac: 14, mobile: 18))
+        .padding(.leading, InterfaceMetrics.value(mac: 8, mobile: 18))
         .padding(.trailing, 6)
         .padding(.vertical, boxPadding)
         .onChange(of: model.routineDrafts[botId]) { _, value in
@@ -266,7 +275,8 @@ struct Composer: View {
         Image(systemName: "plus")
             .appFont(.system(size: InterfaceMetrics.value(mac: 13, mobile: 18), weight: .medium))
             .foregroundStyle(Palette.text)
-            .frame(width: fieldHeight, height: fieldHeight)
+            .frame(width: InterfaceMetrics.value(mac: buttonSize, mobile: fieldHeight),
+                   height: InterfaceMetrics.value(mac: buttonSize, mobile: fieldHeight))
             .composerSurface(in: Circle())
             .contentShape(Circle())
     }

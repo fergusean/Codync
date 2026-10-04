@@ -74,10 +74,14 @@ struct CallView: View {
                 return client
             }
             engine = CloudSpeechEngine(provider: provider, speech: .init(
-                transcribe: { try await client().voiceTranscribe(provider, model: transcribe, wav: $0) },
+                transcribe: { try await VoiceSettings.inReadersScript(client().voiceTranscribe(provider, model: transcribe, wav: $0)) },
                 speak: { try await client().voiceSpeak(provider, model: speechModel, voice: voice, text: $0) },
                 send: { [model, botId] in model.send($0, to: botId) }
             ))
+        // Picks up the computer's newest models for the next call; this one starts right away.
+        if provider != nil, let client = model.client {
+            Task { if let status = try? await client.voiceStatus() { VoiceSettings.remember(status) } }
+        }
             cloudStartedAt = .now
         } else if let provider {
             let chosen = VoiceSettings.model(provider)
