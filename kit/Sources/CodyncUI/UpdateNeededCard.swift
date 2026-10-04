@@ -132,8 +132,6 @@ public final class AppUpdates {
     public private(set) var store: String?
     @ObservationIgnored private var askedAt: Date?
     private var dismissedApp: String? = UserDefaults.standard.string(forKey: "dismissedAppUpdate")
-    private var dismissedHosts: [String: String] =
-        UserDefaults.standard.dictionary(forKey: "dismissedHostUpdates") as? [String: String] ?? [:]
 
     public init() {}
 
@@ -153,17 +151,6 @@ public final class AppUpdates {
     public func dismissApp() {
         Motion.animate { dismissedApp = store }
         UserDefaults.standard.set(store, forKey: "dismissedAppUpdate")
-    }
-
-    /// The computer runs an older host than this app, so a newer one exists; not dismissed.
-    public func hostBehind(_ store: BotStore) -> Bool {
-        store.mismatch == nil && UpdateReminder.host(app: AppVersion.current, host: store.hostVersion?.version,
-                                                     dismissed: dismissedHosts[store.computer.id])
-    }
-
-    public func dismissHost(_ store: BotStore) {
-        Motion.animate { dismissedHosts[store.computer.id] = AppVersion.current }
-        UserDefaults.standard.set(dismissedHosts, forKey: "dismissedHostUpdates")
     }
 }
 
@@ -213,21 +200,6 @@ public struct UpdateReminderCard: View {
     }
 }
 
-/// The newer-release reminders for the shown computers (and, with `appUpdates`, this app).
-public struct UpdateReminders: View {
-    let stores: [BotStore]
-
-    public init(stores: [BotStore]) { self.stores = stores }
-
-    public var body: some View {
-        // Empty when there's nothing newer: no space taken.
-        VStack(spacing: 0) {
-            AppUpdateReminder()
-            ForEach(stores, id: \.computer.id) { HostUpdateReminder(store: $0) }
-        }
-    }
-}
-
 /// The App Store has a newer app (iPhone; needs `AppUpdates` in the environment).
 public struct AppUpdateReminder: View {
     @Environment(AppUpdates.self) private var appUpdates: AppUpdates?
@@ -245,41 +217,5 @@ public struct AppUpdateReminder: View {
                 .padding(.vertical, 4)
                 .transition(.opacity)
         }
-    }
-}
-
-/// This computer runs an older host than this app.
-public struct HostUpdateReminder: View {
-    let store: BotStore
-    @Environment(AppUpdates.self) private var appUpdates: AppUpdates?
-    @Environment(\.hostUpdate) private var hostUpdate
-
-    public init(store: BotStore) { self.store = store }
-
-    public var body: some View {
-        if let appUpdates, appUpdates.hostBehind(store) {
-            let canUpdate = hostUpdate?.available(store) == true
-            UpdateReminderCard(
-                title: "Codync \(AppVersion.current) is available for \(store.hostName)",
-                detail: UpdateReminderText.host(store, instructions: !canUpdate),
-                actionTitle: canUpdate ? "Update" : nil,
-                action: { hostUpdate?.action(store) },
-                dismiss: { appUpdates.dismissHost(store) })
-                .padding(.vertical, 4)
-                .transition(.opacity)
-        }
-    }
-}
-
-enum UpdateReminderText {
-    @MainActor static func host(_ store: BotStore, instructions: Bool) -> String {
-        let runs = "It runs \(store.hostVersion?.version ?? "an older version")."
-        guard instructions else { return runs }
-        let how = switch store.hello?.os {
-        case "macos": "Open Codync on that Mac and choose Check for Updates."
-        case "linux": "Run codync-host update there, or use Check for updates in its Codync app."
-        default: "Update Codync on that computer."
-        }
-        return "\(runs) \(how)"
     }
 }

@@ -120,10 +120,4 @@ import Testing
     #expect(UpdateReminder.app(current: "2.5.0", store: "2.4.0", dismissed: nil) == nil)
     #expect(UpdateReminder.app(current: "2.5.0", store: nil, dismissed: nil) == nil)
     #expect(UpdateReminder.app(current: "", store: "2.5.0", dismissed: nil) == nil)
-
-    #expect(UpdateReminder.host(app: "2.5.0", host: "2.4.3", dismissed: nil))
-    #expect(!UpdateReminder.host(app: "2.5.0", host: "2.4.3", dismissed: "2.5.0"))
-    #expect(UpdateReminder.host(app: "2.6.0", host: "2.4.3", dismissed: "2.5.0"))
-    #expect(!UpdateReminder.host(app: "2.5.0", host: "2.5.0", dismissed: nil))
-    #expect(!UpdateReminder.host(app: "2.5.0", host: nil, dismissed: nil))
 }

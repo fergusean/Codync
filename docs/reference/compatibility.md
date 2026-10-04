@@ -103,14 +103,16 @@ keeps it enabled (the App Store page shows the truth).
 
 ### Reminders
 
-While everything still works, a newer release gets a reminder, dismissed per version:
+While everything still works, a client behind a newer release gets a reminder, dismissed per
+version. A host behind a client gets none: computers update themselves, and the phone usually
+trails them (App Store review), so nudging a computer from it would only be noise.
 
-| Client | This app is behind | A computer's host is behind (older than this app) |
-|---|---|---|
-| iPhone | Card at the top of the bot list (App Store version from the lookup), *Update* opens the App Store | Card with that computer's update steps |
-| Mac | Sparkle's own update prompts | Card in the sidebar for other computers (its own host is the app's) |
-| Linux app | Toast with *Get update* (release page) | Toast with *Update host* |
-| Terminal client | — (it is the host binary) | Status line note pointing to `^k` → Check for updates |
+| Client | This app is behind |
+|---|---|
+| iPhone | Card at the top of the bot list (App Store version from the lookup), *Update* opens the App Store |
+| Mac | Sparkle's own update prompts |
+| Linux app | Toast with *Get update* (release page) |
+| Terminal client | — (it is the host binary) |
 
 ### Wire shape snapshot
 
