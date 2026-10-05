@@ -75,6 +75,7 @@ jobs:
             apps/desktop/build/native/codync-speech
           # Codync Screen is built by `npm run dist:mac:main` (tools/native-screen.mjs).
           xcodebuild -downloadComponent MetalToolchain || true
+          command -v xcodegen >/dev/null || brew install xcodegen
           xcodegen generate --spec apps/project.yml
           swift packaging/dmg/background.swift apps/desktop/build/dmg-background.tiff
 
