@@ -61,9 +61,20 @@ npm run typecheck && npm test
 UI checks: `CODYNC_SHOW_INACTIVE=1` opens the window without taking focus,
 `CODYNC_DEBUG_OPEN=compose|group|plugins|computers|<bot name>` opens a screen, and
 `CODYNC_REMOTE_DEBUG=<port>` lets a script drive the renderer over the DevTools protocol.
-Packaging: `npm run dist:mac` / `npm run dist:linux` after placing the native pieces listed at
-the top of `electron-builder.yml` (the release workflow, `.github/workflows/release-desktop.yml`,
-does this).
+Packaging picks its environment with `CODYNC_ENV` (`dev` when unset):
+
+```sh
+npm run dist:mac                    # dev: dev cloud, Clerk development
+CODYNC_ENV=main npm run dist:mac    # main: what the release workflow ships
+```
+
+`dist:mac` / `dist:linux` write `resources/account-config.json` for that environment and
+`dist:mac` builds the bundled host (`tools/native-host.mjs`, universal, through rustup's pinned
+toolchain) with the same `CODYNC_ENV`, so app and host always match. The other native pieces at
+the top of `electron-builder.yml` (speech and screen helpers) don't depend on the environment;
+place them first (the release workflow, `.github/workflows/release-desktop.yml`, shows how).
+Only one environment's host runs on a computer at a time (one `~/.codync`, port and service):
+switching environments means installing the other build.
 
 For a local signed Mac build, explicitly select a development identity from the project's
 team with `-c.mac.identity="Apple Development: …"`; use `--dir --arm64` and
