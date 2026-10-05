@@ -145,7 +145,7 @@ Data lives in `~/.codync`. The local bearer token authorizes loopback helpers an
 | `apps/ios/Widgets/` | Bots, usage and per-provider usage widgets + bot Live Activity |
 | `apps/desktop/` | Desktop app for macOS and Linux (Electron, React, TypeScript): menu bar/tray + chat window; installs/monitors the host |
 | `cloud/` | Cloudflare accounts, D1, encrypted channel relay and offline mailbox |
-| `apps/shared/` | Shared Apple account integration and environment configuration |
+| `apps/shared/Config/` | Environment configuration (Clerk key, cloud URL) for the iPhone and desktop apps |
 | `apps/screen-macos/`, `apps/screen-linux/` | Platform screen capture/input helpers |
 | `docs/` | [Documentation index](docs/README.md) and [file structure](docs/architecture/file-structure.md) |
 | `relay/` | Cloudflare Worker APNs relay with encrypted per-device tickets |

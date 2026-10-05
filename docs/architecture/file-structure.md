@@ -22,7 +22,7 @@ Codync/
 ├── apps/
 │   ├── project.yml            # XcodeGen source of truth for every Apple target
 │   ├── Codync.xcodeproj/      # Generated Xcode project
-│   ├── shared/                # AccountSession, ComputerStatus, Config/{dev,main}.plist
+│   ├── shared/Config/         # {dev,main}.plist: environment for the iPhone and desktop apps
 │   ├── ios/                   # App/, Views/, Resources/, Widgets/, NotificationService/
 │   │   └── Kit/               # The iPhone app's Swift package
 │   │       ├── Sources/
@@ -84,7 +84,7 @@ Codync/
 | iPhone chat, replies, composer and trace | `apps/ios/Kit/Sources/CodyncUI/Thread/` |
 | Reusable iPhone UI chrome | `apps/ios/Kit/Sources/CodyncUI/Chrome.swift`, `Controls.swift`, `Platform.swift` |
 | iOS navigation, pairing, account settings | `apps/ios/Views/RootView.swift`, `BotListView.swift`, `PairingView.swift`, `AccountSwitcherView.swift`, `SettingsView.swift` |
-| Apple account sessions / public environment config | `apps/shared/AccountSession.swift`, `apps/shared/Config/` |
+| Apple account sessions / public environment config | `apps/ios/App/AccountSession.swift`, `apps/shared/Config/` |
 | Desktop local host / SSH lifecycle | `apps/desktop/src/main/host-controller.ts`, `ssh.ts` |
 | Desktop store, chat and controls | `apps/desktop/src/renderer/store/bot-store.ts`, `views/thread/`, `components/` |
 | Cloud routes / authentication / relay | `cloud/src/index.ts`, `api.ts`, `auth.ts`, `relay.ts` |

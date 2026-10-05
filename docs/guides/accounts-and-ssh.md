@@ -6,7 +6,7 @@ a device token kept encrypted with Electron `safeStorage`, OAuth in the system b
 
 ## Configuration
 
-The iOS app uses `apps/shared/AccountSession.swift`. Public keys and cloud URLs come from `apps/shared/Config/<env>.plist`, copied into the bundle as `AccountConfig.plist` by `project.yml`; Debug selects dev and Release selects main. The desktop app reads the same plist through `node apps/desktop/tools/account-config.mjs <env>`, which writes `resources/account-config.json` (`CODYNC_CLERK_PUBLISHABLE_KEY` / `CODYNC_CLOUD_URL` override it). See [environments](environments-and-deployment.md).
+The iOS app uses `apps/ios/App/AccountSession.swift`. Public keys and cloud URLs come from `apps/shared/Config/<env>.plist`, copied into the bundle as `AccountConfig.plist` by `project.yml`; Debug selects dev and Release selects main. The desktop app reads the same plist through `node apps/desktop/tools/account-config.mjs <env>`, which writes `resources/account-config.json` (`CODYNC_CLERK_PUBLISHABLE_KEY` / `CODYNC_CLOUD_URL` override it). See [environments](environments-and-deployment.md).
 
 Confirm Apple and Google sign-in, Native API and the native app registrations in the intended Clerk instance. The desktop app uses `com.pokai.Codync`, iOS uses `com.pokai.Codync.ios`, with their matching `://callback` URLs. Dashboard configuration and actual OAuth consent must be verified independently of the checked-in plist. Do not bundle Clerk secret keys.
 
@@ -119,7 +119,7 @@ claim and an Apple relay address.
 
 ## Flow
 
-On iPhone, `apps/shared/AccountSession.swift` configures Clerk once. Continue with Google calls `clerk.auth.signInWithOAuth(provider: .google)`
+On iPhone, `apps/ios/App/AccountSession.swift` configures Clerk once. Continue with Google calls `clerk.auth.signInWithOAuth(provider: .google)`
 directly, without the Clerk Account Portal intermediary. Google authorization
 uses the SDK's system browser authentication session. Clerk handles new-user
 transfer, callback validation, session restoration and Keychain storage.
