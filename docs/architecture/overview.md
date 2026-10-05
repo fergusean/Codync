@@ -64,4 +64,4 @@ Remote screen uses the channel for signaling and WebRTC for media/input. Cloudfl
 
 Application/host major versions must match. The channel wire version (`v=1`), pairing URL version (`v=3`) and the cloud health endpoint's service version are separate values.
 
-Debug iOS builds use `apps/shared/Config/dev.plist`; Release uses `main.plist`. The desktop app takes the same values through `apps/desktop/tools/account-config.mjs`. The host has no default cloud URL. Production fields are currently incomplete in checked-in configuration, so a successful Debug install is not production readiness. See [environments](../guides/environments-and-deployment.md).
+Debug iOS builds use `apps/shared/Config/dev.plist`; Release uses `main.plist`. The desktop app takes the same values through `apps/desktop/tools/account-config.mjs`. A local host defaults to the dev cloud; released hosts default to main. Production fields are currently incomplete in checked-in configuration, so a successful Debug install is not production readiness. See [environments](../guides/environments-and-deployment.md).

@@ -66,6 +66,8 @@ jobs:
           security list-keychain -d user -s "$KEYCHAIN_FILE"
 
       - name: Native pieces
+        env:
+          CODYNC_ENV: main  # the bundled host uses the main cloud; local builds use dev
         run: |
           mkdir -p apps/desktop/build/native
           # The host, universal.

@@ -58,6 +58,7 @@ jobs:
         # Vendored C (dbus) would call libgcc's outline atomics, which a static musl link lacks.
         env:
           CFLAGS_aarch64_unknown_linux_musl: -mno-outline-atomics
+          CODYNC_ENV: main  # released hosts use the main cloud; local builds use dev
         run: |
           VERSION=$(python3 -c 'import tomllib; print(tomllib.load(open("Cargo.toml", "rb"))["package"]["version"])')
           test "v$VERSION" = "$GITHUB_REF_NAME" || { echo 'Host version must match release tag'; exit 1; }
