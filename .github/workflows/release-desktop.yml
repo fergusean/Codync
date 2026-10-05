@@ -83,6 +83,8 @@ jobs:
         working-directory: apps/desktop
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: "true"
+          # Same-repo PRs get the secrets; sign them too so the dry run checks the real app.
+          CSC_FOR_PULL_REQUEST: "true"
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_DEVELOPMENT_TEAM }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
@@ -172,7 +174,10 @@ jobs:
           npm run dist:linux:main -- --${{ matrix.arch }} --publish never
           # The website links releases/latest/download/codync-<os>-<arch>.tar.gz.
           cd dist
-          for f in codync-linux-${{ matrix.arch }}.*; do mv "$f" "${f/linux-${{ matrix.arch }}/${{ matrix.name }}}"; done
+          for f in codync-linux-${{ matrix.arch }}.*; do
+            to="${f/linux-${{ matrix.arch }}/${{ matrix.name }}}"
+            [ "$f" = "$to" ] || mv "$f" "$to"
+          done
           for f in codync-${{ matrix.name }}.*; do shasum -a 256 "$f" > "$f.sha256"; done
       - uses: actions/upload-artifact@v4
         if: "!startsWith(github.ref, 'refs/tags/')"
