@@ -11,7 +11,6 @@ The macOS and Linux app is the Electron app in `apps/desktop/`; setup, UI-check 
 ```sh
 cd apps/desktop
 npm ci
-node tools/account-config.mjs dev
 npm run icons      # macOS only
 npm run dev
 ```

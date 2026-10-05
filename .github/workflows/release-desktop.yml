@@ -68,7 +68,7 @@ jobs:
       - name: Native pieces
         run: |
           mkdir -p apps/desktop/build/native
-          # The host is built by `npm run dist:mac` (tools/native-host.mjs) for the same environment.
+          # The host is built by `npm run dist:mac:main` (tools/native-host.mjs) for the same environment.
           # On-device speech for calls.
           swift build -c release --arch arm64 --arch x86_64 --package-path apps/desktop/native/speech-macos
           cp "$(swift build -c release --arch arm64 --arch x86_64 --package-path apps/desktop/native/speech-macos --show-bin-path)/codync-speech" \
@@ -85,7 +85,6 @@ jobs:
       - name: Build, sign and notarize
         working-directory: apps/desktop
         env:
-          CODYNC_ENV: main
           CSC_IDENTITY_AUTO_DISCOVERY: "true"
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_DEVELOPMENT_TEAM }}
@@ -93,7 +92,7 @@ jobs:
         run: |
           npm ci
           npm run icons
-          npm run dist:mac -- --publish never
+          npm run dist:mac:main -- --publish never
           codesign -d --entitlements - dist/mac-universal/Codync.app | grep -q com.apple.security.device.audio-input ||
             { echo "audio-input entitlement missing"; exit 1; }
           spctl --assess --type execute -v dist/mac-universal/Codync.app
@@ -171,11 +170,9 @@ jobs:
       - run: sudo apt-get update && sudo apt-get install -y rpm
       - name: Build
         working-directory: apps/desktop
-        env:
-          CODYNC_ENV: main
         run: |
           npm ci
-          npm run dist:linux -- --${{ matrix.arch }} --publish never
+          npm run dist:linux:main -- --${{ matrix.arch }} --publish never
           # The website links releases/latest/download/codync-<os>-<arch>.tar.gz.
           cd dist
           for f in codync-linux-${{ matrix.arch }}.*; do mv "$f" "${f/linux-${{ matrix.arch }}/${{ matrix.name }}}"; done

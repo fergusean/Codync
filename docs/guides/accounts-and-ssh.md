@@ -6,7 +6,7 @@ a device token kept encrypted with Electron `safeStorage`, OAuth in the system b
 
 ## Configuration
 
-The iOS app uses `apps/ios/App/AccountSession.swift`. Public keys and cloud URLs come from `apps/shared/Config/<env>.plist`, copied into the bundle as `AccountConfig.plist` by `project.yml`; Debug selects dev and Release selects main. The desktop app reads the same plist through `node apps/desktop/tools/account-config.mjs [env]` (default `CODYNC_ENV`, else dev; `npm run dist:*` runs it), which writes `resources/account-config.json` (`CODYNC_CLERK_PUBLISHABLE_KEY` / `CODYNC_CLOUD_URL` override it). See [environments](environments-and-deployment.md).
+The iOS app uses `apps/ios/App/AccountSession.swift`. Public keys and cloud URLs come from `apps/shared/Config/<env>.plist`, copied into the bundle as `AccountConfig.plist` by `project.yml`; Debug selects dev and Release selects main. The desktop app reads the same plist through `node apps/desktop/tools/account-config.mjs <env>` (run by `npm run dev` and `npm run dist:*:<env>`), which writes `resources/account-config.json` (`CODYNC_CLERK_PUBLISHABLE_KEY` / `CODYNC_CLOUD_URL` override it). See [environments](environments-and-deployment.md).
 
 Confirm Apple and Google sign-in, Native API and the native app registrations in the intended Clerk instance. The desktop app uses `com.pokai.Codync`, iOS uses `com.pokai.Codync.ios`, with their matching `://callback` URLs. Dashboard configuration and actual OAuth consent must be verified independently of the checked-in plist. Do not bundle Clerk secret keys.
 
@@ -138,7 +138,7 @@ computer approves each device after comparing a 6-digit code
 ## Verification
 
 - Build the iOS scheme after `xcodegen generate --spec apps/project.yml`, and run the
-  desktop app with `npm run dev` after `node tools/account-config.mjs dev` in `apps/desktop/`.
+  desktop app with `npm run dev` in `apps/desktop/`.
 - Open the account menu from either sidebar layout; test arrows, Return, Escape
   and clicking outside the panel.
 - Sign in with Apple and Google test users, verify the avatar/email, restart the app and

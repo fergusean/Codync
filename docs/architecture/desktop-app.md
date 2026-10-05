@@ -51,9 +51,8 @@ HTTP to the host leaves from the main process (the loopback API has no CORS).
 ```sh
 cd apps/desktop
 npm ci
-node tools/account-config.mjs dev   # Clerk key + cloud URL for this build
 npm run icons                       # macOS: SF Symbol masks
-npm run dev                         # against the installed host on 19222
+npm run dev                         # dev config, against the installed host on 19222
 CODYNC_PORT=19333 CODYNC_HOME=/path/to/home npm run dev   # against a manually run host
 npm run typecheck && npm test
 ```
@@ -61,16 +60,18 @@ npm run typecheck && npm test
 UI checks: `CODYNC_SHOW_INACTIVE=1` opens the window without taking focus,
 `CODYNC_DEBUG_OPEN=compose|group|plugins|computers|<bot name>` opens a screen, and
 `CODYNC_REMOTE_DEBUG=<port>` lets a script drive the renderer over the DevTools protocol.
-Packaging picks its environment with `CODYNC_ENV` (`dev` when unset):
+Each packaging script names its environment:
 
 ```sh
-npm run dist:mac                    # dev: dev cloud, Clerk development
-CODYNC_ENV=main npm run dist:mac    # main: what the release workflow ships
+npm run dist:mac:dev      # dev cloud, Clerk development
+npm run dist:mac:main     # main: what the release workflow ships
+npm run dist:linux:dev    # / dist:linux:main
 ```
 
-`dist:mac` / `dist:linux` write `resources/account-config.json` for that environment and
-`dist:mac` builds the bundled host (`tools/native-host.mjs`, universal, through rustup's pinned
-toolchain) with the same `CODYNC_ENV`, so app and host always match. The other native pieces at
+They write `resources/account-config.json` for that environment, and the Mac ones build the
+bundled host (`tools/native-host.mjs`, universal, through rustup's pinned toolchain) for the same
+one, so app and host always match. Extra electron-builder flags go after `--`
+(`npm run dist:mac:dev -- --dir --arm64`). The other native pieces at
 the top of `electron-builder.yml` (speech and screen helpers) don't depend on the environment;
 place them first (the release workflow, `.github/workflows/release-desktop.yml`, shows how).
 Only one environment's host runs on a computer at a time (one `~/.codync`, port and service):
