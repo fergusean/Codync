@@ -1,6 +1,8 @@
 import Image from "next/image";
 import { AppleLogo, DeviceMobile, LinuxLogo } from "@phosphor-icons/react/ssr";
 import CopyCommand from "./copy-command";
+import Eyebrow from "./eyebrow";
+import Halftone from "./halftone";
 import Reveal from "./reveal";
 import { APP_STORE, DMG } from "../links";
 
@@ -8,9 +10,11 @@ const INSTALL_SH = "curl -fsSL https://raw.githubusercontent.com/leepokai/Codync
 
 export default function Install() {
   return (
-    <section id="install" className="px-4 py-20 sm:px-6 md:py-28">
-      <div className="mx-auto max-w-3xl">
+    <section id="install" className="relative overflow-hidden px-4 py-20 sm:px-6 md:py-28">
+      <Halftone className="w-[36rem] max-w-[80vw] text-neutral-50 opacity-[0.12]" />
+      <div className="relative mx-auto max-w-3xl">
         <Reveal>
+          <Eyebrow>Install</Eyebrow>
           <h2 className="text-3xl font-semibold tracking-tight text-neutral-50 md:text-4xl">Install once.</h2>
           <p className="mt-4 max-w-[36rem] text-lg leading-relaxed text-neutral-400">
             Put Codync on the computer your agents run on, then pair your phone from it.

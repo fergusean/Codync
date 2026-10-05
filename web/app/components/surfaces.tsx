@@ -1,4 +1,5 @@
 import Phone from "./phone";
+import Eyebrow from "./eyebrow";
 import Reveal from "./reveal";
 
 const surfaces = [
@@ -27,6 +28,7 @@ export default function Surfaces() {
     <section className="px-4 py-20 sm:px-6 md:py-28">
       <div className="mx-auto max-w-6xl">
         <Reveal>
+          <Eyebrow>Everywhere</Eyebrow>
           <h2 className="max-w-[36rem] text-3xl font-semibold tracking-tight text-neutral-50 md:text-4xl">
             On every surface.
           </h2>

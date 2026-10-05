@@ -3,6 +3,7 @@
 import { motion, useReducedMotion } from "framer-motion";
 import { AppleLogo, GithubLogo } from "@phosphor-icons/react";
 import Image from "next/image";
+import Halftone from "./halftone";
 import Phone from "./phone";
 import { APP_STORE, DMG, GITHUB, PRODUCT_HUNT } from "../links";
 
@@ -16,10 +17,12 @@ export default function Hero() {
       : { initial: { opacity: 0, y: 20 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.7, delay, ease } };
 
   return (
-    <section className="px-4 pt-12 pb-20 sm:px-6 md:pt-20 md:pb-28">
-      <div className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-14 md:grid-cols-[1.1fr_1fr] md:gap-8">
+    <section className="relative overflow-hidden px-4 pt-12 pb-20 sm:px-6 md:pt-20 md:pb-28">
+      <Halftone corner="top-right" className="w-[44rem] max-w-[90vw] text-neutral-50 opacity-[0.16]" />
+      <Halftone corner="bottom-left" className="w-[22rem] max-w-[60vw] text-neutral-50 opacity-[0.12]" />
+      <div className="relative mx-auto grid max-w-6xl grid-cols-1 items-center gap-14 md:grid-cols-[1.1fr_1fr] md:gap-8">
         <div>
-          <motion.p {...rise(0)} className="mb-5 inline-flex items-center rounded-full bg-neutral-900 px-4 py-1.5 text-sm font-medium text-orange-400">
+          <motion.p {...rise(0)} className="mb-5 text-xs font-medium tracking-[0.25em] text-neutral-400 uppercase">
             The open-source Grok Bot / Muse alternative
           </motion.p>
           <motion.h1
