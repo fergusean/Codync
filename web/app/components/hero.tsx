@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
-import { AppleLogo, CaretUp, DeviceMobile, GithubLogo } from "@phosphor-icons/react";
+import { AppleLogo, DeviceMobile, GithubLogo } from "@phosphor-icons/react";
 import Halftone from "./halftone";
 import Phone from "./phone";
 import { APP_STORE, DMG, GITHUB, PRODUCT_HUNT } from "../links";
@@ -27,13 +27,16 @@ export default function Hero() {
         href={PRODUCT_HUNT}
         target="_blank"
         rel="noopener noreferrer"
-        className="relative mx-auto mb-10 flex w-fit items-center gap-2 rounded-full bg-neutral-900 py-1.5 pr-4 pl-1.5 text-sm text-neutral-300 transition hover:text-neutral-50 md:mb-14"
+        className="relative mx-auto mb-10 flex w-fit transition hover:opacity-80 md:mb-14"
       >
-        <span className="inline-flex items-center gap-0.5 rounded-full bg-neutral-50 px-2.5 py-0.5 text-xs font-semibold text-neutral-950">
-          <CaretUp size={12} weight="bold" />
-          #16
-        </span>
-        Product of the Day on Product Hunt
+        {/* eslint-disable-next-line @next/next/no-img-element -- live badge served by Product Hunt */}
+        <img
+          src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1267264&theme=dark"
+          alt="Codync on Product Hunt"
+          width={250}
+          height={54}
+          className="h-10 w-auto"
+        />
       </motion.a>
       <div className="relative mx-auto grid max-w-6xl grid-cols-1 items-center gap-14 md:grid-cols-[1.1fr_1fr] md:gap-8">
         <div>
