@@ -65,6 +65,8 @@ install_host() {
   fetch "$name.tar.gz"
   tar xzf "$TMP/$name.tar.gz" -C "$TMP"
   place "$TMP/$name/codync-host" "$BIN_DIR/codync-host"
+  # Linux: the Remote screen helper, which the host starts from beside itself.
+  if [ -f "$TMP/$name/codync-screen" ]; then place "$TMP/$name/codync-screen" "$BIN_DIR/codync-screen"; fi
   say "Installed $("$BIN_DIR/codync-host" --version) to $BIN_DIR"
   restart_service "$BIN_DIR/codync-host"
 }

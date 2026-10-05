@@ -35,7 +35,9 @@ jobs:
       matrix:
         include:
           # musl: one static binary that runs on any distro, whatever its glibc.
-          - { os: ubuntu-latest, target: x86_64-unknown-linux-musl, name: linux-x86_64 }
+          # codync-screen (Remote screen on Linux) links the system GStreamer 1.22+, so it is built
+          # for glibc on Ubuntu 24.04 and ships next to the host in the same archive.
+          - { os: ubuntu-24.04, target: x86_64-unknown-linux-musl, name: linux-x86_64 }
           - { os: ubuntu-24.04-arm, target: aarch64-unknown-linux-musl, name: linux-arm64 }
           - { os: macos-latest, target: aarch64-apple-darwin, name: macos-arm64 }
           - { os: macos-latest, target: x86_64-apple-darwin, name: macos-x86_64 }
@@ -48,7 +50,9 @@ jobs:
         run: rustup toolchain install
       - run: rustup target add ${{ matrix.target }}
       - if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y musl-tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y musl-tools libgstreamer-plugins-base1.0-dev libgstreamer-plugins-bad1.0-dev
       - name: Build
         working-directory: host
         # Vendored C (dbus) would call libgcc's outline atomics, which a static musl link lacks.
@@ -58,11 +62,15 @@ jobs:
           VERSION=$(python3 -c 'import tomllib; print(tomllib.load(open("Cargo.toml", "rb"))["package"]["version"])')
           test "v$VERSION" = "$GITHUB_REF_NAME" || { echo 'Host version must match release tag'; exit 1; }
           cargo build --release --target ${{ matrix.target }}
+      - name: Build codync-screen
+        if: runner.os == 'Linux'
+        run: cargo build --release --manifest-path apps/screen-linux/Cargo.toml
       - name: Package
         run: |
           NAME=codync-host-${{ matrix.name }}
           mkdir $NAME
           cp host/target/${{ matrix.target }}/release/codync-host $NAME/
+          if [ "$RUNNER_OS" = Linux ]; then cp apps/screen-linux/target/release/codync-screen $NAME/; fi
           cp LICENSE $NAME/
           tar czf $NAME.tar.gz $NAME
           shasum -a 256 $NAME.tar.gz > $NAME.tar.gz.sha256
