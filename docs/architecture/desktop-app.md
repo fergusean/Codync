@@ -44,7 +44,8 @@ HTTP to the host leaves from the main process (the loopback API has no CORS).
   the product targets one computer, so "Ask for access" rows show status only.
 - **Updates**: electron-updater from GitHub releases (`latest-mac.yml` carries `minApp`, the same
   iPhone gate as before). Installs of the SwiftUI app get the first desktop release through one
-  more Sparkle appcast, generated for the zip by the release workflow.
+  more Sparkle appcast, generated for the zip by the release workflow (deprecated, removed after
+  2026-11-06: [updates guide](../guides/updates.md#deprecated-the-sparkle-migration-appcast-remove-after-2026-11-06)).
 
 ## Development
 
