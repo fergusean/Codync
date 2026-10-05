@@ -19,7 +19,7 @@ export default function Hero() {
       : { initial: { opacity: 0, y: 20 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.7, delay, ease } };
 
   return (
-    <section className="relative overflow-hidden px-4 pt-12 pb-32 sm:px-6 md:pt-20 md:pb-44">
+    <section className="relative overflow-hidden px-4 pt-12 pb-20 sm:px-6 md:pt-20 md:pb-28">
       <Halftone corner="top-right" className="w-[44rem] max-w-[90vw] text-neutral-50 opacity-[0.16]" />
       <Halftone corner="bottom-left" className="w-[22rem] max-w-[60vw] text-neutral-50 opacity-[0.12]" />
       <motion.a
