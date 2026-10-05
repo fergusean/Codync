@@ -30,6 +30,13 @@ The iPhone app stays native SwiftUI; its package moved from `kit/` into `apps/io
 The renderer owns all state; closing the window hides it, so the menu bar keeps its data.
 HTTP to the host leaves from the main process (the loopback API has no CORS).
 
+Unsent composer text is retained in each computer’s `BotStore`, separately for every bot
+and reply thread. Switching conversations or closing a reply panel restores the exact text.
+Submitting clears only that conversation’s draft; completion or failure of the send does
+not clear a newer draft. Drafts last for the window’s session and are cleared when the
+computer is removed, its host identity changes, or the bot is deleted. iOS and the TUI
+already retain drafts per conversation; the shared desktop behavior covers macOS and Linux.
+
 ## Platform notes
 
 - **Icons**: SF Symbols may only ship in apps for Apple platforms, so the masks are generated
