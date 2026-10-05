@@ -17,7 +17,7 @@ export default function CopyCommand({ command }: { command: string }) {
   }
 
   return (
-    <div className="flex items-center gap-3 rounded-xl bg-neutral-950 py-3 pr-3 pl-4">
+    <div className="flex items-center gap-3 rounded-xl bg-black py-3 pr-3 pl-4">
       <code className="min-w-0 flex-1 overflow-x-auto font-mono text-sm whitespace-nowrap text-neutral-200">
         {command}
       </code>
@@ -28,7 +28,7 @@ export default function CopyCommand({ command }: { command: string }) {
         title={copied ? "Copied" : "Copy"}
         className="shrink-0 rounded-full p-2 text-neutral-400 transition hover:bg-neutral-800 hover:text-neutral-100 active:scale-95"
       >
-        {copied ? <Check size={16} className="text-orange-400" /> : <Copy size={16} />}
+        {copied ? <Check size={16} className="text-neutral-50" /> : <Copy size={16} />}
       </button>
     </div>
   );

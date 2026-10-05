@@ -1,4 +1,6 @@
 import { AppleLogo, BellRinging, LinuxLogo, LockKey, Terminal } from "@phosphor-icons/react/ssr";
+import Eyebrow from "./eyebrow";
+import Halftone from "./halftone";
 import Phone from "./phone";
 import Reveal from "./reveal";
 
@@ -19,6 +21,7 @@ export function Answers() {
           <Phone src="/screens/answer.webp" alt="Scout's reply: it added weeklyTotals to src/pace.js with a test, and all tests pass" />
         </Reveal>
         <Reveal className="order-1 md:order-2" delay={0.05}>
+          <Eyebrow>Chat</Eyebrow>
           <h2 className="text-3xl font-semibold tracking-tight text-neutral-50 md:text-4xl">
             The answer, without the noise.
           </h2>
@@ -37,6 +40,7 @@ export function Features() {
     <section className="px-4 py-20 sm:px-6 md:py-28">
       <div className="mx-auto max-w-6xl">
         <Reveal>
+          <Eyebrow>Bots</Eyebrow>
           <h2 className="max-w-[36rem] text-3xl font-semibold tracking-tight text-neutral-50 md:text-4xl">
             A team of bots on your own computer.
           </h2>
@@ -44,8 +48,9 @@ export function Features() {
 
         <div className="mt-12 grid grid-cols-1 gap-4 md:grid-cols-3 md:grid-rows-[auto_auto]">
           <Reveal className="md:col-span-2 md:row-span-2">
-            <div className="flex h-full flex-col overflow-hidden rounded-3xl bg-gradient-to-br from-orange-500/15 via-neutral-900 to-neutral-900 md:flex-row">
-              <div className="p-8 md:w-1/2 md:p-10">
+            <div className="relative flex h-full flex-col overflow-hidden rounded-3xl bg-neutral-900 md:flex-row">
+              <Halftone corner="bottom-left" className="w-96 text-neutral-50 opacity-[0.14]" />
+              <div className="relative p-8 md:w-1/2 md:p-10">
                 <h3 className="text-xl font-semibold text-neutral-50">Put bots in a room</h3>
                 <p className="mt-3 leading-relaxed text-neutral-400">
                   Start a group chat and every member answers in its own session. They read each other, disagree
@@ -62,7 +67,7 @@ export function Features() {
 
           <Reveal delay={0.05}>
             <div className="h-full rounded-3xl bg-neutral-900 p-8">
-              <BellRinging size={26} className="text-orange-400" />
+              <BellRinging size={26} className="text-neutral-50" />
               <h3 className="mt-5 text-xl font-semibold text-neutral-50">Only the pings that matter</h3>
               <p className="mt-3 leading-relaxed text-neutral-400">
                 A notification when a bot needs you or finishes. Commands and edits arrive as cards: allow once,
@@ -72,10 +77,11 @@ export function Features() {
           </Reveal>
 
           <Reveal delay={0.1}>
-            <div className="h-full rounded-3xl bg-orange-500/10 p-8">
-              <LockKey size={26} className="text-orange-400" />
-              <h3 className="mt-5 text-xl font-semibold text-neutral-50">Your code stays home</h3>
-              <p className="mt-3 leading-relaxed text-neutral-400">
+            <div className="relative h-full overflow-hidden rounded-3xl bg-neutral-50 p-8">
+              <Halftone className="w-48 text-neutral-950 opacity-[0.12]" />
+              <LockKey size={26} className="relative text-neutral-950" />
+              <h3 className="relative mt-5 text-xl font-semibold text-neutral-950">Your code stays home</h3>
+              <p className="relative mt-3 leading-relaxed text-neutral-600">
                 Agents run on your machine with your own logins. The phone reaches it end-to-end encrypted.
               </p>
             </div>

@@ -14,7 +14,7 @@ import { DMG, GITHUB } from "./links";
 export default function Home() {
   return (
     <>
-      <header className="sticky top-0 z-20 bg-neutral-950/80 backdrop-blur-md">
+      <header className="sticky top-0 z-20 bg-black/80 backdrop-blur-md">
         <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
           <Link href="/" className="flex items-center gap-2.5 font-semibold text-neutral-50">
             <Image src="/icon.png" alt="" width={28} height={28} className="rounded-[7px]" />
