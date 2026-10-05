@@ -68,11 +68,7 @@ jobs:
       - name: Native pieces
         run: |
           mkdir -p apps/desktop/build/native
-          # The host, universal.
-          cargo build --release --manifest-path host/Cargo.toml --target aarch64-apple-darwin
-          cargo build --release --manifest-path host/Cargo.toml --target x86_64-apple-darwin
-          lipo -create -output apps/desktop/build/native/codync-host \
-            host/target/aarch64-apple-darwin/release/codync-host host/target/x86_64-apple-darwin/release/codync-host
+          # The host is built by `npm run dist:mac:main` (tools/native-host.mjs) for the same environment.
           # On-device speech for calls.
           swift build -c release --arch arm64 --arch x86_64 --package-path apps/desktop/native/speech-macos
           cp "$(swift build -c release --arch arm64 --arch x86_64 --package-path apps/desktop/native/speech-macos --show-bin-path)/codync-speech" \
@@ -95,10 +91,8 @@ jobs:
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
         run: |
           npm ci
-          node tools/account-config.mjs main
           npm run icons
-          npm run build
-          npx electron-builder --mac --publish never
+          npm run dist:mac:main -- --publish never
           codesign -d --entitlements - dist/mac-universal/Codync.app | grep -q com.apple.security.device.audio-input ||
             { echo "audio-input entitlement missing"; exit 1; }
           spctl --assess --type execute -v dist/mac-universal/Codync.app
@@ -178,9 +172,7 @@ jobs:
         working-directory: apps/desktop
         run: |
           npm ci
-          node tools/account-config.mjs main
-          npm run build
-          npx electron-builder --linux --${{ matrix.arch }} --publish never
+          npm run dist:linux:main -- --${{ matrix.arch }} --publish never
           # The website links releases/latest/download/codync-<os>-<arch>.tar.gz.
           cd dist
           for f in codync-linux-${{ matrix.arch }}.*; do mv "$f" "${f/linux-${{ matrix.arch }}/${{ matrix.name }}}"; done
