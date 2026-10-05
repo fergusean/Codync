@@ -125,6 +125,9 @@ public struct EntryData: Codable, Hashable, Sendable {
     public var entries: [PlanItem]?
     /// notice: info | error | divider
     public var style: String?
+    /// Bot-to-bot notices retain their original heading separately from their outcome.
+    public var heading: String?
+    public var delegationId: String?
     /// The bot that wrote it (a group shows who spoke).
     public var author: String?
     /// On a main-chat message that has a thread: its replies.

@@ -26,12 +26,14 @@ public extension Color {
 }
 
 /// Black and white: a pure black (or white) ground, grey bubbles, and color that
-/// comes only from the bots; amber marks "needs you" and red marks errors.
+/// comes from the bots; blue distinguishes bot handoffs, amber marks "needs you"
+/// and red marks errors.
 public enum Palette {
     public static let background = Color(light: 0xFFFFFF, dark: 0x0A0A0A)
     public static let surface = Color(light: 0xF4F4F4, dark: 0x141414)
     public static let bubbleAgent = Color(light: 0xF0F0F0, dark: 0x1C1C1C)
     public static let bubbleUser = Color(light: 0xE2E2E2, dark: 0x363636)
+    public static let bubbleBotMessage = Color(light: 0xEAF2FF, dark: 0x15263E)
     public static let border = Color(light: 0xE6E6E6, dark: 0x262626)
     public static let text = Color(light: 0x141414, dark: 0xF2F2F2)
     public static let secondary = Color(light: 0x6B6B6B, dark: 0x9A9A9A)

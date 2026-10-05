@@ -3,6 +3,7 @@ import Foundation
 
 extension BotStore {
     private struct Cache: Codable {
+        var schemaVersion: Int?
         /// App build + host version that wrote the cache; any change means refetch everything.
         var stamp: String?
         var hostId: String?
@@ -25,7 +26,7 @@ extension BotStore {
               let cache = try? JSONDecoder().decode(Cache.self, from: data) else { return }
         cacheStamp = cache.stamp ?? ""
         hostId = cache.hostId
-        rev = cache.rev
+        rev = cache.schemaVersion == Self.cacheSchemaVersion ? cache.rev : 0
         bots = Dictionary(cache.bots.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
         entries = Dictionary(grouping: cache.entries, by: \.botId)
     }
@@ -47,7 +48,7 @@ extension BotStore {
             list.filter { !$0.id.hasPrefix("local-") }.suffix(200)
                 + list.filter { $0.id.hasPrefix("local-") && ["waiting", "delivering", "failed"].contains($0.data.status) }
         }
-        let cache = Cache(stamp: "\(Self.appBuild)/\(hello?.version ?? "")", hostId: hostId, rev: rev, bots: Array(bots.values), entries: kept)
+        let cache = Cache(schemaVersion: Self.cacheSchemaVersion, stamp: "\(Self.appBuild)/\(hello?.version ?? "")", hostId: hostId, rev: rev, bots: Array(bots.values), entries: kept)
         if let data = try? JSONEncoder().encode(cache) {
             try? data.write(to: cacheURL, options: .atomic)
         }

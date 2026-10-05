@@ -11,6 +11,7 @@ import { useStore as useLiveStore, useStoreRef as useStore } from '../../store/c
 import { QUICK_REACTIONS, type BotStore } from '../../store/bot-store'
 import { AttachmentList } from './Attachments'
 import { relativeTime } from './chat-items'
+import { botMessage, hasRecipientReply, isRecipientReply } from './bot-message'
 import { MarkdownText } from './Markdown'
 import { PermissionCard } from './PermissionCard'
 import { ConnectionRequestCard } from '../marketplace/ConnectionRequestCard'
@@ -28,6 +29,9 @@ export const ChatRow = memo(function ChatRow({ entry, groupStart, chat, openTrac
   /** Main chat only: start (or open) the thread on this message. */
   openThread?: (e: Entry) => void
 }) {
+  const store = useLiveStore()
+  const botReply = isRecipientReply(entry, store.allEntries(entry.botId))
+  const message = entry.kind === 'notice' ? botMessage(entry.data) : null
   const reply = openThread ? () => openThread(entry) : undefined
   const chip = entry.data.thread && entry.data.thread.count > 0 && openThread ? <ThreadChip summary={entry.data.thread} open={() => openThread(entry)} /> : null
   switch (entry.kind) {
@@ -43,7 +47,8 @@ export const ChatRow = memo(function ChatRow({ entry, groupStart, chat, openTrac
       return (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 4, paddingTop: groupStart ? 12 : 4 }}>
           {chat && isGroup(chat) && groupStart ? <AuthorLabel botId={entry.data.author} /> : null}
-          <AgentBubble entry={entry} openTrace={openTrace} reply={reply} />
+          {botReply ? <span style={{ ...font('subheadline', 'medium'), color: 'var(--secondary)', paddingLeft: 12 }}>Reply from {chat?.name ?? store.authorName(entry.botId)}</span> : null}
+          <AgentBubble botReply={botReply} entry={entry} openTrace={openTrace} reply={reply} />
           <div style={{ paddingLeft: chat && isGroup(chat) ? 34 : 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
             <ReactionsRow entry={entry} />
             {chip}
@@ -59,6 +64,7 @@ export const ChatRow = memo(function ChatRow({ entry, groupStart, chat, openTrac
       )
     default:
       if (entry.data.connectionRequest) return <div style={{ paddingTop: 12 }}><ConnectionRequestCard entry={entry} /></div>
+      if (message) return <BotMessageRow message={message} entry={entry} showReply={!hasRecipientReply(entry, store.allEntries(entry.botId))} />
       return <div style={{ paddingTop: 10 }}><NoticeRow entry={entry} /></div>
   }
 })
@@ -195,7 +201,7 @@ function UserStatus({ entry, botWorking, hovering }: { entry: Entry; botWorking:
   }
 }
 
-export function AgentBubble({ entry, openTrace, reply }: { entry: Entry; openTrace: () => void; reply?: () => void }) {
+export function AgentBubble({ entry, openTrace, reply, botReply = false }: { entry: Entry; openTrace: () => void; reply?: () => void; botReply?: boolean }) {
   const store = useStore()
   const [hovering, setHovering] = useState(false)
   const copy = () => entry.data.text && window.codync.app.copy(entry.data.text)
@@ -203,7 +209,7 @@ export function AgentBubble({ entry, openTrace, reply }: { entry: Entry; openTra
     <div className="message agent" title={fullDate.format(entry.createdAt)} onMouseEnter={() => setHovering(true)} onMouseLeave={() => setHovering(false)}>
       <div className="message-body">
         <Bubble
-          className="bubble agent"
+          className={`bubble agent${botReply ? ' bot-message' : ''}`}
           reactions={reactionPick(store, entry)}
           items={() => [
             { title: 'Copy', icon: 'square.on.square', action: copy },
@@ -217,6 +223,21 @@ export function AgentBubble({ entry, openTrace, reply }: { entry: Entry; openTra
       </div>
     </div>
   )
+}
+
+function BotMessageRow({ message, entry, showReply }: { message: NonNullable<ReturnType<typeof botMessage>>; entry: Entry; showReply: boolean }) {
+  const store = useStore()
+  const bubble = (label: string, body: string) => (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 6 }}>
+      <span style={{ ...font('subheadline', 'medium'), color: 'var(--secondary)', paddingLeft: 12 }}>{label}</span>
+      <Bubble className="bubble agent bot-message" reactions={reactionPick(store, entry)} items={() => [{ title: 'Copy', icon: 'square.on.square', action: () => window.codync.app.copy(body) }]}><MarkdownText text={body} /></Bubble>
+    </div>
+  )
+  return <div style={{ paddingTop: 12, paddingRight: 40, display: 'flex', flexDirection: 'column', gap: 6 }}>
+    {bubble(message.label, message.body)}
+    {message.detail ? <span style={{ ...font('footnote'), color: entry.data.style === 'error' ? 'var(--danger)' : 'var(--secondary)', paddingLeft: 12 }}>{message.detail}</span> : null}
+    {showReply && message.reply ? bubble(message.reply.label, message.reply.body) : null}
+  </div>
 }
 
 export function NoticeRow({ entry }: { entry: Entry }) {

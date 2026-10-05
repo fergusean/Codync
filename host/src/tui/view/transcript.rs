@@ -226,11 +226,17 @@ fn entry_lines(
                 Some(a) => (a.name.clone(), a.color.as_str()),
                 None => ("A deleted bot".to_owned(), "gray"),
             };
+            let bot_reply = app
+                .entries
+                .get(&b.id)
+                .is_some_and(|entries| entries.values().any(|request| matches_recipient_request(request, e)));
+            let label = if bot_reply { format!("Reply from {name}") } else { name };
             out.lines.push(Line::from(vec![
-                Span::styled(format!(" {name}"), name_style(color)),
+                Span::styled(format!(" {label}"), name_style(color)),
                 Span::styled(format!(" {}", clock(e.created_at)), t.dim),
             ]));
-            out.lines.extend(md::render(e.text(), width, 1));
+            let lines = md::render(e.text(), width, 1);
+            out.lines.extend(if bot_reply { with_bg(lines, width, t.bot_message) } else { lines });
             reactions(out, e);
             out.messages.push((e.id.clone(), from, out.lines.len()));
             if let Some(ti) = info.get(&e.turn).filter(|ti| ti.steps > 0 && ti.last_message.as_ref() == Some(&e.id)) {
@@ -259,6 +265,35 @@ fn entry_lines(
         }
         Kind::Notice => {
             let from = out.lines.len();
+            if let Some(message) = bot_message(&e.data) {
+                gap(out);
+                out.lines.push(Line::from(Span::styled(
+                    format!(" {}", message.label),
+                    t.secondary.add_modifier(Modifier::BOLD),
+                )));
+                let lines = md::render(message.body, width, 1);
+                out.lines.extend(with_bg(lines, width, t.bot_message));
+                if !message.detail.is_empty() {
+                    let style = if e.data["style"] == "error" { t.red } else { t.secondary };
+                    out.lines.extend(md::wrap(
+                        &[Span::styled(message.detail.to_owned(), style)],
+                        width,
+                        &[Span::raw("   ")],
+                        &[Span::raw("   ")],
+                    ));
+                }
+                let has_reply = app.entries.get(&b.id).is_some_and(|entries| {
+                    entries.values().any(|reply| reply.is_final() && matches_recipient_request(e, reply))
+                });
+                if !has_reply && let Some((label, body)) = message.reply {
+                    gap(out);
+                    out.lines
+                        .push(Line::from(Span::styled(format!(" {label}"), t.secondary.add_modifier(Modifier::BOLD))));
+                    let lines = md::render(body, width, 1);
+                    out.lines.extend(with_bg(lines, width, t.bot_message));
+                }
+                return;
+            }
             let text = if let Some(status) = e.data["connectionRequest"]["status"].as_str() {
                 format!(
                     "{} · {} · {}",
@@ -295,6 +330,51 @@ fn entry_lines(
         }
         _ => {}
     }
+}
+
+#[derive(Debug, PartialEq)]
+struct BotMessage<'a> {
+    label: String,
+    body: &'a str,
+    detail: &'a str,
+    reply: Option<(&'a str, &'a str)>,
+}
+
+fn matches_recipient_request(request: &Entry, reply: &Entry) -> bool {
+    request.kind == Kind::Notice
+        && reply.kind == Kind::Agent
+        && request.data["delegationId"].as_str().is_some_and(|id| !id.is_empty())
+        && request.data["heading"].as_str().is_some_and(|heading| heading.starts_with("Request from "))
+        && request.turn == reply.turn
+        && request.thread_id == reply.thread_id
+}
+
+fn bot_message(data: &serde_json::Value) -> Option<BotMessage<'_>> {
+    if data["delegationId"].as_str()?.is_empty() {
+        return None;
+    }
+    let heading = data["heading"].as_str()?;
+    let (attribution, body) = heading.split_once(": ")?;
+    let (prefix, name) = ["Message from ", "Request from ", "Messaged ", "Asked "].into_iter().find_map(|prefix| {
+        attribution.strip_prefix(prefix).filter(|name| !name.is_empty()).map(|name| (prefix, name))
+    })?;
+    let label = if matches!(prefix, "Messaged " | "Asked ") { "Message to" } else { "Message from" };
+    let text = data["text"].as_str()?;
+    let outcome = if text == heading { "" } else { text.strip_prefix(heading)?.strip_prefix('\n')? };
+    let ask = matches!(prefix, "Asked " | "Request from ");
+    let reply = if ask && data["status"] == "completed" {
+        outcome.split_once(":\n").filter(|(label, _)| label.starts_with("Reply from "))
+    } else {
+        None
+    };
+    let detail = if !ask || reply.is_some() {
+        ""
+    } else if prefix == "Request from " && outcome == "Waiting for a reply…" {
+        "Working on a reply…"
+    } else {
+        outcome
+    };
+    Some(BotMessage { label: format!("{label} {name}"), body, detail, reply })
 }
 
 /// A message's reactions, under it.
@@ -351,6 +431,94 @@ fn thread_summary(v: &serde_json::Value) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn bot_requests_separate_multiline_messages_from_their_outcomes() {
+        let heading = "Request from Miles: Urgent.\n\nError: connection aborted";
+        let data = serde_json::json!({
+            "delegationId": "request", "heading": heading,
+            "text": format!("{heading}\nbot request cancelled"), "style": "error",
+        });
+        assert_eq!(
+            bot_message(&data),
+            Some(BotMessage {
+                label: "Message from Miles".into(),
+                body: "Urgent.\n\nError: connection aborted",
+                detail: "bot request cancelled",
+                reply: None,
+            })
+        );
+        assert!(bot_message(&serde_json::json!({"text": "Other notice"})).is_none());
+    }
+
+    #[test]
+    fn bot_requests_show_each_bots_role_and_put_replies_in_bubbles() {
+        use serde_json::json;
+        for (prefix, expected) in [("Asked Dex", "Waiting for a reply…"), ("Request from Miles", "Working on a reply…")]
+        {
+            let heading = format!("{prefix}: Investigate.");
+            let mut data = json!({"delegationId": "request", "heading": heading, "text": format!("{heading}\nWaiting for a reply…")});
+            assert_eq!(bot_message(&data).unwrap().detail, expected);
+            data["status"] = json!("completed");
+            data["text"] = json!(format!("{heading}\nReply from Dex:\nInvestigated.\n\nNo changes needed."));
+            let message = bot_message(&data).unwrap();
+            assert_eq!(message.detail, "");
+            assert_eq!(message.reply, Some(("Reply from Dex", "Investigated.\n\nNo changes needed.")));
+        }
+        for prefix in ["Messaged Dex", "Message from Miles"] {
+            let heading = format!("{prefix}: Investigate.");
+            for outcome in [
+                "Queued.",
+                "Running in Dex's chat…",
+                "Completed. Outcome reported in Dex's chat.",
+                "Recipient stopped.",
+            ] {
+                let data =
+                    json!({"delegationId": "message", "heading": heading, "text": format!("{heading}\n{outcome}")});
+                let message = bot_message(&data).unwrap();
+                assert_eq!(message.detail, "");
+                assert_eq!(message.reply, None);
+            }
+        }
+    }
+
+    #[test]
+    fn recipient_reply_replaces_notice_excerpt_and_retains_message_actions() {
+        use serde_json::json;
+        let (tx, _) = tokio::sync::mpsc::unbounded_channel();
+        let mut app = App::new(super::super::super::net::Client::new("http://127.0.0.1:1", None), tx, String::new());
+        app.on_msg(super::super::super::app::Msg::Event(json!({"type":"bot","bot":{"id":"b","name":"Dex"}})));
+        let request = Entry {
+            id: "request".into(),
+            seq: 1,
+            turn: 8,
+            kind: Kind::Notice,
+            created_at: 0,
+            thread_id: None,
+            data: json!({"heading":"Request from Miles: Investigate.", "delegationId":"request", "status":"completed",
+                "text":"Request from Miles: Investigate.\nReply from Dex:\nShort excerpt"}),
+        };
+        let reply = Entry {
+            id: "reply".into(),
+            seq: 2,
+            kind: Kind::Agent,
+            data: json!({"text":"Full answer remains available", "final":true}),
+            ..request.clone()
+        };
+        app.entries.insert("b".into(), [(1, request.clone()), (2, reply.clone())].into());
+        let mut out = Built { lines: vec![], buttons: vec![], messages: vec![] };
+        let bot = &app.bots["b"];
+        entry_lines(&mut out, &app, bot, &request, &HashMap::new(), true, 80);
+        entry_lines(&mut out, &app, bot, &reply, &HashMap::new(), true, 80);
+        let text = out.lines.iter().map(ToString::to_string).collect::<Vec<_>>().join("\n");
+        assert!(!text.contains("Short excerpt"));
+        assert_eq!(text.matches("Reply from Dex").count(), 1);
+        assert!(text.contains("Full answer remains available"));
+        assert_eq!(out.messages[0].0, reply.id);
+        assert!(!matches_recipient_request(&request, &Entry { turn: 7, ..reply.clone() }));
+        assert!(!matches_recipient_request(&request, &Entry { thread_id: Some("thread".into()), ..reply }));
+    }
+
 
     #[test]
     fn thread_summary_counts_replies() {

@@ -7,6 +7,20 @@ import SwiftUI
 struct ChatRow: View {
     let entry: Entry
     let groupStart: Bool
+    let chat: Bot?
+    let openTrace: () -> Void
+    var openThread: ((Entry) -> Void)?
+    @Environment(BotStore.self) private var model
+
+    var body: some View {
+        ChatRowContent(entry: entry, groupStart: groupStart, chat: chat,
+                       openTrace: openTrace, openThread: openThread)
+    }
+}
+
+private struct ChatRowContent: View {
+    let entry: Entry
+    let groupStart: Bool
     /// The bot or group the chat belongs to.
     let chat: Bot?
     let openTrace: () -> Void
@@ -27,9 +41,16 @@ struct ChatRow: View {
             .animation(Motion.reduced(Motion.layout, reduceMotion), value: entry.data.reactions)
             .padding(.top, groupStart ? 12 : 4)
         case "agent":
+            let botReply = BotMessage.isRecipientReply(entry, in: model.allEntries(entry.botId))
             VStack(alignment: .leading, spacing: 4) {
+                if botReply {
+                    Text("Reply from \(chat?.name ?? model.authorName(entry.botId))")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(Palette.secondary)
+                        .padding(.leading, 12)
+                }
                 if chat?.isGroup == true, groupStart { AuthorLabel(botId: entry.data.author) }
-                AgentBubble(entry: entry, openTrace: openTrace, reply: reply)
+                AgentBubble(entry: entry, openTrace: openTrace, reply: reply, botReply: botReply)
                 Group {
                     ReactionsRow(entry: entry)
                     threadChip
@@ -49,6 +70,10 @@ struct ChatRow: View {
         default:
             if let request = entry.data.connectionRequest {
                 ConnectionRequestCard(entry: entry, request: request).padding(.top, 12)
+            } else if entry.kind == "notice", let message = BotMessage(data: entry.data) {
+                BotMessageRow(entry: entry, message: message,
+                              showReply: !BotMessage.hasRecipientReply(entry, in: model.allEntries(entry.botId)))
+                    .padding(.top, 12)
             } else {
                 NoticeRow(entry: entry).padding(.top, 10)
             }
@@ -196,6 +221,7 @@ struct AgentBubble: View {
     let entry: Entry
     let openTrace: () -> Void
     var reply: (() -> Void)?
+    var botReply = false
     @Environment(BotStore.self) private var model
 
     var body: some View {
@@ -204,7 +230,8 @@ struct AgentBubble: View {
                 .equatable()
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)
-                .background(Palette.bubbleAgent, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .background(botReply ? Palette.bubbleBotMessage : Palette.bubbleAgent,
+                            in: RoundedRectangle(cornerRadius: 18, style: .continuous))
                 .contextActions(reactions: model.reactionPick(entry)) {
                     var items = [
                         MenuItem("Copy", icon: "square.on.square") { Pasteboard.copy(entry.data.text) },
@@ -216,6 +243,57 @@ struct AgentBubble: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.trailing, 40)
+    }
+}
+
+
+struct BotMessageRow: View {
+    let entry: Entry
+    let message: BotMessage
+    var showReply = true
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            BotMessageBubble(label: message.label, text: message.body)
+            if !message.detail.isEmpty {
+                Text(message.detail)
+                    .font(.footnote)
+                    .foregroundStyle(entry.data.style == "error" ? Palette.danger : Palette.secondary)
+                    .textSelection(.enabled)
+                    .padding(.leading, 12)
+            }
+            if showReply, let reply = message.reply {
+                BotMessageBubble(label: reply.label, text: reply.body)
+                    .padding(.top, 6)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.trailing, 40)
+    }
+}
+
+private struct BotMessageBubble: View {
+    let label: String
+    let text: String
+
+    @ViewBuilder private var content: some View {
+        StreamingMarkdown(text: text, live: false)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(label)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(Palette.secondary)
+                .padding(.leading, 12)
+            content
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .background(Palette.bubbleBotMessage, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                .contextActions {
+                    [MenuItem("Copy", icon: "square.on.square") { Pasteboard.copy(text) }]
+                }
+        }
     }
 }
 

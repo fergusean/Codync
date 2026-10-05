@@ -403,3 +403,7 @@
     opacity: 0;
   }
 }
+
+.bubble.agent.bot-message {
+  background: var(--bubble-bot-message);
+}

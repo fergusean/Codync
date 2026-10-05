@@ -741,3 +741,28 @@ private func helloJSON(version: String, minApp: String? = nil, backends: String 
     let anotherAccount = SharedStore.Context(accountID: "another-user", suite: suite)
     #expect(anotherAccount.composerDrafts.isEmpty)
 }
+
+@MainActor @Test func olderCachesRefetchBotMetadataWithoutDroppingLocalSends() throws {
+    let (storage, suite) = context()
+    defer { storage.erase(); UserDefaults(suiteName: suite)?.removePersistentDomain(forName: suite) }
+    let computer = randomComputer("Fixture")
+    let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "0"
+    let url = URL.cachesDirectory.appending(path: "codync-mirror-\(Bundle.main.bundleIdentifier ?? "app")-\(storage.id)-\(computer.id).json")
+    let legacy = #"""
+    {"stamp":"\#(build)/3.0.0","hostId":"h1","rev":77,"bots":[],"entries":[
+      {"id":"notice","seq":1,"botId":"dex","rev":77,"kind":"notice","turn":1,"createdAt":1,"updatedAt":1,
+       "data":{"text":"Message from Miles: Investigate.\nCompleted.","status":"completed"}},
+      {"id":"local-pending","seq":2,"botId":"dex","rev":0,"kind":"user","turn":1,"createdAt":2,"updatedAt":2,
+       "data":{"text":"My unsent message","status":"failed"}}
+    ]}
+    """#
+    try Data(legacy.utf8).write(to: url)
+    let store = BotStore(computer: computer, clientKind: "ios", storage: storage) { FakeRemote(.ready(.direct)) }
+    defer { store.retire() }
+    #expect(store.allEntries("dex").map(\.id) == ["notice", "local-pending"])
+    #expect(store.allEntries("dex").last?.data.text == "My unsent message")
+    store.saveCache()
+    let bytes = try Data(contentsOf: url)
+    let cache = try #require(JSONSerialization.jsonObject(with: bytes) as? [String: Any])
+    #expect(cache["rev"] as? Int == 0)
+}

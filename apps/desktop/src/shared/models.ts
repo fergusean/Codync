@@ -130,6 +130,10 @@ export interface ConnectionRequest {
 }
 
 export interface EntryData {
+  delegationId?: string
+  heading?: string
+  sourceBotId?: string
+  targetBotId?: string
   connectionRequest?: ConnectionRequest
   routineId?: string
   runId?: string

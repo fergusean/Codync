@@ -5,6 +5,7 @@
   --background: #ffffff;
   --surface: #f4f4f4;
   --bubble-agent: #f0f0f0;
+  --bubble-bot-message: #eaf2ff;
   --bubble-user: #e2e2e2;
   --border: #e6e6e6;
   --text: #141414;
@@ -61,6 +62,7 @@
     --background: #070707;
     --surface: #111111;
     --bubble-agent: #1c1c1c;
+    --bubble-bot-message: #15263e;
     --bubble-user: #3a3a3a;
     --border: #262626;
     --text: #fafafa;
