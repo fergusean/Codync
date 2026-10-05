@@ -74,6 +74,10 @@ one, so app and host always match, plus the Codync Screen helper (`tools/native-
 Extra electron-builder flags go after `--` (`npm run dist:mac:dev -- --dir --arm64`). The speech
 helper at the top of `electron-builder.yml` doesn't depend on the environment; place it first
 (the release workflow, `.github/workflows/release-desktop.yml`, shows how).
+`dist:mac:dev` signs with the team 7FUM8A8H72 development certificate (`CSC_NAME` in
+`package.json`): the Screen launch agent only runs code from that team, and the keychain holds
+another team's certificate electron-builder would otherwise pick. Update the name when it is
+renewed.
 Only one environment's host runs on a computer at a time (one `~/.codync`, port and service):
 switching environments means installing the other build.
 
