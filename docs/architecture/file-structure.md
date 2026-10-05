@@ -64,6 +64,15 @@ Codync/
 
 `build/`, `apps/ios/Kit/.build/`, `apps/desktop/out/`, `apps/desktop/dist/`, Cargo `target/`, `node_modules/` and Wrangler local state are generated working data. They are not source modules and should not become documentation locations. Edit `apps/project.yml` and run `xcodegen generate --spec apps/project.yml`; never hand-edit `project.pbxproj`.
 
+## Targets
+
+- `apps/desktop/` — desktop app for macOS and Linux (Electron; `npm run dev`, packaged by `.github/workflows/release-desktop.yml`)
+- `iOS` (`apps/ios/`) — iOS app
+- `Screen` (`apps/screen-macos/`) — Codync Screen: capture, input and WebRTC for Remote screen, embedded in the macOS desktop app (`Contents/Library/LoginItems`)
+- `apps/screen-linux/` — `codync-screen` (Rust, GStreamer + xdg portals), the Linux Remote screen helper
+- `Widgets` (`apps/ios/Widgets/`) — usage widget + bot Live Activity (bundle id `com.pokai.Codync.ios.LiveActivity`)
+- `CodyncKit` (`apps/ios/Kit/`) — the iPhone app's Swift package: `CodyncKit` + `CodyncUI` libraries (tests: `xcodebuild test -scheme CodyncKit-Package` on an iOS simulator)
+
 ## Where to make a change
 
 | Responsibility | Source entry points |

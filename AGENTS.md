@@ -55,6 +55,10 @@ Name Swift files after their main `UpperCamelCase` type; use `snake_case.rs` and
 
 Use Swift Testing (`@Test`, `#expect`), Rust unit tests, `node --test` in the desktop app, and the relay’s Node assertion tests. Name tests after observable behavior. Add regression coverage for changed logic; no numeric coverage threshold is configured.
 
+## Several agents share `dev`
+
+- Several agents often work in this checkout on `dev` at once. Before touching files with someone else's uncommitted changes, or anything tree-wide (renames, `xcodegen`, version bump, `git stash`/`reset`/`checkout`), tell the other agents what you'll change if your tool can message them; otherwise ask the user first. Never discard, revert or reformat hunks that aren't yours.
+
 ## Commit & Pull Request Guidelines
 
 - Conventional Commits: `type(scope): subject`. Types: `feat`, `fix`, `refactor`, `perf`, `docs`, `test`, `build`, `ci`, `chore`. Scope is the area touched: `ios`, `desktop`, `host`, `cloud`, `relay`, `web`, `docs`.
