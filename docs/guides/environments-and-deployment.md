@@ -12,7 +12,7 @@ Reviewed against repository configuration on 2026-09-26. Checked-in configuratio
 | Cloud Worker / D1 / DO | `cloud/wrangler.toml` | Root production, `dev`, or `local` environment |
 | APNs Worker | `relay/wrangler.toml` | Separate deployment and secrets; see [relay README](../../relay/README.md) |
 
-The host's compiled default follows its build profile like the app: debug builds use `https://dev-api.codync.dev`, release builds `https://api.codync.dev`. Override it with the Mac's **Reach from anywhere** control or `codync-host cloud --url <url>`. `codync-host cloud` displays status; `--disable` turns access off. App and host must point at the same intended cloud.
+The host's compiled default follows its build profile like the app: debug builds use `https://dev-api.codync.dev`, release builds `https://api.codync.dev`. Override it with the Mac's **Reach from anywhere** control or `codync-host cloud --url <url>`. `codync-host cloud` displays status; `--disable` turns access off. App and host must point at the same intended cloud. The desktop app enforces this for the host it manages: when that host's cloud is on but points elsewhere (a release host bundled into a dev build), the app switches it to the build's `account-config.json` cloud once per run.
 
 ## Checked-in readiness
 
