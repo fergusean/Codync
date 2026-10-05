@@ -1,4 +1,6 @@
 import { Check, Plus } from "@phosphor-icons/react/ssr";
+import Eyebrow from "./eyebrow";
+import Halftone from "./halftone";
 import Reveal from "./reveal";
 import { GITHUB } from "../links";
 
@@ -28,6 +30,7 @@ export default function Compare() {
     <section id="compare" className="px-4 py-20 sm:px-6 md:py-28">
       <div className="mx-auto max-w-6xl">
         <Reveal>
+          <Eyebrow>Compare</Eyebrow>
           <h2 className="max-w-[40rem] text-3xl font-semibold tracking-tight text-neutral-50 md:text-4xl">
             Everything Grok Bot and Muse do. Open source, with any agent.
           </h2>
@@ -44,7 +47,7 @@ export default function Compare() {
               <ul className="mt-6 space-y-3">
                 {same.map((s) => (
                   <li key={s} className="flex gap-3 leading-relaxed text-neutral-300">
-                    <Check size={20} weight="bold" className="mt-0.5 shrink-0 text-orange-400" />
+                    <Check size={20} weight="bold" className="mt-0.5 shrink-0 text-neutral-50" />
                     {s}
                   </li>
                 ))}
@@ -53,20 +56,21 @@ export default function Compare() {
           </Reveal>
 
           <Reveal delay={0.05}>
-            <div className="h-full rounded-3xl bg-orange-500/10 p-8 md:p-10">
-              <h3 className="text-xl font-semibold text-neutral-50">What&apos;s different</h3>
-              <ul className="mt-6 space-y-6">
+            <div className="relative h-full overflow-hidden rounded-3xl bg-neutral-50 p-8 md:p-10">
+              <Halftone className="w-72 text-neutral-950 opacity-[0.12]" />
+              <h3 className="relative text-xl font-semibold text-neutral-950">What&apos;s different</h3>
+              <ul className="relative mt-6 space-y-6">
                 {different.map(([title, body]) => (
                   <li key={title} className="flex gap-3">
-                    <Plus size={20} weight="bold" className="mt-0.5 shrink-0 text-orange-400" />
+                    <Plus size={20} weight="bold" className="mt-0.5 shrink-0 text-neutral-950" />
                     <div>
-                      <p className="font-medium text-neutral-50">{title}</p>
-                      <p className="mt-1 leading-relaxed text-neutral-400">{body}</p>
+                      <p className="font-medium text-neutral-950">{title}</p>
+                      <p className="mt-1 leading-relaxed text-neutral-600">{body}</p>
                     </div>
                   </li>
                 ))}
               </ul>
-              <a href={GITHUB} className="mt-8 inline-block text-neutral-200 underline underline-offset-4 hover:text-white">
+              <a href={GITHUB} className="relative mt-8 inline-block font-medium text-neutral-950 underline underline-offset-4 hover:text-black">
                 Read the code on GitHub
               </a>
             </div>

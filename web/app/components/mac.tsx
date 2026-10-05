@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Eyebrow from "./eyebrow";
 import Reveal from "./reveal";
 
 // Real window and menu captures from the Mac app; both PNGs keep their rounded, transparent corners.
@@ -7,6 +8,7 @@ export default function Mac() {
     <section className="px-4 py-20 sm:px-6 md:py-28">
       <div className="mx-auto max-w-6xl">
         <Reveal>
+          <Eyebrow>Desktop</Eyebrow>
           <h2 className="max-w-[36rem] text-3xl font-semibold tracking-tight text-neutral-50 md:text-4xl">
             And at your desk, on your Mac.
           </h2>

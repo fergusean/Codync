@@ -1,4 +1,5 @@
 import { HardDrives, LockKey, WifiHigh } from "@phosphor-icons/react/ssr";
+import Eyebrow from "./eyebrow";
 import Reveal from "./reveal";
 
 const points = [
@@ -24,6 +25,7 @@ export default function Privacy() {
     <section className="px-4 py-20 sm:px-6 md:py-28">
       <div className="mx-auto max-w-6xl">
         <Reveal>
+          <Eyebrow>Privacy</Eyebrow>
           <h2 className="max-w-[36rem] text-3xl font-semibold tracking-tight text-neutral-50 md:text-4xl">
             Private by design.
           </h2>
@@ -36,7 +38,7 @@ export default function Privacy() {
           {points.map(({ icon: Icon, title, body }, i) => (
             <Reveal key={title} delay={i * 0.05}>
               <div className="h-full rounded-3xl bg-neutral-900 p-8">
-                <Icon size={26} className="text-orange-400" />
+                <Icon size={26} className="text-neutral-50" />
                 <h3 className="mt-5 text-xl font-semibold text-neutral-50">{title}</h3>
                 <p className="mt-3 leading-relaxed text-neutral-400">{body}</p>
               </div>

@@ -1,12 +1,15 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
-import { AppleLogo, GithubLogo } from "@phosphor-icons/react";
-import Image from "next/image";
+import { AppleLogo, DeviceMobile, GithubLogo } from "@phosphor-icons/react";
+import Halftone from "./halftone";
 import Phone from "./phone";
 import { APP_STORE, DMG, GITHUB, PRODUCT_HUNT } from "../links";
 
 const ease = [0.16, 1, 0.3, 1] as const;
+const button =
+  "inline-flex h-12 items-center justify-center gap-2 whitespace-nowrap rounded-full px-6 font-medium transition active:scale-[0.98]";
+const secondary = "bg-neutral-900 text-neutral-100 hover:bg-neutral-800";
 
 export default function Hero() {
   const reduce = useReducedMotion();
@@ -16,10 +19,28 @@ export default function Hero() {
       : { initial: { opacity: 0, y: 20 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.7, delay, ease } };
 
   return (
-    <section className="px-4 pt-12 pb-20 sm:px-6 md:pt-20 md:pb-28">
-      <div className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-14 md:grid-cols-[1.1fr_1fr] md:gap-8">
+    <section className="relative overflow-hidden px-4 pt-12 pb-20 sm:px-6 md:pt-20 md:pb-28">
+      <Halftone corner="top-right" className="w-[44rem] max-w-[90vw] text-neutral-50 opacity-[0.16]" />
+      <Halftone corner="bottom-left" className="w-[22rem] max-w-[60vw] text-neutral-50 opacity-[0.12]" />
+      <motion.a
+        {...rise(0)}
+        href={PRODUCT_HUNT}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="relative mx-auto mb-10 flex w-fit transition hover:opacity-80 md:mb-14"
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element -- live badge served by Product Hunt */}
+        <img
+          src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1267264&theme=dark"
+          alt="Codync on Product Hunt"
+          width={250}
+          height={54}
+          className="h-10 w-auto"
+        />
+      </motion.a>
+      <div className="relative mx-auto grid max-w-6xl grid-cols-1 items-center gap-14 md:grid-cols-[1.1fr_1fr] md:gap-8">
         <div>
-          <motion.p {...rise(0)} className="mb-5 inline-flex items-center rounded-full bg-neutral-900 px-4 py-1.5 text-sm font-medium text-orange-400">
+          <motion.p {...rise(0)} className="mb-5 text-xs font-medium tracking-[0.25em] text-neutral-400 uppercase">
             The open-source Grok Bot / Muse alternative
           </motion.p>
           <motion.h1
@@ -33,50 +54,20 @@ export default function Hero() {
             your iPhone, Mac, Linux desktop or a terminal over SSH. Free, MIT licensed, and every feature of Grok
             Bot and Muse, 1:1.
           </motion.p>
-          <motion.div {...rise(0.18)} className="mt-9 flex flex-col gap-3 sm:flex-row">
-            <a
-              href={DMG}
-              className="inline-flex items-center justify-center gap-2 rounded-full bg-neutral-50 px-6 py-3 font-medium text-neutral-950 transition hover:bg-white active:scale-[0.98]"
-            >
+          <motion.div {...rise(0.18)} className="mt-9 flex flex-wrap gap-3">
+            <a href={DMG} className={`${button} bg-neutral-50 text-neutral-950 hover:bg-white`}>
               <AppleLogo size={18} weight="fill" />
               Download for Mac
             </a>
-            <div className="flex gap-3">
-              <a
-                href={APP_STORE}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex justify-center transition hover:opacity-80 active:scale-[0.98]"
-              >
-                <Image src="/app-store-badge.svg" alt="Download on the App Store" width={144} height={48} className="h-12 w-auto" />
-              </a>
-              <a
-                href={GITHUB}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-neutral-900 px-5 py-3 font-medium text-neutral-100 sm:flex-none sm:px-6 transition hover:bg-neutral-800 active:scale-[0.98]"
-              >
-                <GithubLogo size={18} weight="fill" />
-                Star on GitHub
-              </a>
-            </div>
+            <a href={APP_STORE} target="_blank" rel="noopener noreferrer" className={`${button} ${secondary}`}>
+              <DeviceMobile size={18} weight="fill" />
+              iPhone app
+            </a>
+            <a href={GITHUB} target="_blank" rel="noopener noreferrer" className={`${button} ${secondary}`}>
+              <GithubLogo size={18} weight="fill" />
+              Star on GitHub
+            </a>
           </motion.div>
-          <motion.a
-            {...rise(0.24)}
-            href={PRODUCT_HUNT}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-6 inline-flex transition hover:opacity-80"
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element -- live badge served by Product Hunt */}
-            <img
-              src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1267264&theme=dark"
-              alt="Codync on Product Hunt"
-              width={250}
-              height={54}
-              className="h-[54px] w-[250px]"
-            />
-          </motion.a>
         </div>
 
         <div className="relative mx-auto w-full max-w-[26rem] md:max-w-none">
