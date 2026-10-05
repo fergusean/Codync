@@ -85,10 +85,14 @@ jobs:
           CSC_IDENTITY_AUTO_DISCOVERY: "true"
           # Same-repo PRs get the secrets; sign them too so the dry run checks the real app.
           CSC_FOR_PULL_REQUEST: "true"
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_DEVELOPMENT_TEAM }}
-          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+          # Notarized with the App Store Connect API key: unlike an app-specific password, it
+          # survives Apple ID password changes.
+          APPLE_API_KEY: ${{ runner.temp }}/AuthKey.p8
+          APPLE_API_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
         run: |
+          printf '%s\n' "$ASC_PRIVATE_KEY" > "$APPLE_API_KEY"
           npm ci
           npm run icons
           npm run dist:mac:main -- --publish never
