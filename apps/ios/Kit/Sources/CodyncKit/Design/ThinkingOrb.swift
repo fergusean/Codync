@@ -45,17 +45,19 @@ public struct ThinkingOrb: View {
     private func drawing(time: Double) -> some View {
         let frame = ThinkingOrbGeometry.frame(state: state, size: size, time: time)
         return Canvas { context, _ in
+            // Reuse concrete ink so every dot/line avoids platform-color resolution.
+            let inkColor = Color(color.resolve(in: context.environment))
             // Tintable ink: preserves depth and blends with cards, wallpaper and
             // accessory rendering instead of baking a paper/background color in.
             for line in frame.lines {
                 var path = Path()
                 path.move(to: CGPoint(x: line.x1, y: line.y1))
                 path.addLine(to: CGPoint(x: line.x2, y: line.y2))
-                context.stroke(path, with: .color(color.opacity(ink(line.white, line.alpha))), lineWidth: line.width)
+                context.stroke(path, with: .color(inkColor.opacity(ink(line.white, line.alpha))), lineWidth: line.width)
             }
             for dot in frame.dots {
                 let rect = CGRect(x: dot.x - dot.radius, y: dot.y - dot.radius, width: dot.radius * 2, height: dot.radius * 2)
-                context.fill(Path(ellipseIn: rect), with: .color(color.opacity(ink(dot.white, dot.alpha))))
+                context.fill(Path(ellipseIn: rect), with: .color(inkColor.opacity(ink(dot.white, dot.alpha))))
             }
         }
     }
