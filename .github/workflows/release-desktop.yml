@@ -116,6 +116,10 @@ jobs:
             --download-url-prefix "https://github.com/leepokai/Codync/releases/download/v${VERSION}/" \
             --link https://www.codync.dev/ -o build/appcast.xml build/updates
           python3 packaging/updates/annotate-appcast.py build/appcast.xml "$MIN_APP"
+          python3 -m venv "$RUNNER_TEMP/update-verification"
+          "$RUNNER_TEMP/update-verification/bin/pip" install 'cryptography>=44,<47'
+          "$RUNNER_TEMP/update-verification/bin/python" packaging/updates/verify-appcast.py \
+            build/appcast.xml apps/desktop/dist/mac-universal/Codync.app apps/desktop/dist/codync-macos.zip
 
       - uses: actions/upload-artifact@v4
         if: "!startsWith(github.ref, 'refs/tags/')"
@@ -178,9 +182,12 @@ jobs:
           npm run dist:linux:main -- --${{ matrix.arch }} --publish never
           # The website links releases/latest/download/codync-<os>-<arch>.tar.gz.
           cd dist
-          for f in codync-linux-${{ matrix.arch }}.*; do
-            to="${f/linux-${{ matrix.arch }}/${{ matrix.name }}}"
-            [ "$f" = "$to" ] || mv "$f" "$to"
+          # electron-builder names x64 tar.gz `x64` and deb `amd64`; the update feed follows the renames.
+          for f in codync-linux-x64.* codync-linux-amd64.*; do
+            [ -e "$f" ] || continue
+            to="codync-${{ matrix.name }}.${f#*.}"
+            mv "$f" "$to"
+            sed -i "s|$f|$to|g" latest-linux*.yml
           done
           for f in codync-${{ matrix.name }}.*; do shasum -a 256 "$f" > "$f.sha256"; done
       - uses: actions/upload-artifact@v4
