@@ -9,7 +9,8 @@ Release builds update through electron-updater from GitHub releases
 (`apps/desktop/src/main/updates.ts`). Open **Settings → Updates** in the menu bar
 to check for a release, enable scheduled checks, or opt into automatic downloads
 and installation. The chat window's Settings has the same **Check for updates**
-action on its Updates page. Development builds (`npm run dev`) don't update.
+action on its Updates page. Only packaged `main` builds update: `npm run dev` and builds made
+with `tools/account-config.mjs dev` never replace themselves with a release.
 
 The app checks daily (hourly while a release waits for the iPhone app, below).
 Automatic installation waits until no Codync window is focused, there has been no
@@ -18,8 +19,10 @@ A staged update also installs when quitting. Manual installation can interrupt w
 A release whose `latest-mac.yml` names a `minApp` newer than the App Store's iPhone
 app waits while an iPhone is paired with this host.
 
-Before replacement, Codync unregisters its screen helper and stops the host
-(`codync-host stop`). If that fails, installation pauses with a retry action. A
+Before replacement on macOS, Codync unregisters its screen helper and stops the host
+(`codync-host stop`), which runs from inside the app; on Linux the installed host keeps
+running. If stopping fails, installation pauses with a retry action, and an install that
+fails afterwards starts the host again. A
 persistent restart marker makes the next app launch reinstall the host service from
 the new bundle; remote screen registration is restored when the host reports that
 it is enabled. Ordinary Quit keeps the host running when no update is staged.
