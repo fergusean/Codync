@@ -4,6 +4,7 @@ import { Icon } from '../components/Icon'
 import type { MenuItem } from '../components/Overlay'
 import { font } from '../lib/fonts'
 import { useApp } from '../store/context'
+import { useSSH } from './settings/ssh-model'
 import type { Connection } from '../store/bot-store'
 
 /** An empty exclusion list means all computers, including newly paired ones. */
@@ -42,9 +43,13 @@ function summary(connections: Connection[]) {
 /** The roster's only connection surface: a quiet summary, with details and filters on demand. */
 export function ComputerFilterHeader({ hidden, setHidden, manage, compact = false }: { hidden: string; setHidden: (v: string) => void; manage: () => void; compact?: boolean }) {
   const app = useApp()
+  const ssh = useSSH()
+  const pending = ssh.state.profiles.filter((p) => !ssh.state.attachments.some((a) => a.profileId === p.id))
+  const connecting = pending.filter((p) => { const status = ssh.status(p.id); return status.kind === 'connecting' || status.kind === 'retrying' }).length
   const selection = computerSelection(app.computers.map((c) => c.id), hidden)
   const stores = selection.shown.map((id) => app.store(id)).filter((s) => !!s)
-  const text = summary(stores.map((s) => s.shownConnection))
+  const online = stores.filter((s) => s.shownConnection.kind === 'online').length
+  const text = connecting ? `${online ? `${online} connected · ` : ''}${connecting} connecting…` : summary(stores.map((s) => s.shownConnection))
   const title = (c: Computer) => {
     const store = app.store(c.id)
     return store ? `${store.hostName} · ${store.connectionLabel}` : c.name
@@ -52,6 +57,11 @@ export function ComputerFilterHeader({ hidden, setHidden, manage, compact = fals
   const items = (): MenuItem[] => {
     const list: MenuItem[] = [{ title: 'All computers', selected: selection.shown.length === app.computers.length, action: () => setHidden('') }]
     for (const c of app.computers) list.push({ title: title(c), selected: selection.shown.includes(c.id), action: () => setHidden(selection.toggling(c.id)) })
+    for (const p of pending) {
+      const status = ssh.status(p.id)
+      const detail = status.kind === 'connecting' ? status.step : status.kind === 'retrying' || status.kind === 'failed' ? status.message : status.kind === 'confirmHostKey' ? 'Confirm host key…' : status.kind === 'notInstalled' ? 'Host not installed' : 'Offline'
+      list.push({ title: `${p.name || p.host} · ${detail}`, action: manage })
+    }
     if (app.computers.length > 1) app.computers.forEach((c, i) => list.push({ title: `Only ${c.name}`, divider: i === 0, action: () => setHidden(selection.only(c.id)) }))
     if (stores.length) list.push({ title: 'Reconnect', icon: 'arrow.clockwise', divider: true, action: () => stores.forEach((s) => s.restartStream()) })
     list.push({ title: 'Manage computers', icon: 'desktopcomputer', action: manage })

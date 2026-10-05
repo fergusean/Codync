@@ -28,7 +28,7 @@ import { StarPrompt } from './StarPrompt'
 import { OpenVoiceSettings } from './call/CallView'
 import { AccountPanelLayer, DesktopActionMenu, ProfileAvatar } from './PanelMenus'
 import { useTraySummary } from './tray-summary'
-import { useSSHAttachments } from './settings/ssh-model'
+import { useSSH, useSSHAttachments } from './settings/ssh-model'
 import './chat-window.css'
 import './sidebar-header.css'
 
@@ -41,7 +41,8 @@ export function ChatWindow() {
   const [confirmReset, setConfirmReset] = useState(false)
   useTraySummary(app)
   useSSHAttachments(app)
-  const showsChat = app.host.state.kind === 'running' || app.computers.length > 0
+  const ssh = useSSH()
+  const showsChat = app.host.state.kind === 'running' || app.computers.length > 0 || ssh.state.profiles.length > 0
 
   useEffect(
     () =>
@@ -149,6 +150,8 @@ interface EditTarget {
 
 function ChatSplitView() {
   const app = useApp()
+  const ssh = useSSH()
+  const connecting = ssh.state.profiles.some((p) => { const status = ssh.status(p.id); return status.kind === 'connecting' || status.kind === 'retrying' }) || [...app.stores.values()].some((s) => s.shownConnection.kind === 'connecting')
   const [compact, setCompact] = usePref(prefs.sidebarCompact)
   const [sidebarWidth, setSidebarWidth] = usePref(prefs.sidebarWidth)
   const [hidden, setHidden] = usePref(prefs.hiddenComputers)
@@ -318,8 +321,8 @@ function ChatSplitView() {
           <CharacterAvatar shape="squircle" color="orange" size={60} style={{ marginLeft: -10 }} />
           <CharacterAvatar shape="teardrop" color="violet" size={60} mood="working" style={{ marginLeft: -10 }} />
         </div>
-        <div style={font('title2', 'semibold')}>Your coding agents, as teammates.</div>
-        <div style={{ color: 'var(--secondary)', textAlign: 'center', maxWidth: 420 }}>Pick a bot, or create one for each kind of work and point it at a project.</div>
+        <div style={font('title2', 'semibold')}>{connecting ? 'Connecting to your computers…' : 'Your coding agents, as teammates.'}</div>
+        <div style={{ color: 'var(--secondary)', textAlign: 'center', maxWidth: 420 }}>{connecting ? 'Your bots will appear once connected. Manage computers to see connection progress.' : 'Pick a bot, or create one for each kind of work and point it at a project.'}</div>
         <Button onClick={() => compose()} disabled={!onlineStores.length}>
           New Bot
         </Button>
