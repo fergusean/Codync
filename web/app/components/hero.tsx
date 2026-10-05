@@ -27,7 +27,7 @@ export default function Hero() {
         href={PRODUCT_HUNT}
         target="_blank"
         rel="noopener noreferrer"
-        className="relative mx-auto mb-10 flex w-fit transition hover:opacity-80 md:mb-14"
+        className="relative mx-auto mb-10 flex w-fit items-center gap-3 transition hover:opacity-80 md:mb-14"
       >
         {/* eslint-disable-next-line @next/next/no-img-element -- live badge served by Product Hunt */}
         <img
@@ -37,6 +37,7 @@ export default function Hero() {
           height={54}
           className="h-10 w-auto"
         />
+        <span className="text-sm font-medium text-neutral-300">#16 Product of the Day</span>
       </motion.a>
       <div className="relative mx-auto grid max-w-6xl grid-cols-1 items-center gap-14 md:grid-cols-[1.1fr_1fr] md:gap-8">
         <div>
@@ -70,7 +71,8 @@ export default function Hero() {
           </motion.div>
         </div>
 
-        <div className="relative mx-auto w-full max-w-[26rem] md:max-w-none">
+        {/* The second phone hangs below this column, so reserve room for it. */}
+        <div className="relative mx-auto mb-16 w-full max-w-[26rem] md:mb-20 md:max-w-none">
           <motion.div
             {...(reduce
               ? {}
