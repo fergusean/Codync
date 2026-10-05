@@ -73,13 +73,9 @@ jobs:
           swift build -c release --arch arm64 --arch x86_64 --package-path apps/desktop/native/speech-macos
           cp "$(swift build -c release --arch arm64 --arch x86_64 --package-path apps/desktop/native/speech-macos --show-bin-path)/codync-speech" \
             apps/desktop/build/native/codync-speech
-          # Codync Screen (Remote screen capture and input), built unsigned; electron-builder signs it.
+          # Codync Screen is built by `npm run dist:mac:main` (tools/native-screen.mjs).
           xcodebuild -downloadComponent MetalToolchain || true
           xcodegen generate --spec apps/project.yml
-          xcodebuild build -project apps/Codync.xcodeproj -scheme Screen -configuration Release \
-            -destination 'generic/platform=macOS' -derivedDataPath build/derived -quiet \
-            CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
-          cp -R "$(find build/derived -name CodyncScreen.app -path '*/Release/*' | head -1)" apps/desktop/build/native/
           swift packaging/dmg/background.swift apps/desktop/build/dmg-background.tiff
 
       - name: Build, sign and notarize

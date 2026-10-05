@@ -70,10 +70,10 @@ npm run dist:linux:dev    # / dist:linux:main
 
 They write `resources/account-config.json` for that environment, and the Mac ones build the
 bundled host (`tools/native-host.mjs`, universal, through rustup's pinned toolchain) for the same
-one, so app and host always match. Extra electron-builder flags go after `--`
-(`npm run dist:mac:dev -- --dir --arm64`). The other native pieces at
-the top of `electron-builder.yml` (speech and screen helpers) don't depend on the environment;
-place them first (the release workflow, `.github/workflows/release-desktop.yml`, shows how).
+one, so app and host always match, plus the Codync Screen helper (`tools/native-screen.mjs`).
+Extra electron-builder flags go after `--` (`npm run dist:mac:dev -- --dir --arm64`). The speech
+helper at the top of `electron-builder.yml` doesn't depend on the environment; place it first
+(the release workflow, `.github/workflows/release-desktop.yml`, shows how).
 Only one environment's host runs on a computer at a time (one `~/.codync`, port and service):
 switching environments means installing the other build.
 
