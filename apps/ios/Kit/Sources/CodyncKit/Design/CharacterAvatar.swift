@@ -68,6 +68,8 @@ struct DottedBody: View {
     let mood: CharacterAvatar.Mood
     let paused: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var visible = false
 
     /// Where the light sits and where the eyes look.
     struct Pose: Equatable {
@@ -116,8 +118,8 @@ struct DottedBody: View {
             }
             .frame(width: size, height: size)
         } else {
-            let still = mood == .idle || reduceMotion
-            TimelineView(.animation(paused: still)) { timeline in
+            let still = mood == .idle || reduceMotion || !visible || scenePhase != .active
+            TimelineView(.animation(minimumInterval: 1.0 / 30, paused: still)) { timeline in
                 let t = still ? 0 : timeline.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 3600)
                 // Glance: whole-cell steps left / center / right, like a small display.
                 let pose = Pose(yaw: mood == .working ? t * 1.4 : -0.7,
@@ -125,14 +127,18 @@ struct DottedBody: View {
                                 blinking: !still && (t / 4.7).truncatingRemainder(dividingBy: 1) < 0.035,
                                 ripple: mood == .needsInput ? t * 5 : nil)
                 Canvas { ctx, _ in
+                    let inkColor = Color(Palette.text.resolve(in: ctx.environment))
+                    let tintColor = Color(color.resolve(in: ctx.environment))
                     for d in Self.inks(dots, grid: grid, step: step, size: size, pose: pose) where !d.eye {
                         let p = d.dot.center, r = d.radius
                         let dot = Path(ellipseIn: CGRect(x: p.x - r, y: p.y - r, width: r * 2, height: r * 2))
-                        ctx.fill(dot, with: .color(Palette.text.opacity(d.ink)))
-                        if d.tint > 0 { ctx.fill(dot, with: .color(color.opacity(d.tint))) }
+                        ctx.fill(dot, with: .color(inkColor.opacity(d.ink)))
+                        if d.tint > 0 { ctx.fill(dot, with: .color(tintColor.opacity(d.tint))) }
                     }
                 }
             }
+            .onAppear { visible = true }
+            .onDisappear { visible = false }
         }
     }
 
