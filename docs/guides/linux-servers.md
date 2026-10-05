@@ -35,7 +35,7 @@ Other commands work the same as on a desktop: `codync-host pair`, `codync-host t
 The phone connects over the encrypted device channel. The pairing link lists only **Tailscale** and **private (LAN/VPC)** addresses; the host never advertises a public IP.
 
 - **Tailscale (recommended for VMs):** install Tailscale on the VM and on the phone, then `codync-host pair`. The Tailscale name comes first in the link. You don't need to open port 19222 in the cloud firewall.
-- **Cloudflare cloud:** `codync-host cloud --url https://…` if you run your own Codync cloud. The production cloud isn't live yet (see [environments](environments-and-deployment.md)).
+- **Cloudflare cloud:** start the host with `CODYNC_CLOUD_URL=https://…` if you run your own Codync cloud. The production cloud isn't live yet (see [environments](environments-and-deployment.md)).
 - **Desktop app over SSH:** the desktop app (macOS or Linux) can attach an SSH computer and tunnel to its loopback API ([Accounts and SSH](accounts-and-ssh.md)). From any terminal: `ssh -L 19222:127.0.0.1:19222 vm`, then `codync-host tui` locally.
 
 The host listens on `0.0.0.0:19222`. The local API (`/api/*`, `/events`, terminals; bearer token) answers **loopback callers only**, so a public address never exposes it. From outside, only `/health` (host id, computer id, version) and the end-to-end encrypted device channel answer, and the channel only serves devices holding this host's pairing keys. Keep 19222 closed in the cloud firewall anyway unless you deliberately pair over a VPN or private network.

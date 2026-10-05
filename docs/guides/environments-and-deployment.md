@@ -8,11 +8,11 @@ Reviewed against repository configuration on 2026-09-26. Checked-in configuratio
 | --- | --- | --- |
 | Apple app | `apps/shared/Config/dev.plist`, `main.plist` | `project.yml` copies the selected file to bundled `AccountConfig.plist`; Debug uses dev, Release uses main |
 | Account SDK | `apps/shared/AccountSession.swift` | Public Clerk configuration; development environment overrides are supported |
-| Host | `host/src/remote/cloud.rs` | `CODYNC_CLOUD=off` or stored disable wins; then `CODYNC_CLOUD_URL`, stored URL, compiled default |
+| Host | `host/src/remote/cloud.rs` | `CODYNC_CLOUD=off` or stored disable wins; then `CODYNC_CLOUD_URL`, then the build's cloud (`CODYNC_ENV` at compile time) |
 | Cloud Worker / D1 / DO | `cloud/wrangler.toml` | Root production, `dev`, or `local` environment |
 | APNs Worker | `relay/wrangler.toml` | Separate deployment and secrets; see [relay README](../../relay/README.md) |
 
-The host's compiled default is dev (`https://dev-api.codync.dev`) for every local build, debug or release; only the release workflows build with `CODYNC_ENV=main` and get `https://api.codync.dev`. Local builds of every client are dev (iOS Debug, desktop `account-config.mjs dev`, any `cargo build`), and main is built only by CI, so they never mix. Override it with the Mac's **Reach from anywhere** control or `codync-host cloud --url <url>`. `codync-host cloud` displays status; `--disable` turns access off. App and host must point at the same intended cloud.
+The environment is chosen when building, never stored: the host compiles in its cloud from `CODYNC_ENV` (`main` → `https://api.codync.dev`, unset or anything else → `https://dev-api.codync.dev`, debug or release alike), and the only cloud setting a host saves is on/off (**Reach from anywhere**, `codync-host cloud --enable|--disable`). `CODYNC_CLOUD_URL` points a host at a cloud you're developing (https, or http to this computer). Build the host with the same environment as the app next to it; the release workflows set `CODYNC_ENV=main`.
 
 ## Checked-in readiness
 

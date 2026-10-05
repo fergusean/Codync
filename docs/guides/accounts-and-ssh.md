@@ -189,7 +189,7 @@ directly (the encrypted channel wasn't ported to the desktop app), so their
 "Ask for access" rows show status only. See [desktop app](../architecture/desktop-app.md).
 
 **Computers & devices** (Settings) shows, for this computer and each SSH computer:
-*Reach from anywhere* (`setCloud`, using the app's `cloudURL` when the host has none),
+*Reach from anywhere* (`setCloud`, on/off; the host's build decides which cloud),
 *Add to account* (claim: `POST /v1/claims` → loopback `claimSign` → complete) and
 *Remove from account* (`unclaim`), a pairing QR, and the authorized devices with revoke.
 A device asking for access raises the menu bar dot and opens the approval sheet with the
