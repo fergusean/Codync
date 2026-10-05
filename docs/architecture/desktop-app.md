@@ -65,6 +65,15 @@ Packaging: `npm run dist:mac` / `npm run dist:linux` after placing the native pi
 the top of `electron-builder.yml` (the release workflow, `.github/workflows/release-desktop.yml`,
 does this).
 
+For a local signed Mac build, explicitly select a development identity from the project's
+team with `-c.mac.identity="Apple Development: …"`; use `--dir --arm64` and
+`-c.mac.notarize=false` only for local development. Automatic identity discovery can select
+an old certificate from another team. `security find-identity` alone does not establish that
+a certificate is still trusted: verify its exported public certificate with
+`security verify-cert -c certificate.pem -p codeSign -R ocsp -R require` before signing.
+If Gatekeeper reports `CSSMERR_TP_CERT_REVOKED`, fix the signing identity rather than
+disabling security checks. Distributed builds still require Developer ID signing and notarization.
+
 ## Parity with the SwiftUI app
 
 The port follows the Swift sources view by view (metrics, fonts, colors, motion), including the
