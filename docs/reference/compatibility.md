@@ -91,7 +91,8 @@ installing such a release:
   and `Updates.available` (`apps/desktop/src/main/updates.ts`) holds the release while the
   local host's `minApp` is lower, an iPhone is paired and the App Store is behind, before
   anything downloads. A check the person starts shows why. While waiting it checks hourly. The Sparkle appcast kept for the
-  SwiftUI Mac app's installs carries `<codync:minApp>` (`packaging/updates/annotate-appcast.py`).
+  SwiftUI Mac app's installs carries `<codync:minApp>` (`packaging/updates/annotate-appcast.py`);
+  it is deprecated and removed after 2026-11-06 ([updates guide](../guides/updates.md#deprecated-the-sparkle-migration-appcast-remove-after-2026-11-06)).
 - Hosts released before 2.5.0 don't have this gate and install any release. Before the first
   real `minApp` raise, most computers should be on 2.5.0 or newer.
 

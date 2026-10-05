@@ -33,6 +33,21 @@ counter is independent. Installs of the SwiftUI Mac app that preceded the deskto
 app still read the Sparkle appcast; the release workflow generates one for the
 desktop zip, so those installs move to the desktop app.
 
+### Deprecated: the Sparkle migration appcast (remove after 2026-11-06)
+
+The appcast exists only so installs of the SwiftUI Mac app (2.6.x and earlier) can
+move to the desktop app; 2.7.1 is the first release they accept. Support ends
+2026-11-06, one month after 2.7.1. Releases after that date drop it, and those installs
+need a manual download of the desktop app. Remove together:
+
+- the Sparkle part of **Update feeds** in `.github/workflows/release-desktop.yml`
+  (`generate_appcast`, `annotate-appcast.py`, `verify-appcast.py`) and `appcast.xml`
+  in **Publish**
+- `SUPublicEDKey` in `apps/desktop/electron-builder.yml`
+- `packaging/updates/annotate-appcast.py`, `verify-appcast.py`, `macos-public-key.txt`
+- the `SPARKLE_PRIVATE_KEY` secret (row below) and the appcast mentions in
+  `docs/architecture/desktop-app.md` and `docs/reference/compatibility.md`
+
 ## Standalone hosts on Linux and macOS
 
 ```sh
@@ -86,7 +101,7 @@ already distributed clients. Repository Actions secrets:
 
 | Secret | Contents |
 | --- | --- |
-| `SPARKLE_PRIVATE_KEY` | Sparkle's base64 Ed25519 private key export (the migration appcast) |
+| `SPARKLE_PRIVATE_KEY` | Sparkle's base64 Ed25519 private key export (the migration appcast; deprecated, see above) |
 | `HOST_UPDATE_SIGNING_KEY` | Separate base64 32-byte Ed25519 seed for host manifests |
 
 The desktop workflow signs and notarizes the Mac app, builds its DMG and zip, adds
