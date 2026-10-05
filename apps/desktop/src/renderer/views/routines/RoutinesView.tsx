@@ -129,7 +129,7 @@ export function RoutinesView({ botId, initialId, onClose }: { botId: string; ini
           {routines.map((routine) => (
             <HStack key={routine.id} gap={12} className="outlined-card routines-card">
               <button className="routine-row" onClick={() => open(routine.id)}>
-                <Text tone="text">{routine.name}</Text>
+                <Text size="compactBody" tone="text">{routine.name}</Text>
                 <Text size="caption" tone={routine.lastError ? 'danger' : 'secondary'}>{summary(routine)}</Text>
               </button>
               <HStack as="span" align="stretch" aria-label={routine.name}>
