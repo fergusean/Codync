@@ -15,7 +15,9 @@ The bot is the same agent on the computer; the call only changes how you talk to
 - Desktop: the capsule sits 16 CSS pixels below the window top and explicitly excludes itself
   from Electron's window-drag region so the gear, mute and end buttons receive mouse clicks.
   The iPhone places its capsule below native navigation; the terminal has no call controls.
-- Speech → text with `SFSpeechRecognizer` (on-device when the language supports it). A pause ends an
+- Speech → text with `SFSpeechRecognizer` (on-device when the language supports it) in the language
+  picked under Voice chat → Language (`callLanguage`; empty follows the system's first language,
+  which is often English on bilingual setups). A pause ends an
   utterance and sends it as an ordinary message (`BotStore.send`), so it takes the normal path:
   queued while the bot works, folded into its next turn. What you said appears in the chat as your
   message; the bot's reply appears as its message.
