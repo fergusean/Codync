@@ -3,29 +3,35 @@
 A client and a host on versions that can't work together say which one to update:
 [Client and host compatibility](../reference/compatibility.md).
 
-## macOS
+## Desktop app
 
-Release builds use Sparkle 2.10.0. Open **Settings → Updates** in the menu bar
+Release builds update through electron-updater from GitHub releases
+(`apps/desktop/src/main/updates.ts`). Open **Settings → Updates** in the menu bar
 to check for a release, enable scheduled checks, or opt into automatic downloads
-and installation. The chat window's account menu has the same **Check for
-updates** action. Debug builds disable the production updater.
+and installation. The chat window's Settings has the same **Check for updates**
+action on its Updates page. Only packaged `main` builds update: `npm run dev` and builds made
+with `tools/account-config.mjs dev` never replace themselves with a release.
 
-The app checks daily. Automatic installation waits until the app is inactive,
-there has been no keyboard/mouse input for ten minutes, and the local host reports
-no working bots, pending input, or running setup terminals. A staged update can
-also install when quitting. Manual installation can interrupt work.
+The app checks daily (hourly while a release waits for the iPhone app, below).
+Automatic installation waits until no Codync window is focused, there has been no
+keyboard/mouse input for ten minutes, and the local host reports that it is idle.
+A staged update also installs when quitting. Manual installation can interrupt work.
+A release whose `latest-mac.yml` names a `minApp` newer than the App Store's iPhone
+app waits while an iPhone is paired with this host.
 
-Before replacement, Codync unregisters its screen helper and stops the host,
-waiting for its data lock to be released. If cleanup fails, installation pauses
-with a retry action. A persistent restart marker makes the next app launch
-reinstall the host service from the new bundle; remote screen registration is
-restored when the host reports that it is enabled. Ordinary Quit keeps the host
-running when no update is staged.
+Before replacement on macOS, Codync unregisters its screen helper and stops the host
+(`codync-host stop`), which runs from inside the app; on Linux the installed host keeps
+running. If stopping fails, installation pauses with a retry action, and an install that
+fails afterwards starts the host again. A
+persistent restart marker makes the next app launch reinstall the host service from
+the new bundle; remote screen registration is restored when the host reports that
+it is enabled. Ordinary Quit keeps the host running when no update is staged.
 
-Sparkle verifies Ed25519 signatures before extraction. Its standard installer
-handles app replacement and relaunch. Appcast URLs identify an immutable release
-archive; the feed itself is served from the latest GitHub release. macOS build
-versions follow the marketing version; the iOS build counter is independent.
+The release workflow publishes `latest-mac.yml` and `latest-linux*.yml` with the
+app archives. macOS build versions follow the marketing version; the iOS build
+counter is independent. Installs of the SwiftUI Mac app that preceded the desktop
+app still read the Sparkle appcast; the release workflow generates one for the
+desktop zip, so those installs move to the desktop app.
 
 ## Standalone hosts on Linux and macOS
 
@@ -42,8 +48,7 @@ update to interrupt bots. Stop a manually launched host before replacing it.
 Automatic updates require an installed background service and are off by default.
 They check daily while idle; failures are reported in update status.
 
-The Linux app exposes these controls under **Computers & devices → Host updates**
-(also reached from the account menu's **Check for updates**); the TUI's action
+The TUI's action
 list (`^k`) has **Check for updates**, which reports the result in the status line.
 The API operations (`hostUpdateStatus`, `checkHostUpdate`, `installHostUpdate`,
 `setHostAutomaticUpdates`) require a local connection, including an SSH tunnel.
@@ -61,16 +66,17 @@ computer identity within 30 seconds. Startup failure restores and restarts the
 previous binary. Data is preserved; this is binary rollback, not database rollback
 or recovery from power loss during installation.
 
-Bundled hosts are updated with the Mac app. Homebrew hosts use
+The host bundled in the Mac desktop app is updated with the app. Homebrew hosts use
 `brew upgrade leepokai/codync/codync-host`, followed by `codync-host install`.
 Development builds must be rebuilt. The independent updater refuses to overwrite
-those installations. The Linux desktop executable remains package-managed or
-manually installed; its update controls update the host.
+those installations. The Linux desktop app uses the installed host, which updates
+with the commands above, independently of the app.
 
 ## Release configuration
 
-Both workflows run for a `vMAJOR.MINOR.PATCH` tag. Keep the host Cargo version and
-the app marketing version aligned before tagging. The host workflow refuses a
+Both workflows (`host.yml`, `release-desktop.yml`) run for a `vMAJOR.MINOR.PATCH` tag. Keep the host Cargo version,
+`apps/desktop/package.json` and the marketing version aligned before tagging; the
+desktop workflow fails when the app and host versions differ. The host workflow refuses a
 tag/version mismatch. Existing clients without this updater need one manual
 upgrade to adopt it.
 
@@ -80,11 +86,12 @@ already distributed clients. Repository Actions secrets:
 
 | Secret | Contents |
 | --- | --- |
-| `SPARKLE_PRIVATE_KEY` | Sparkle's base64 Ed25519 private key export |
+| `SPARKLE_PRIVATE_KEY` | Sparkle's base64 Ed25519 private key export (the migration appcast) |
 | `HOST_UPDATE_SIGNING_KEY` | Separate base64 32-byte Ed25519 seed for host manifests |
 
-The Mac workflow signs/notarizes the app, builds its DMG, generates `appcast.xml`,
-then verifies the actual DMG signature and metadata before upload. The host
+The desktop workflow signs and notarizes the Mac app, builds its DMG and zip, adds
+`minApp` to `latest-mac.yml` and generates `appcast.xml` for the zip; it builds the
+Linux AppImage, deb and tar.gz on x86_64 and arm64. The host
 workflow emits `codync-host-<platform>.update.json` and `.update.json.sig` alongside
 each archive. Signing fails if a private key does not match the committed public
 key. Never commit private keys or put them in command-line arguments.
@@ -95,9 +102,9 @@ used. Building locally or configuring secrets does not publish a release.
 
 ## References
 
+- [electron-updater](https://www.electron.build/auto-update)
 - [Sparkle publishing documentation](https://sparkle-project.org/documentation/publishing/)
-- [Sparkle gentle reminders](https://sparkle-project.org/documentation/gentle-reminders/)
 - [Grok Bot's safe relaunch gate](https://github.com/b-nnett/grok-bot-0.18-reconstructed/blob/main/source/electron-main/update/safe-relaunch-gate.ts)
 
 Grok Bot supplied the reference for opt-in, staged updates and idle-gated restart.
-Codync uses app inactivity and input idle time; it does not require a locked screen.
+Codync uses window focus and input idle time; it does not require a locked screen.

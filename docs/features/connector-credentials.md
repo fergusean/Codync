@@ -1,6 +1,6 @@
 # Connector setup and credentials
 
-Codync uses one host-owned connection workflow on iOS, macOS and Linux. A
+Codync uses one host-owned connection workflow on iOS and the desktop app (macOS, Linux). A
 Marketplace installation and a bot's connection request use the same installation,
 OAuth and verification endpoints. The clients never implement a separate password
 store. A phone submits credentials through its authenticated encrypted channel to

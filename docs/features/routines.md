@@ -1,7 +1,7 @@
 # Routines
 
 Routines belong to an agent bot and are usually created by talking to it ("I want
-a routine that…"). Every agent receives the built-in `routines` MCP server. The Mac
+a routine that…"). Every agent receives the built-in `routines` MCP server. The desktop
 conversation details panel and the iPhone's **More → Routines** show a compact list
 (name, schedule, on/off switch). The header's chat button puts "I want a routine
 that " in the composer; **+** opens the form for doing it by hand. A row opens
@@ -11,10 +11,9 @@ Claude Code routines also offer besides GitHub events) and a run timeout; cron i
 written directly as five fields plus an IANA time zone, and the host checks it and
 shows the summary and next run. One-off times, intervals, events and multiple
 triggers are left to the bot: editing such a routine shows its current triggers as
-the selected type and keeps them until Schedule or Webhook replaces them. Linux (boxed list with switches,
-same form) and the TUI (`n` form with a typed When, `c` asks the bot) match.
+the selected type and keeps them until Schedule or Webhook replaces them. The TUI (`n` form with a typed When, `c` asks the bot) match.
 A saved webhook routine's form shows its public URL and key (copy, reveal, replace
-with confirmation; Linux the same, TUI `w` copies a curl command and `W` replaces the
+with confirmation; TUI `w` copies a curl command and `W` replaces the
 key). Creation/update notices open the routine.
 
 ## Apple setup interface
@@ -153,7 +152,7 @@ All normal methods use the existing authenticated host API / authorized E2E chan
 | `routineWebhook` | `botId`, `id`, optional `rotate`; returns `url` (public or null), `localUrl`, `key`, `connected` |
 
 The local-only `routineCall` backs the MCP tools. Each MCP instance is scoped to
-its bot. Phone and Mac panels refresh while visible; definitions do not currently
+its bot. Phone and desktop panels refresh while visible; definitions do not currently
 participate in offline client caches. Run transcript entries use normal rev/SSE.
 
 ## Reference and parity

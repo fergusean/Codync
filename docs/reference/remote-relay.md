@@ -14,8 +14,8 @@ Shared deterministic [vectors](fixtures/remote-relay-vectors.json) and their [ge
 | D4 | **Host 是授權的唯一權威**。host 在本機 SQLite 保存「已授權裝置」表；**只有兩條路能新增列**：本機 QR 配對（§4.1）與 host 自己的核准動作（`decideAccessRequest` approve，§4.2 B）。雲端 state **只能縮短**授權（刪除列、延長既有列的 lease），永遠不能新增。host 把此表簽成 **ACL** 發佈到自己的 DO，DO 據此放行 WebSocket；E2E 握手時 host 再驗一次。 | 無帳號模式也能用中繼（host 以機器金鑰向雲端註冊，不需帳號）；雲端被攻破也無法新增可解密的裝置（新增要 host 本機的使用者動作、ACL 要 host 簽、握手要 host 私鑰）；撤權有兩道即時關卡（DO 封鎖 + host 關 channel）。 |
 | D5 | **Computer ID 由 host 簽章公鑰推導**：`computerId = b64url(SHA-256(hostSignPub)[0..16])`。不由雲端分配。 | 自我驗證、離線可得、無法被搶註；DO 名稱可直接推導。代價：換 host 金鑰 = 新 computer（見 §3.5）。 |
 | D6 | 帳號 → Computers → Bots：`AccountStore`（`[ComputerID: BotStore]`），`BotReference = accountId + computerId + botId`。 | 依帳號與電腦隔離狀態。 |
-| D7 | 共用 bearer token（`~/.codync/token`）**只接受 loopback 連線**（Mac App 本機、SSH tunnel、statusline、MCP、TUI、Linux App）。手機與其他遠端 client 一律走 E2E channel。 | 移除「一個 token 開所有手機」的舊模型；不留相容路徑。 |
-| D8 | SSH：macOS App 以系統 OpenSSH `-L` 轉發到遠端 host 的 loopback API；遠端側看到的是 loopback 呼叫者，所以 SSH 帳號等同本機使用者權限（能讀 `~/.codync/token` 的人本來就有這權限）。 | 產品決策 6；重用 loopback API，不需要額外授權層。 |
+| D7 | 共用 bearer token（`~/.codync/token`）**只接受 loopback 連線**（桌面 App 本機、SSH tunnel、statusline、MCP、TUI）。手機與其他遠端 client 一律走 E2E channel。 | 移除「一個 token 開所有手機」的舊模型；不留相容路徑。 |
+| D8 | SSH：桌面 App（`apps/desktop/src/main/ssh.ts`）以系統 OpenSSH `-L` 轉發到遠端 host 的 loopback API；遠端側看到的是 loopback 呼叫者，所以 SSH 帳號等同本機使用者權限（能讀 `~/.codync/token` 的人本來就有這權限）。 | 產品決策 6；重用 loopback API，不需要額外授權層。 |
 | D10 | **推播內容也加密**：host 以裝置註冊的 X25519 push key 封裝通知標題／內文（§6.7），APNs 只帶通用文字 + `mutable-content`，iOS Notification Service Extension 解開。Live Activity 只推狀態 enum，不推自由文字。 | 決策 2：Cloudflare（`relay/`）只看得到密文。 |
 
 **審查後的取捨（rev 2）**：
@@ -24,7 +24,7 @@ Shared deterministic [vectors](fixtures/remote-relay-vectors.json) and their [ge
 - SSH 目標設了 `ProxyJump`／`ProxyCommand` 時不做 keyscan、也不做 `SSH_ASKPASS` 首次確認：要求使用者先在終端機連過一次（host key 已在 `~/.ssh/known_hosts`）。少見情境，換來不必實作 askpass helper。
 - 推播選擇「加密 + NSE」而非「只送通用文字」：保留 Grok Bot 式的通知預覽。
 
-明確不做（這一版）：雲端保存聊天、Mac 當手機的 SSH gateway、手機原生 SSH、host 金鑰輪替後沿用舊授權、團隊共享。
+明確不做（這一版）：雲端保存聊天、桌面 App 當手機的 SSH gateway、手機原生 SSH、host 金鑰輪替後沿用舊授權、團隊共享。
 
 ---
 
@@ -59,9 +59,10 @@ Shared deterministic [vectors](fixtures/remote-relay-vectors.json) and their [ge
 | Cloud schema | `cloud/migrations/` |
 | Host identity / crypto / channel | `host/src/remote/identity.rs`, `crypto.rs`, `channel.rs` |
 | Host cloud / relay | `host/src/remote/cloud.rs`, `relay.rs` |
-| Swift transports / identity | `kit/Sources/CodyncKit/Client/` |
-| Account and per-computer state | `kit/Sources/CodyncUI/` |
-| Apple account integration | `apps/shared/AccountSession.swift` |
+| Swift transports / identity | `apps/ios/Kit/Sources/CodyncKit/Client/` |
+| Account and per-computer state | `apps/ios/Kit/Sources/CodyncUI/` |
+| iOS account integration | `apps/shared/AccountSession.swift` |
+| Desktop account, device key, cloud API | `apps/desktop/src/main/account.ts`, `cloud.ts` |
 
 See [architecture](../architecture/overview.md) and [file structure](../architecture/file-structure.md). Application/host compatibility follows their major version; channel `v`, QR version and Worker package version are separate values.
 
@@ -77,14 +78,14 @@ See [architecture](../architecture/overview.md) and [file structure](../architec
 - 寫入：先寫 `identity.json.tmp`（0600）再 rename。讀取失敗（格式錯）→ 啟動失敗並說明，不自動覆蓋。
 - `computerId` 由 `sign` 公鑰推導（§1）。
 
-### 3.2 Device（iPhone、Mac 作為 client）
+### 3.2 Device（iPhone、桌面 App 作為 client）
 
 - 只有一把 Ed25519 金鑰（`Curve25519.Signing.PrivateKey`）。
 - 每個 `SharedStore.Context.id`（帳號 namespace，`local` 或 hash(userID)）一把，避免跨帳號關聯。
 - 另有一把 X25519 **push key**（`Curve25519.KeyAgreement.PrivateKey`），同樣每 context 一把，只用於解開推播（§6.7）。
 - Keychain：`kSecClassGenericPassword`，`kSecAttrService = "com.pokai.Codync.device-key"`（push key 用 `"com.pokai.Codync.push-key"`），`kSecAttrAccount = context.id`，值 = 32-byte `rawRepresentation`，`kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`，`kSecAttrSynchronizable = false`。
-- macOS：**不設** `kSecUseDataProtectionKeychain`（Mac App 是 Developer ID、未 sandbox、沒有 entitlements 檔；data protection keychain 需要 provisioning profile 背書的 entitlement，否則 `-34018`）。使用 login keychain，不設 access group。
-- iOS App、Widgets、NotificationService 共用 access group `$(AppIdentifierPrefix)com.pokai.Codync`（APPLE-APPS 在 `project.yml` 對這三個 target 加 `keychain-access-groups` entitlement；kit 從 Info.plist `CodyncKeychainGroup` 讀 group，缺值則不設 group）。
+- 桌面 App（`apps/desktop/src/main/cloud.ts`）：每個帳號一把 Ed25519 device key，seed 以 Electron `safeStorage`（OS keychain）加密後存在 app 的 userData 目錄；只用於雲端 `/v1` API 的 `Codync-Sig`。
+- iOS App、Widgets、NotificationService 共用 access group `$(AppIdentifierPrefix)com.pokai.Codync`（`project.yml` 對這三個 target 加 `keychain-access-groups` entitlement；`CodyncKit` 從 Info.plist `CodyncKeychainGroup` 讀 group，缺值則不設 group）。
 - 私鑰永不離開 Keychain／process；雲端只存公鑰。
 - 帳號登出／移除帳號：刪除該 context 的 device key、computers 快取、mailbox 草稿、widget snapshot。
 
@@ -103,7 +104,7 @@ See [architecture](../architecture/overview.md) and [file structure](../architec
 
 | 動作 | 效果 |
 |---|---|
-| 在電腦上撤銷裝置（Mac UI／`codync-host devices revoke`） | host 刪除裝置列與其 push tickets、Live Activity tickets → 立即關閉該裝置所有 channel → 發佈新 ACL → DO 關閉其 WebSocket；帳號來源的另呼叫 `DELETE` 對應 grant（見 §8.4 `POST /v1/host/grants/{id}/revoke`） |
+| 在電腦上撤銷裝置（桌面 App／`codync-host devices revoke`） | host 刪除裝置列與其 push tickets、Live Activity tickets → 立即關閉該裝置所有 channel → 發佈新 ACL → DO 關閉其 WebSocket；帳號來源的另呼叫 `DELETE` 對應 grant（見 §8.4 `POST /v1/host/grants/{id}/revoke`） |
 | 雲端撤銷 grant／裝置／解除綁定／刪帳號 | Worker 寫 D1 → 呼叫 DO `/internal/block`（`[{dk, grantId}]`，立即關閉並封鎖）→ DO 通知 host `cloud.changed` → host 拉 `/v1/host/state` 並刪除裝置列 |
 | host 連不到雲端 | 帳號來源裝置的 lease 最長 15 分鐘後失效，host 關閉 channel；本機（QR）來源裝置不受影響 |
 
@@ -139,7 +140,7 @@ codync://pair?v=3&name=<pct>&id=<computerId>&sk=<signPub>&bk=<boxPub>&code=<pair
 `urls` 與 `cloud` 至少要有一個。`offerId = b64url(SHA-256("codync/offer/v1" ‖ codeBytes)[0..16])`。
 
 流程：
-1. 使用者在電腦上開 QR（Mac 選單 → loopback `pairing`；或 `codync-host pair`）。host 產生 code，記在記憶體，並立即發佈含 `offers` 的新 ACL。
+1. 使用者在電腦上開 QR（桌面 App 選單列 → loopback `pairing`；或 `codync-host pair`）。host 產生 code，記在記憶體，並立即發佈含 `offers` 的新 ACL。
 2. 手機載入／建立 device key，用 §7.5 的連線策略連線，hello 帶 `"pair": true`（中繼另需 URL `pair=<offerId>`）。
 3. 握手成功（手機已用 QR 的 `sk` 驗證 host）後，第一個 request 必須是：
    ```json
@@ -157,11 +158,11 @@ codync://pair?v=3&name=<pct>&id=<computerId>&sk=<signPub>&bk=<boxPub>&code=<pair
 
 ### 4.2 帳號流程
 
-**A. 電腦加入帳號（claim）**—在該電腦上的 Mac App（或經 SSH tunnel 的 Mac App）操作：
-1. Mac App（Clerk 已登入）`POST /v1/claims` → `{claimId, nonce, expiresAt}`（5 分鐘）。
-2. Mac App 呼叫 loopback `claimSign {claimId, nonce, userId}` → host 回傳註冊資料與簽章：
+**A. 電腦加入帳號（claim）**—在該電腦上的桌面 App（或經 SSH tunnel 的桌面 App）操作：
+1. 桌面 App（Clerk 已登入）`POST /v1/claims` → `{claimId, nonce, expiresAt}`（5 分鐘）。
+2. 桌面 App 呼叫 loopback `claimSign {claimId, nonce, userId}` → host 回傳註冊資料與簽章：
    `sig = Ed25519_host("codync/claim/v1\n" + claimId + "\n" + nonce + "\n" + userId + "\n" + computerId + "\n" + boxKey)`（UTF-8，**無結尾換行**；向量 `claim`）。Worker 以此 `boxKey` 建立或更新 `computers.box_pub`，不接受 client 另給的值。
-3. Mac App `POST /v1/claims/{claimId}/complete`（Clerk）帶上 host 回傳的內容。Worker 驗 Clerk、claim、簽章，原子化設定 owner。
+3. 桌面 App `POST /v1/claims/{claimId}/complete`（Clerk）帶上 host 回傳的內容。Worker 驗 Clerk、claim、簽章，原子化設定 owner。
 4. Worker 通知 DO `cloud.changed` → host 拉 state 得知 owner。
 
 **B. 手機取得存取權**（commit-then-reveal SAS，ZRTP／BLE numeric comparison 同型）：
@@ -170,7 +171,7 @@ codync://pair?v=3&name=<pct>&id=<computerId>&sk=<signPub>&bk=<boxPub>&code=<pair
 3. 對 `access == "none"` 的電腦：手機產生 32 random bytes `nD`（只存記憶體），`POST /v1/computers/{id}/access-requests {"commit": b64url(SHA-256("codync/sascommit/v1" ‖ dk ‖ nD))}` → `{requestId, expiresAt}`。
 4. Worker 通知 DO → host 拉 state → 看到新申請（含 `commit`）→ host 產生 32 random bytes `nH`（存本機記憶體，每個 requestId 只產生一次）→ `POST /v1/host/access-requests/{id}/nonce {"nonce": nH}`（已有 host nonce → `409 conflict`，host 不得換）。
 5. 手機輪詢 `GET /v1/access-requests/{id}`（每 2 秒）→ 出現 `hostNonce` 後才 `POST /v1/access-requests/{id}/reveal {"nonce": nD}` → Worker 存入並通知 DO `cloud.changed`。手機此時計算 SAS 顯示「在電腦上確認代碼 123456」。
-6. host 拉 state 取得 `deviceNonce` → 驗 `SHA-256("codync/sascommit/v1" ‖ dk ‖ nD) == commit`（不符 → 自動 deny 並記 `warn`）→ 計算 SAS → `accessRequests` 事件 → Mac App 顯示核准對話框（裝置名稱、平台、帳號 email、SAS）。**`nD` 驗證通過前 host 不顯示 SAS、不接受 approve**（`decideAccessRequest` 回 409）。無 GUI 的 host：`codync-host access list|approve|deny`。
+6. host 拉 state 取得 `deviceNonce` → 驗 `SHA-256("codync/sascommit/v1" ‖ dk ‖ nD) == commit`（不符 → 自動 deny 並記 `warn`）→ 計算 SAS → `accessRequests` 事件 → 桌面 App 顯示核准對話框（裝置名稱、平台、帳號 email、SAS）。**`nD` 驗證通過前 host 不顯示 SAS、不接受 approve**（`decideAccessRequest` 回 409）。無 GUI 的 host：`codync-host access list|approve|deny`。
 7. 核准 → host `POST /v1/host/access-requests/{id}/decision {"decision":"approve"}` → D1 建立 grant → 回 `grantId` → host **以自己顯示給使用者的 `dk` 與回傳的 `grantId`** 新增裝置列（`source=account`，lease 15 分鐘）→ 發佈 ACL。
 8. 手機輪詢到 `approved` → 連線（§7.5）。第一次 `hello` 回應帶 `boxKey`，此時 pin（§3.3）。
 
@@ -508,13 +509,13 @@ The route table below summarizes the contract. Executable schema and validation 
 
 `codync-host cloud` reports cloud status; `devices` lists/revokes device access; `access` handles pending approval. `reset-token` rotates the local bearer credential, not remote device grants.
 
-## 10. Shared Swift integration
+## 10. iOS Swift integration
 
-`CodyncKit/Client` owns transport, crypto, identity and cloud API models. `CodyncUI` owns account/per-computer stores and presentation. Consumers must retain account and computer scope when handling asynchronous responses, links and cached widget data. See [file structure](../architecture/file-structure.md).
+`CodyncKit/Client` (`apps/ios/Kit/`) owns transport, crypto, identity and cloud API models. `CodyncUI` owns account/per-computer stores and presentation. The desktop app doesn't use the device channel; it reaches its own host and SSH computers over loopback. Consumers must retain account and computer scope when handling asynchronous responses, links and cached widget data. See [file structure](../architecture/file-structure.md).
 
-## 11. Apple apps and SSH
+## 11. Apps and SSH
 
-The Apple apps share Clerk integration. QR pairing remains usable without an account; account sign-in requires host-approved device access. macOS uses OpenSSH forwarding for SSH computers, not a mobile SSH gateway. See [accounts and SSH](../guides/accounts-and-ssh.md).
+The iOS app (ClerkKit) and the desktop app (Clerk Frontend API) sign in to the same Clerk instance. QR pairing remains usable without an account; account sign-in requires host-approved device access. The desktop app uses OpenSSH forwarding for SSH computers, not a mobile SSH gateway. See [accounts and SSH](../guides/accounts-and-ssh.md).
 
 ## 12. Verification
 
@@ -552,7 +553,7 @@ The following implemented clarifications take precedence over the original contr
 - **ACL**：列表中 `grant` 為 null 的已封鎖 dk 會被解除封鎖；被封鎖的 dk 仍可開 pairing socket。
 - **帳號裝置 mailbox**：第一次拉取 state 之前收到的 item 先保留、不 ack。
 - **SSH forward**：以 `lsof` 確認本機 listener 屬於我們啟動的 `ssh`。
-- **取消 access request**：iOS SAS sheet 與 Mac computers 視窗都有取消按鈕（`DELETE /v1/access-requests/{id}`）。
+- **取消 access request**：iOS SAS sheet 有取消按鈕（`DELETE /v1/access-requests/{id}`）。
 
 ## 15. Limits and risks
 

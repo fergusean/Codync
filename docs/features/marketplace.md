@@ -21,7 +21,7 @@ Installing a remote connector probes it; a 401 marks it `signedOut` and bots don
 
 | Where the user signs in | Redirect URI | Who finishes |
 | --- | --- | --- |
-| On the computer (Mac app, TUI; loopback caller) | `http://127.0.0.1:<port>/oauth/callback` | the host's callback page |
+| On the computer (desktop app, TUI; loopback caller) | `http://127.0.0.1:<port>/oauth/callback` | the host's callback page |
 | On the phone (E2E channel caller) | `<cloud>/v1/oauth/callback` → 302 `codync://oauth?…` | the app's system sign-in sheet sends `connectorSignInFinish` |
 
 The cloud page is stateless and the code is useless without the PKCE verifier held by the host. Servers without dynamic client registration (e.g. GitHub) need a token header instead (custom connector, URL + headers). `connectorTarget` (loopback only) hands the proxy the URL and headers.

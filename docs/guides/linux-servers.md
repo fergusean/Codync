@@ -1,6 +1,6 @@
 # Running the host on a Linux server or cloud VM
 
-`codync-host` runs on any 64-bit Linux machine: a desktop, a home server, or a headless cloud VM (AWS, GCP, Azure, Hetzner, DigitalOcean…). It needs no display. Bots run on that machine and you message them from the iPhone, the Mac app or `codync-host tui`.
+`codync-host` runs on any 64-bit Linux machine: a desktop, a home server, or a headless cloud VM (AWS, GCP, Azure, Hetzner, DigitalOcean…). It needs no display. Bots run on that machine and you message them from the iPhone, the desktop app or `codync-host tui`.
 
 ## Requirements
 
@@ -35,15 +35,15 @@ Other commands work the same as on a desktop: `codync-host pair`, `codync-host t
 The phone connects over the encrypted device channel. The pairing link lists only **Tailscale** and **private (LAN/VPC)** addresses; the host never advertises a public IP.
 
 - **Tailscale (recommended for VMs):** install Tailscale on the VM and on the phone, then `codync-host pair`. The Tailscale name comes first in the link. You don't need to open port 19222 in the cloud firewall.
-- **Cloudflare cloud:** `codync-host cloud --url https://…` if you run your own Codync cloud. The production cloud isn't live yet (see [environments](environments-and-deployment.md)).
-- **Mac app over SSH:** the Mac app can attach an SSH computer and tunnel to its loopback API ([Accounts and SSH](accounts-and-ssh.md)). From any terminal: `ssh -L 19222:127.0.0.1:19222 vm`, then `codync-host tui` locally.
+- **Cloudflare cloud:** start the host with `CODYNC_CLOUD_URL=https://…` if you run your own Codync cloud. The production cloud isn't live yet (see [environments](environments-and-deployment.md)).
+- **Desktop app over SSH:** the desktop app (macOS or Linux) can attach an SSH computer and tunnel to its loopback API ([Accounts and SSH](accounts-and-ssh.md)). From any terminal: `ssh -L 19222:127.0.0.1:19222 vm`, then `codync-host tui` locally.
 
 The host listens on `0.0.0.0:19222`. The local API (`/api/*`, `/events`, terminals; bearer token) answers **loopback callers only**, so a public address never exposes it. From outside, only `/health` (host id, computer id, version) and the end-to-end encrypted device channel answer, and the channel only serves devices holding this host's pairing keys. Keep 19222 closed in the cloud firewall anyway unless you deliberately pair over a VPN or private network.
 
 ## Limitations on a headless server
 
 - **Remote screen and the `computer` tool don't work.** They need a desktop session (portals + GStreamer, `apps/screen-linux/`). The feature is off by default, so nothing else is affected.
-- **No Linux desktop app.** The GTK app (`codync`) needs a desktop, and its release build needs glibc 2.39+ (Ubuntu 24.04 or newer). On a server, use the phone, the Mac app over SSH, or `codync-host tui`.
+- **No desktop app.** The Linux desktop app (`codync`, AppImage/deb/tar.gz) needs a graphical session; it uses the installed `codync-host`. On a server, use the phone, the desktop app on another computer over SSH, or `codync-host tui`.
 - **Keep-awake is a no-op.** The host tries `systemd-inhibit` while a bot works; VMs don't sleep, and failure only logs a warning.
 - **One computer per account.** A VM counts as the account's computer; multiple computers are future work.
 - **Usage limits** come from the local Claude and Codex installs, same as on a desktop.

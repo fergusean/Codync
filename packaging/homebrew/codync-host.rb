@@ -33,6 +33,8 @@ class CodyncHost < Formula
 
   def install
     bin.install "codync-host"
+    # Linux: the Remote screen helper (needs the system's GStreamer and xdg-desktop-portal).
+    bin.install "codync-screen" if OS.linux?
   end
 
   def caveats

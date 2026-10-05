@@ -1,18 +1,23 @@
 # Voice call
 
-A hands-free call with one bot from the iPhone or Mac chat (the waveform button in an empty composer).
-Linux and the terminal UI have no calls: neither has an audio stack (GTK app, TUI); they show the
-"Voice chat · 00:16" notice like every client.
+A hands-free call with one bot from the iPhone or desktop chat (the waveform button in an empty composer).
+On Linux the desktop app offers only the cloud engines (on-device speech is macOS only). The terminal
+UI has no calls (no audio stack); it shows the "Voice chat · 00:16" notice like every client.
 The bot is the same agent on the computer; the call only changes how you talk to it.
 
 ## On-device voice
 
-- `kit/Sources/CodyncUI/Call/`: `CallView` (the call bar) over a `VoiceEngine`; `OnDeviceEngine` is the default audio loop.
+- `apps/ios/Kit/Sources/CodyncUI/Call/` (iPhone) and `apps/desktop/src/renderer/views/call/` (desktop): `CallView` (the call bar) over a `VoiceEngine`; `OnDeviceEngine` is the default audio loop. On the Mac the desktop app runs speech recognition in `codync-speech` (`apps/desktop/native/speech-macos/`, driven by `apps/desktop/src/main/speech.ts`).
 - UI follows Grok Bot: a floating capsule over the top of the chat (`ThreadView` overlay), and the
   chat stays readable and usable underneath. Left to right: the bot's avatar (pulses while
   speaking; tap it to interrupt), a dotted level line (your voice while listening, a ripple while
   the bot speaks, a slow breath while it works), gear (call settings), mic (mute), red ✕ (end).
-- Speech → text with `SFSpeechRecognizer` (on-device when the language supports it). A pause ends an
+- Desktop: the capsule sits 16 CSS pixels below the window top and explicitly excludes itself
+  from Electron's window-drag region so the gear, mute and end buttons receive mouse clicks.
+  The iPhone places its capsule below native navigation; the terminal has no call controls.
+- Speech → text with `SFSpeechRecognizer` (on-device when the language supports it) in the language
+  picked under Voice chat → Language (`callLanguage`; empty follows the system's first language,
+  which is often English on bilingual setups). A pause ends an
   utterance and sends it as an ordinary message (`BotStore.send`), so it takes the normal path:
   queued while the bot works, folded into its next turn. What you said appears in the chat as your
   message; the bot's reply appears as its message.
@@ -113,7 +118,7 @@ built into the host and the app (today `gpt-realtime-2.1`, `gpt-transcribe`, `gp
 list arrives.
 
 Voice settings (`VoiceChatSettingsView`) open from the call bar's gear and from settings: on the
-iPhone, **Computers & settings → Voice chat**; on the Mac, **Account → Voice chat** (this Mac's
+iPhone, **Computers & settings → Voice chat**; on the desktop, **Settings → Voice chat** (this
 computer) or the waveform button on a computer's card in **Computers & devices**. Keys are entered
 on the computer only: the host takes `setVoiceKey` from loopback, and the iPhone shows whether a key
 is there and can test it. Picking a cloud engine shows its key form instead of the on-device settings: a secure field, a link
@@ -129,7 +134,7 @@ shows the provider's name next to the dots whenever audio leaves the device.
 
 - On the computer, in the host's vault (`host/src/voice.rs`, slot `voice`: encrypted in
   `codync.db` with the vault key from Keychain / Secret Service), so one key serves the iPhone and the
-  Mac. It reaches the host once, over the encrypted channel, and never leaves it again; it is never
+  desktop app. It reaches the host once, over the encrypted channel, and never leaves it again; it is never
   logged and never sent to the relay or our cloud.
 - Host methods (control scope): `voiceStatus` (which providers have a key), `setVoiceKey
   {provider, key}` (checked with one credential mint before it's kept; empty removes it),

@@ -6,11 +6,11 @@ Codync keeps agents and their working files on a computer. Clients address that 
 
 ```mermaid
 flowchart LR
-    Phone[iPhone / remote Apple client] -->|Encrypted WebSocket| Cloud[cloud/ Worker + ComputerRelay DO]
+    Phone[iPhone] -->|Encrypted WebSocket| Cloud[cloud/ Worker + ComputerRelay DO]
     Phone -->|Encrypted direct channel| Host[codync-host]
     Cloud <-->|Encrypted frames| Host
-    Local[Mac / Linux / TUI] -->|Loopback HTTP + SSE| Host
-    SSH[Mac SSH tunnel] -->|Forwarded loopback HTTP + SSE| Host
+    Local[Desktop app / TUI] -->|Loopback HTTP + SSE| Host
+    SSH[Desktop SSH tunnel] -->|Forwarded loopback HTTP + SSE| Host
     Host -->|ACP over stdio| Agents[Coding agents]
     Host --> DB[(Local SQLite)]
     Host -->|Sealed alert| Push[relay/ APNs Worker]
@@ -31,7 +31,8 @@ The phone tries direct candidates first, with a 1.5-second connection race, then
 | Long-term bot memory | Host `bots/<botId>/memory/` |
 | Account users, computer ownership, devices and grants | `cloud/` D1 |
 | Presence, host-signed ACL, offline encrypted mailbox | Per-computer `ComputerRelay` Durable Object |
-| Phone/Mac remote-device signing and push keys | Keychain, partitioned by account context |
+| Phone remote-device signing and push keys | Keychain, partitioned by account context |
+| Desktop account token and cloud device key | App data, encrypted with Electron `safeStorage` |
 | Client mirror, widget snapshots, selected computer | Per-account cache/App Group storage |
 | APNs signing key and ticket encryption key | `relay/` Worker secrets |
 
@@ -43,13 +44,13 @@ Cloud account metadata includes names, public keys, ownership and access state. 
 
 `agent/bot.rs` serializes each bot's turns and owns its ACP process. A main chat and its reply threads can have distinct sessions. Group turns are queued on member bots and use their main sessions; the group itself has no harness. See [groups and threads](../features/groups-and-threads.md), [collaboration](../features/bot-collaboration.md) and [context/memory](../features/context-and-memory.md).
 
-## Apple state and routing
+## Client state and routing
 
-- `AccountSession` owns Clerk integration; `AccountStore` owns one account context's computer stores.
+- On iPhone, `AccountSession` owns Clerk integration; `AccountStore` owns one account context's computer stores.
 - `BotReference(accountId, computerId, botId)` identifies a destination. Widgets and pushes carry account/computer scope.
 - `BotStore` mirrors one computer and consumes a `HostTransport`: loopback or encrypted channel.
 - Account changes retire the old stores; late responses must not update the new context. Signing out erases that context's local credentials and caches.
-- The Mac attaches its local host and configured SSH hosts through loopback transports. Remote Apple connections use device identities.
+- The desktop app (`apps/desktop/`) has its own TypeScript `BotStore` and attaches its local host and configured SSH hosts through loopback only ([desktop app](desktop-app.md)). iPhone connections use device identities.
 
 The product currently prioritizes one computer. Existing account-scoped aggregation and SSH support remain; their presence is not a reason to add multi-computer features without a product requirement.
 
@@ -63,4 +64,4 @@ Remote screen uses the channel for signaling and WebRTC for media/input. Cloudfl
 
 Application/host major versions must match. The channel wire version (`v=1`), pairing URL version (`v=3`) and the cloud health endpoint's service version are separate values.
 
-Debug Apple builds use `apps/shared/Config/dev.plist`; Release uses `main.plist`. The host has no default cloud URL. Production fields are currently incomplete in checked-in configuration, so a successful Debug install is not production readiness. See [environments](../guides/environments-and-deployment.md).
+Debug iOS builds use `apps/shared/Config/dev.plist`; Release uses `main.plist`. The desktop app takes the same values through `apps/desktop/tools/account-config.mjs`. The host compiles in its cloud from `CODYNC_ENV` (`main`, else dev), set by the same packaging script (`dist:mac:dev` / `dist:mac:main`). Production fields are currently incomplete in checked-in configuration, so a successful Debug install is not production readiness. See [environments](../guides/environments-and-deployment.md).

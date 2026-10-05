@@ -6,7 +6,7 @@ Create two or more bots normally, giving each a clear name, description, project
 
 Every bot receives the built-in `team` MCP server. `list_bots` returns the other visible bots' IDs, descriptions, agents, folders and status. `ask_bot(botId, message)` sends a self-contained request and waits for the recipient's final text reply. The requesting bot incorporates that answer into its response to you. The same tools work across ACP backends that support MCP servers.
 
-The host records the request and its outcome in both chats using existing notice entries, so the current iOS, macOS, Linux and terminal clients can display them. Tool details also remain in the trace. There is no additional team setup screen.
+The host records the request and its outcome in both chats using existing notice entries, so the current iOS, desktop and terminal clients can display them. Tool details also remain in the trace. There is no additional team setup screen.
 
 ## Execution
 

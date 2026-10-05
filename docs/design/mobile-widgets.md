@@ -43,7 +43,7 @@
 - App 教學、設定清單與說明支援 Dynamic Type；無障礙大字體改用選單切換類型／provider。固定大小的 widget 保留緊湊數值，並提供完整的 VoiceOver 用量與重置描述。
 - 教學涵蓋 Home Screen 與 Lock Screen；新增 WidgetKit 原生預覽涵蓋小／中尺寸、矩形／圓形／行內配件與空狀態。
 
-`kit/Sources/CodyncKit/Design/WidgetCards.swift` 是共用繪製元件；`apps/ios/Views/WidgetGalleryView.swift` 與 `apps/ios/Widgets/CodyncWidgets.swift` 共用它，減少預覽與實際 widget 的差異。
+`apps/ios/Kit/Sources/CodyncKit/Design/WidgetCards.swift` 是共用繪製元件；`apps/ios/Views/WidgetGalleryView.swift` 與 `apps/ios/Widgets/CodyncWidgets.swift` 共用它，減少預覽與實際 widget 的差異。
 
 ## Live Activity 與 Dynamic Island
 
@@ -84,13 +84,13 @@ Dynamic Island 固定黑底，文字採淺色；Lock Screen 卡片配合系統�
 
 ## 驗證
 
-執行 `swift test --package-path kit` 與 `python3 tools/render-widgets.py` 檢查共用邏輯及繪製。系統 WidgetKit／ActivityKit 預覽在 `apps/ios/Widgets/WidgetPreviews.swift`。
+在 `apps/ios/Kit` 以 iOS 模擬器執行 `xcodebuild test -scheme CodyncKit-Package`檢查共用邏輯。系統 WidgetKit／ActivityKit 預覽在 `apps/ios/Widgets/WidgetPreviews.swift`。
 
 實機仍需分別確認加入 Home／Lock Screen widget、編輯 provider、跨帳號切換、背景刷新，以及 Live Activity／APNs 更新。共用圖片與 build 成功不等於這些系統整合已通過。[歷史檢查紀錄](../archive/mobile-widgets-verification-2026-09-26.md) 保留當時的測試範圍與操作限制。
 
 ## Halftone 與 Thinking Orbs（2026-09-26）
 
-Bot 的角色頭像使用 `CharacterAvatar` 點陣；provider 圖示由 `ProviderMascot` 選擇，小尺寸可使用隨 app 打包的官方 provider 圖示。15 pt 用 7 × 7、20–26 pt 用 9 × 9、28 pt 以上用 13 × 13 網格，保留鏤空眼睛並提高小尺寸墨色。iOS 與 macOS 共用 provider 呈現邏輯。
+Bot 的角色頭像使用 `CharacterAvatar` 點陣；provider 圖示由 `ProviderMascot` 選擇，小尺寸可使用隨 app 打包的官方 provider 圖示。15 pt 用 7 × 7、20–26 pt 用 9 × 9、28 pt 以上用 13 × 13 網格，保留鏤空眼睛並提高小尺寸墨色。iOS App 與 widgets 共用 provider 呈現邏輯；桌面 App 的對應實作在 `apps/desktop/src/renderer/views/usage/ProviderMascot.tsx`。
 
 狀態圖示以 [Jakub Antalik 的 thinking-orbs](https://github.com/Jakubantalik/thinking-orbs) 為來源，這次原生移植四種實際使用的造型：
 
@@ -107,4 +107,4 @@ Bot 的角色頭像使用 `CharacterAvatar` 點陣；provider 圖示由 `Provide
 
 App 內動畫最多 30 fps；離開畫面、App 非 active 或啟用 Reduce Motion 時顯示靜態幀。Widget、Live Activity 與 Dynamic Island 明確傳入 `animated: false`，不依賴持續動畫計時。狀態仍隨既有資料更新。
 
-上游 MIT 授權全文隨 `CodyncKit` resource bundle 發佈，位於 `kit/Sources/CodyncKit/Resources/ThirdPartyNotices/thinking-orbs-LICENSE.txt`。`ThinkingOrbGeometryTests` 使用上游獨立 golden vectors 的取樣，驗證四種造型 × 兩尺寸 × 四時間點的 dot／line 數量、位置、半徑、墨色及深度順序。其餘五種上游造型暫未移植；有對應產品狀態時再加入。
+上游 MIT 授權全文隨 `CodyncKit` resource bundle 發佈，位於 `apps/ios/Kit/Sources/CodyncKit/Resources/ThirdPartyNotices/thinking-orbs-LICENSE.txt`。`ThinkingOrbGeometryTests` 使用上游獨立 golden vectors 的取樣，驗證四種造型 × 兩尺寸 × 四時間點的 dot／line 數量、位置、半徑、墨色及深度順序。其餘五種上游造型暫未移植；有對應產品狀態時再加入。

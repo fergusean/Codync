@@ -1,22 +1,25 @@
-name: CodyncKit
+name: iOS Kit
 
+# The iPhone app's Swift package (apps/ios/Kit): models, client, stores and screens.
 on:
   push:
     branches: [main, v2]
-    paths: ["kit/**", "docs/reference/fixtures/remote-relay-vectors.json", ".github/workflows/kit.yml"]
+    paths: ["apps/ios/Kit/**", "docs/reference/fixtures/remote-relay-vectors.json", ".github/workflows/kit.yml"]
   pull_request:
-    paths: ["kit/**", "docs/reference/fixtures/remote-relay-vectors.json"]
+    paths: ["apps/ios/Kit/**", "docs/reference/fixtures/remote-relay-vectors.json"]
 
 jobs:
   test:
     runs-on: macos-latest
     defaults:
       run:
-        working-directory: kit
+        working-directory: apps/ios/Kit
     steps:
       - uses: actions/checkout@v4
       - uses: maxim-lobanov/setup-xcode@v1
         with:
           xcode-version: latest-stable
-      - run: swift build
-      - run: swift test
+      - name: Test on an iPhone simulator
+        run: |
+          DEVICE=$(xcrun simctl list devices available | grep -m1 -oE 'iPhone [^(]+\(([0-9A-F-]{36})\)' | grep -oE '[0-9A-F-]{36}')
+          xcodebuild test -scheme CodyncKit-Package -destination "platform=iOS Simulator,id=$DEVICE" -quiet
