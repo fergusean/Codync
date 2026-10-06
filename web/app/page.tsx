@@ -9,6 +9,8 @@ import Install from "./components/install";
 import Privacy from "./components/privacy";
 import Mac from "./components/mac";
 import Surfaces from "./components/surfaces";
+import Cost from "./components/cost";
+import Questions from "./components/questions";
 import { DMG, GITHUB } from "./links";
 
 export default function Home() {
@@ -21,9 +23,15 @@ export default function Home() {
             Codync
           </Link>
           <div className="flex items-center gap-2">
-            <a href="#install" className="hidden rounded-full px-4 py-2 text-sm text-neutral-400 transition hover:text-neutral-100 sm:block">
-              Install
-            </a>
+            {[
+              ["#cost", "Pricing"],
+              ["#questions", "FAQ"],
+              ["#install", "Install"],
+            ].map(([href, label]) => (
+              <a key={href} href={href} className="hidden rounded-full px-4 py-2 text-sm text-neutral-400 transition hover:text-neutral-100 sm:block">
+                {label}
+              </a>
+            ))}
             <a
               href={GITHUB}
               aria-label="Codync on GitHub"
@@ -45,12 +53,14 @@ export default function Home() {
       <main className="flex-1">
         <Hero />
         <Film />
-        <Compare />
         <Answers />
         <Features />
         <Mac />
         <Surfaces />
         <Privacy />
+        <Compare />
+        <Cost />
+        <Questions />
         <Install />
       </main>
 

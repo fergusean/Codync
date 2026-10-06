@@ -8,7 +8,7 @@ const agents = ["Claude Code", "Codex", "Cursor", "Gemini", "Copilot", "OpenCode
 
 const platforms = [
   { icon: AppleLogo, title: "Mac", body: "A menu bar app with a native chat window. Pairs your phone and installs the host itself." },
-  { icon: LinuxLogo, title: "Linux", body: "A GTK 4 / libadwaita app for the desktop, or just the host on a headless server or cloud VM." },
+  { icon: LinuxLogo, title: "Linux", body: "The same desktop app as the Mac (AppImage or deb), or just the host on a headless server or cloud VM." },
   { icon: Terminal, title: "Terminal", body: "A full terminal UI in the same binary, for SSH sessions and machines with no display." },
 ];
 

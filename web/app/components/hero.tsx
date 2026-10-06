@@ -41,21 +41,19 @@ export default function Hero() {
       </motion.a>
       <div className="relative mx-auto grid max-w-6xl grid-cols-1 items-center gap-14 md:grid-cols-[1.1fr_1fr] md:gap-8">
         <div>
-          <motion.p {...rise(0)} className="mb-5 text-xs font-medium tracking-[0.25em] text-neutral-400 uppercase">
-            <span className="text-neutral-50">100% free</span>
-            <span className="mx-2 text-neutral-600">/</span>
-            The open-source Grok Bot / Muse alternative
-          </motion.p>
           <motion.h1
             {...rise(0.04)}
-            className="text-4xl font-semibold leading-[1.05] tracking-tighter text-neutral-50 sm:text-5xl lg:text-6xl"
+            className="text-4xl font-semibold leading-[1.05] tracking-tighter text-neutral-50 sm:text-5xl lg:text-[3.5rem]"
           >
-            Message your coding agents like teammates.
+            The 100% free, <span className="whitespace-nowrap">open-source</span> Grok Bot / Muse alternative.
           </motion.h1>
-          <motion.p {...rise(0.1)} className="mt-6 max-w-[34rem] text-lg leading-relaxed text-neutral-400">
+          <motion.p {...rise(0.08)} className="mt-5 text-2xl font-medium tracking-tight text-neutral-300 md:text-3xl">
+            Message your coding agents like teammates.
+          </motion.p>
+          <motion.p {...rise(0.12)} className="mt-5 max-w-[34rem] text-lg leading-relaxed text-neutral-400">
             Codync runs Claude Code, Codex and 40+ agents as named bots on your computer. Reply and approve from
-            your iPhone, Mac, Linux desktop or a terminal over SSH. 100% free and MIT licensed, with no hidden
-            fees, and every feature of Grok Bot and Muse, 1:1.
+            your iPhone, Mac, Linux desktop or a terminal over SSH. MIT licensed, no hidden fees, and every feature
+            of Grok Bot and Muse, 1:1.
           </motion.p>
           <motion.div {...rise(0.18)} className="mt-9 flex flex-wrap gap-3">
             <a href={DMG} className={`${button} bg-neutral-50 text-neutral-950 hover:bg-white`}>
