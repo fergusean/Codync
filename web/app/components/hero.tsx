@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, MotionConfig } from "framer-motion";
-import { AppleLogo, DeviceMobile, LinuxLogo, OpenAiLogo, Terminal } from "@phosphor-icons/react";
+import { AppleLogo, DeviceMobile, GithubLogo, LinuxLogo, OpenAiLogo, Terminal } from "@phosphor-icons/react";
 import DownloadButton from "./download-button";
 import Halftone from "./halftone";
 import MacWindow from "./mac-window";
@@ -32,16 +32,28 @@ export default function Hero() {
         <Halftone corner="top-right" className="w-[44rem] max-w-[90vw] text-neutral-50 opacity-[0.12]" />
         <Halftone corner="top-left" className="w-[30rem] max-w-[70vw] text-neutral-50 opacity-[0.08]" />
         <div className="relative mx-auto flex max-w-5xl flex-col items-center text-center">
-          <motion.a
-            {...rise(0)}
-            href={PRODUCT_HUNT}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 rounded-full bg-neutral-900 py-1.5 pr-4 pl-1.5 text-sm transition hover:bg-neutral-800"
-          >
-            <span className="rounded-full bg-neutral-50 px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap text-neutral-950">100% free</span>
-            <span className="text-neutral-300">#16 Product of the Day<span className="hidden sm:inline"> on Product Hunt</span></span>
-          </motion.a>
+          <motion.div {...rise(0)} className="flex flex-col items-center gap-4">
+            <a
+              href={PRODUCT_HUNT}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-3 transition hover:opacity-80"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element -- live badge served by Product Hunt */}
+              <img
+                src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1267264&theme=dark"
+                alt="Codync on Product Hunt"
+                width={250}
+                height={54}
+                className="h-10 w-auto"
+              />
+              <span className="text-sm font-medium text-neutral-300">#16 Product of the Day</span>
+            </a>
+            <span className="inline-flex items-center gap-2 rounded-full bg-neutral-900 py-1.5 pr-4 pl-1.5 text-sm">
+              <span className="rounded-full bg-neutral-50 px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap text-neutral-950">100% free</span>
+              <span className="text-neutral-300">No hidden fees, no paid tier</span>
+            </span>
+          </motion.div>
 
           <motion.h1
             {...rise(0.04)}
@@ -85,6 +97,15 @@ export default function Hero() {
             >
               <DeviceMobile size={18} weight="fill" />
               iPhone app
+            </a>
+            <a
+              href={GITHUB}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex h-12 items-center gap-2 rounded-full bg-neutral-900 px-6 font-medium text-neutral-100 transition hover:bg-neutral-800 active:scale-[0.98]"
+            >
+              <GithubLogo size={18} weight="fill" />
+              Star on GitHub
             </a>
           </motion.div>
 
