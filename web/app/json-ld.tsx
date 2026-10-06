@@ -27,7 +27,7 @@ const graph = {
       url: SITE,
       description: DESCRIPTION,
       applicationCategory: "DeveloperApplication",
-      operatingSystem: "macOS, Linux, iOS",
+      operatingSystem: "macOS, Windows, Linux, iOS",
       image: `${SITE}/icon.png`,
       downloadUrl: [DMG, APP_STORE],
       installUrl: APP_STORE,

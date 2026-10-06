@@ -1,4 +1,4 @@
-import { AppleLogo, BellRinging, LinuxLogo, LockKey, Terminal } from "@phosphor-icons/react/ssr";
+import { AppleLogo, BellRinging, LinuxLogo, LockKey, Terminal, WindowsLogo } from "@phosphor-icons/react/ssr";
 import Eyebrow from "./eyebrow";
 import Halftone from "./halftone";
 import Phone from "./phone";
@@ -8,6 +8,7 @@ const agents = ["Claude Code", "Codex", "Cursor", "Gemini", "Copilot", "OpenCode
 
 const platforms = [
   { icon: AppleLogo, title: "Mac", body: "A menu bar app with a native chat window. Pairs your phone and installs the host itself." },
+  { icon: WindowsLogo, title: "Windows", body: "The same desktop app, with a tray icon. It runs the host for you; Remote screen isn't there yet." },
   { icon: LinuxLogo, title: "Linux", body: "The same desktop app as the Mac (AppImage or deb), or just the host on a headless server or cloud VM." },
   { icon: Terminal, title: "Terminal", body: "A full terminal UI in the same binary, for SSH sessions and machines with no display." },
 ];
@@ -109,12 +110,12 @@ export function Features() {
 
           <Reveal className="md:col-span-3" delay={0.05}>
             <div className="rounded-3xl bg-neutral-900 p-8 md:p-10">
-              <h3 className="text-xl font-semibold text-neutral-50">Mac and Linux, both first-class</h3>
+              <h3 className="text-xl font-semibold text-neutral-50">Mac, Windows and Linux</h3>
               <p className="mt-3 max-w-[40rem] leading-relaxed text-neutral-400">
-                One Rust host runs on either, on your desk or on a server. Every client talks to the same host, so your
+                One Rust host runs on all three, on your desk or, on Linux, on a server. Every client talks to the same host, so your
                 bots and chats are the same everywhere.
               </p>
-              <ul className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-3">
+              <ul className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
                 {platforms.map(({ icon: Icon, title, body }) => (
                   <li key={title}>
                     <Icon size={24} weight="fill" className="text-neutral-50" />

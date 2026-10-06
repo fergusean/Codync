@@ -43,7 +43,7 @@ Codync/
 │   │       │       ├── Usage/
 │   │       │       └── Resources/
 │   │       └── Tests/         # CodyncKitTests and CodyncUITests
-│   ├── desktop/               # Electron app for macOS and Linux (see desktop-app.md)
+│   ├── desktop/               # Electron app for macOS, Linux and Windows (see desktop-app.md)
 │   │   ├── src/main/          # Host service, tray, account, updates, SSH, screen, speech
 │   │   ├── src/preload/       # window.codync bridge
 │   │   ├── src/renderer/      # React UI: store/, components/, views/
@@ -67,7 +67,7 @@ Codync/
 
 ## Targets
 
-- `apps/desktop/` — desktop app for macOS and Linux (Electron; `npm run dev`, packaged by `.github/workflows/release-desktop.yml`)
+- `apps/desktop/` — desktop app for macOS, Linux and Windows (Electron; `npm run dev`, packaged by `.github/workflows/release-desktop.yml`)
 - `iOS` (`apps/ios/`) — iOS app
 - `Screen` (`apps/screen-macos/`) — Codync Screen: capture, input and WebRTC for Remote screen, embedded in the macOS desktop app (`Contents/Library/LoginItems`)
 - `apps/screen-linux/` — `codync-screen` (Rust, GStreamer + xdg portals), the Linux Remote screen helper

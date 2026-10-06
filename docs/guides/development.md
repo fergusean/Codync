@@ -6,7 +6,7 @@ Run commands from the repository root unless a block changes directory. See [fil
 
 ## Desktop app
 
-The macOS and Linux app is the Electron app in `apps/desktop/`; setup, UI-check switches and packaging are in [desktop app](../architecture/desktop-app.md#development):
+The macOS, Linux and Windows app is the Electron app in `apps/desktop/`; setup, UI-check switches and packaging are in [desktop app](../architecture/desktop-app.md#development):
 
 ```sh
 cd apps/desktop
