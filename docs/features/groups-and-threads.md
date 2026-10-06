@@ -56,6 +56,11 @@ replies itself.
 - A new message in the same lane, or Stop, ends a running room turn before its next speaker.
 - Tool calls, thoughts and permission cards of a member's group turn are written to the
   group (with `author`), not to the member's own chat. One "done" push per room turn.
+- Files sent to a group are kept in the group's data folder (`~/.codync/bots/<group>/uploads`);
+  each member's prompt lists their paths under the user's line.
+- Voice calls work in a group: each final reply is read with its speaker's name, a member's
+  pending permission card is announced (a group has no status of its own), and the realtime
+  operator is told the room's members.
 
 ## How a thread continues (`host/src/agent/bot/session.rs`)
 

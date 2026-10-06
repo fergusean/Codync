@@ -1,14 +1,13 @@
 import Hero from "./components/hero";
 import Film from "./components/film";
 import { Answers, Features } from "./components/features";
-import Compare from "./components/compare";
-import Install from "./components/install";
-import Privacy from "./components/privacy";
-import Mac from "./components/mac";
 import Surfaces from "./components/surfaces";
+import Privacy from "./components/privacy";
+import Compare from "./components/compare";
 import Cost from "./components/cost";
 import Questions from "./components/questions";
 import CompareCards from "./components/compare-cards";
+import Install from "./components/install";
 import Reveal from "./components/reveal";
 import { SiteFooter, SiteHeader } from "./components/site-chrome";
 
@@ -16,13 +15,11 @@ export default function Home() {
   return (
     <>
       <SiteHeader />
-
       <main className="flex-1">
         <Hero />
         <Film />
         <Answers />
         <Features />
-        <Mac />
         <Surfaces />
         <Privacy />
         <Compare />
@@ -36,7 +33,6 @@ export default function Home() {
         </section>
         <Install />
       </main>
-
       <SiteFooter />
     </>
   );
