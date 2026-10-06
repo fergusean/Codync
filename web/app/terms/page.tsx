@@ -12,7 +12,7 @@ export default function Terms() {
         </Section>
 
         <Section title="2. The service">
-          Codync is free, open-source software (MIT license) that lets you message AI agents running on your own computer from your iPhone, Mac or Linux desktop.
+          Codync is free, open-source software (MIT license) that lets you message AI agents running on your own computer from your iPhone, Mac, Windows PC or Linux desktop.
         </Section>
 
         <Section title="3. Your responsibility">

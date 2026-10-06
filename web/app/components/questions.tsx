@@ -17,7 +17,7 @@ const questions: [string, string][] = [
   ],
   [
     "How do I start?",
-    "Install Codync on the computer your agents run on and create a bot. Then pair your iPhone by scanning the code from the Mac menu bar, the Linux app or codync-host pair.",
+    "Install Codync on the computer your agents run on and create a bot. Then pair your iPhone by scanning the code from the Mac menu bar, the Windows or Linux app, or codync-host pair.",
   ],
   [
     "Where does my data go?",
@@ -29,7 +29,7 @@ const questions: [string, string][] = [
   ],
   [
     "Which computers can run it?",
-    "A Mac, or a Linux desktop or headless server. The iPhone app and the terminal UI over SSH talk to the same host.",
+    "A Mac, a Windows PC, or a Linux desktop or headless server. The iPhone app and the terminal UI over SSH talk to the same host.",
   ],
   [
     "Is it safe to let bots work on my computer?",

@@ -56,7 +56,7 @@ export default function Hero() {
             <motion.p {...rise(0.12)} className="mt-5 max-w-[34rem] text-lg leading-relaxed text-neutral-400">
               Codync runs Claude Code, Codex and 40+ agents as named bots on your own computer. They write code,
               sort your inbox, plan your week and run routines with the apps you connect. Reply and approve from your
-              iPhone, Mac, Linux desktop or a terminal over SSH. MIT licensed, no hidden fees.
+              iPhone, Mac, Windows PC, Linux desktop or a terminal over SSH. MIT licensed, no hidden fees.
             </motion.p>
             <motion.div {...rise(0.18)} className="mt-9 flex flex-wrap gap-3">
               <a href={DMG} className={`${button} bg-neutral-50 text-neutral-950 hover:bg-white`}>
