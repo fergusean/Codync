@@ -57,7 +57,7 @@ export default function Home() {
       <footer className="px-4 py-12 sm:px-6">
         <div className="mx-auto flex max-w-6xl flex-col gap-6 text-sm text-neutral-500 sm:flex-row sm:items-center sm:justify-between">
           <p>
-            Free and open source.{" "}
+            100% free and open source. No hidden fees.{" "}
             <a href={GITHUB} className="text-neutral-300 underline underline-offset-4 hover:text-white">
               Code on GitHub
             </a>

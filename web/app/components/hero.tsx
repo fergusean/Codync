@@ -42,6 +42,8 @@ export default function Hero() {
       <div className="relative mx-auto grid max-w-6xl grid-cols-1 items-center gap-14 md:grid-cols-[1.1fr_1fr] md:gap-8">
         <div>
           <motion.p {...rise(0)} className="mb-5 text-xs font-medium tracking-[0.25em] text-neutral-400 uppercase">
+            <span className="text-neutral-50">100% free</span>
+            <span className="mx-2 text-neutral-600">/</span>
             The open-source Grok Bot / Muse alternative
           </motion.p>
           <motion.h1
@@ -52,8 +54,8 @@ export default function Hero() {
           </motion.h1>
           <motion.p {...rise(0.1)} className="mt-6 max-w-[34rem] text-lg leading-relaxed text-neutral-400">
             Codync runs Claude Code, Codex and 40+ agents as named bots on your computer. Reply and approve from
-            your iPhone, Mac, Linux desktop or a terminal over SSH. Free, MIT licensed, and every feature of Grok
-            Bot and Muse, 1:1.
+            your iPhone, Mac, Linux desktop or a terminal over SSH. 100% free and MIT licensed, with no hidden
+            fees, and every feature of Grok Bot and Muse, 1:1.
           </motion.p>
           <motion.div {...rise(0.18)} className="mt-9 flex flex-wrap gap-3">
             <a href={DMG} className={`${button} bg-neutral-50 text-neutral-950 hover:bg-white`}>
