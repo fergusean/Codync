@@ -2,11 +2,8 @@ name: iOS Kit
 
 # The iPhone app's Swift package (apps/ios/Kit): models, client, stores and screens.
 on:
-  push:
-    branches: [main, v2]
-    paths: ["apps/ios/Kit/**", "docs/reference/fixtures/remote-relay-vectors.json", ".github/workflows/kit.yml"]
   pull_request:
-    paths: ["apps/ios/Kit/**", "docs/reference/fixtures/remote-relay-vectors.json"]
+    paths: ["apps/ios/Kit/**", "docs/reference/fixtures/remote-relay-vectors.json", ".github/workflows/kit.yml"]
 
 jobs:
   test:

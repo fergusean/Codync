@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Codync: 100% free AI agent app, the open-source Grok Bot alternative",
+    default: "Codync: the open-source Grok Bot alternative, a free AI agent app",
     template: "%s | Codync",
   },
   description: DESCRIPTION,
