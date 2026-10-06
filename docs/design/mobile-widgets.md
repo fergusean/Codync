@@ -61,6 +61,13 @@ State 分頁的 Live Activity 頁顯示鎖定畫面形式，Dynamic Island 頁�
 
 狀態色：待回應琥珀（`Palette.attention`）、失敗紅、完成綠；工作中的說明維持灰色，只有需要注意的狀態跳出來。經過時間用 `Text(startedAt, style: .timer)` 由系統自己往上數，不需要推播（`startedAt` 已在 remote content state 裡）。狀態切換時頭像舊臉放大淡出、新臉縮放進場，文字用 `.contentTransition(.interpolate)`，Review／時間列由下往上進場，全部用 `Motion.activityPhase`（0.6 s spring，在 iOS 給 activity 更新的 2 s 內）。Review 只開啟對話，核准仍在 App 的 permission card。
 
+模擬器截圖看不到 Live Activity，所以 Live Activity、動態島（各狀態 × Lock Screen／Compact／Minimal／Expanded，淺色與深色）和 widget 卡片改用 render 測試輸出 PNG 檢查：
+
+```sh
+cd apps/ios/Kit && TEST_RUNNER_CODYNC_RENDER_DIR=<輸出資料夾> xcodebuild test -scheme CodyncKit-Package \
+  -derivedDataPath ../../../build/dd -destination 'platform=iOS Simulator,id=<sim-id>' '-only-testing:CodyncKitTests/renderSurfaces()'
+```
+
 實際形式由 iOS 根據裝置、活動數量與互動決定；App 內的形式選單只控制設計預覽。[Apple Live Activities 設計指南](https://developer.apple.com/design/human-interface-guidelines/live-activities)
 
 所有形式共用 `BotActivityPresentation` 的狀態判斷：
