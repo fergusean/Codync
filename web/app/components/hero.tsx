@@ -32,25 +32,27 @@ export default function Hero() {
       <section className="relative overflow-hidden px-4 pt-14 pb-20 sm:px-6 md:pt-20 md:pb-28">
         <Halftone corner="top-right" className="w-[44rem] max-w-[90vw] text-neutral-50 opacity-[0.12]" />
         <Halftone corner="top-left" className="w-[30rem] max-w-[70vw] text-neutral-50 opacity-[0.08]" />
+        <motion.div {...rise(0)} className="relative mb-10 flex justify-center md:mb-14">
+          <a
+            href={PRODUCT_HUNT}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-3 transition hover:opacity-80"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element -- live badge served by Product Hunt */}
+            <img
+              src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1267264&theme=dark"
+              alt="Codync on Product Hunt"
+              width={250}
+              height={54}
+              className="h-10 w-auto"
+            />
+            <span className="text-sm font-medium text-neutral-300">#16 Product of the Day</span>
+          </a>
+        </motion.div>
         <div className="relative mx-auto grid max-w-6xl grid-cols-1 items-center gap-14 md:grid-cols-[1.15fr_1fr] md:gap-8">
           <div className="flex flex-col items-start text-left">
             <motion.div {...rise(0)} className="flex flex-col items-start gap-4">
-              <a
-                href={PRODUCT_HUNT}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-3 transition hover:opacity-80"
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element -- live badge served by Product Hunt */}
-                <img
-                  src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1267264&theme=dark"
-                  alt="Codync on Product Hunt"
-                  width={250}
-                  height={54}
-                  className="h-10 w-auto"
-                />
-                <span className="text-sm font-medium text-neutral-300">#16 Product of the Day</span>
-              </a>
               <span className="inline-flex items-center gap-2 rounded-full bg-neutral-900 py-1.5 pr-4 pl-1.5 text-sm">
                 <span className="rounded-full bg-neutral-50 px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap text-neutral-950">100% free</span>
                 <span className="text-neutral-300">No hidden fees, no paid tier</span>
