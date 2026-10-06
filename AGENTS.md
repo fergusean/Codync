@@ -24,16 +24,21 @@ Run from the repository root unless a command changes directories:
 
 ## Installing a new build: kill the old one first
 
-Always stop the old desktop app, host and iPhone process before running a new build (old host = old protocol, old app = old UI); commands in [docs/guides/development.md](docs/guides/development.md#apple-apps).
+Always stop the old desktop app, host and iPhone process before running a new build (old host = old protocol, old app = old UI); commands in [docs/guides/development.md](docs/guides/development.md#desktop-app).
 
 Keep only the latest build: in this checkout, Apple builds go to `build/dd` only (no other `-derivedDataPath`, no copies in scratchpads, `/tmp` or Xcode's DerivedData); delete any older Codync build right away, so macOS never launches a stale copy. A git worktree may keep its own single build inside that worktree.
 
+After every validated host, cloud or push update is integrated into
+`fergusean/consolidated`, deploy to Sean’s infrastructure following
+[local upgrades](docs/guides/local-upgrades.md) and preserving
+[deployment memory](docs/reference/sean-deployment.md), unless the task is
+limited to planning, investigation or review.
+
 ## Versioning & releases
 
-- **Every source change ships as a release.** A version bump on `main` is the only release trigger (Auto Tag → desktop app for macOS, Linux and Windows, host, Homebrew, in-app update), so any change to shipped code (`apps/`, `host/`, `packaging/`) bumps the version before it reaches `main`, without being asked. Docs, `web/`, `cloud/`, `relay/` and CI-only changes don't bump.
-- Phone ↔ host compatibility: each side names the oldest version of the other it works with (`minApp` in the host's `hello`, `minHost` in each client). Additive changes need nothing; a rename/removal raises `minApp` in the same release, and hosts hold that release until the App Store has the iPhone app: [docs/reference/compatibility.md](docs/reference/compatibility.md)
-- Pick the bump yourself: patch for fixes and small tweaks, minor for new features or protocol additions. Never bump major (stay on 2.x). One bump per merge into `main`: if `MARKETING_VERSION` is already ahead of the latest `v*` tag, leave it.
-- How: set `MARKETING_VERSION` in `apps/project.yml` and `version` in `host/Cargo.toml` (+ its `Cargo.lock` entry) and `apps/desktop/package.json` (+ `package-lock.json`) to the same value, run `xcodegen generate --spec apps/project.yml`, commit as `build: bump version to X.Y.Z`. Never touch `CURRENT_PROJECT_VERSION` (Xcode Cloud sets the iOS build number). When the iOS app changes, also write that version's section in `apps/ios/WhatsNew.md` (zh-Hant + en-US, what iPhone users notice); it becomes the App Store "What's New".
+- **Do not bump versions in upstream PRs.** Keep release numbers unchanged and exclude version-only changes. Include generated project or lockfile changes only when the feature requires them.
+- Phone ↔ host compatibility follows [compatibility](docs/reference/compatibility.md): additive changes need no bump; a rename/removal raises `minApp` and waits for the iPhone release.
+- Version bumps belong to separate release work on `main`: [release versioning](docs/guides/development.md#versioning-and-releases).
 
 ## Coding Style & Naming Conventions
 
