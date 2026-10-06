@@ -57,7 +57,7 @@ replies itself.
 - Tool calls, thoughts and permission cards of a member's group turn are written to the
   group (with `author`), not to the member's own chat. One "done" push per room turn.
 
-## How a thread continues (`host/src/agent/bot.rs`)
+## How a thread continues (`host/src/agent/bot/session.rs`)
 
 - In a bot's chat, a thread is its own ACP session. The first reply forks the chat's session
   (`session/fork`, e.g. Claude) so the thread starts from everything said so far; an agent
