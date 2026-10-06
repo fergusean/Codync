@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_loading">ZC Codync · Open the app for the latest report</string>
+    <string name="widget_bots_description">Latest bot status and unread counts</string>
+    <string name="widget_usage_description">Latest limits across providers</string>
+    <string name="widget_provider_description">Latest limits from your selected provider</string>
+    <color name="widget_background">#F8F8F8</color>
+    <color name="widget_foreground">#111111</color>
+    <color name="widget_secondary">#666666</color>
+    <color name="widget_warning">#BF791F</color>
+    <color name="widget_track">#DDDDDD</color>
+</resources>

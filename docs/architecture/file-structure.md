@@ -48,6 +48,7 @@ Codync/
 │   │   ├── src/preload/       # window.codync bridge
 │   │   ├── src/renderer/      # React UI: store/, components/, views/
 │   │   └── native/            # codync-speech (macOS on-device speech helper)
+│   ├── android/               # Kotlin/Compose client; app, core and design modules
 │   ├── screen-macos/          # macOS screen helper (Xcode Screen target)
 │   └── screen-linux/          # Linux portal/GStreamer screen helper
 ├── cloud/                     # Account API + encrypted relay Worker and Durable Object
