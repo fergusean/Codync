@@ -30,6 +30,12 @@ The iPhone app stays native SwiftUI; its package moved from `kit/` into `apps/io
 The renderer owns all state; closing the window hides it, so the menu bar keeps its data.
 HTTP to the host leaves from the main process (the loopback API has no CORS).
 
+Unsent composer text is kept per computer, separately for every bot and reply thread, and
+saved to `localStorage`, so switching conversations, closing a reply panel or restarting the
+app restores the exact text. Submitting clears only that conversation's draft. Drafts are
+cleared when the host identity changes or the bot is deleted. iOS and the TUI keep drafts the
+same way; the shared desktop behavior covers macOS and Linux.
+
 ## Platform notes
 
 - **Icons**: SF Symbols may only ship in apps for Apple platforms, so the masks are generated
@@ -97,6 +103,9 @@ The port follows the Swift sources view by view (metrics, fonts, colors, motion)
 Mac chat redesign that was in progress at the time (larger chat text, actions beside messages,
 one composer capsule, circular chat controls, Jump to latest). It was checked side by side with
 the SwiftUI build against the same host using screenshots from Computer Use.
+
+Composer keyboard behavior, animation and durable draft storage, with a host-free
+regression fixture: [composer checks](../guides/composer.md).
 
 ## The SwiftUI apps in the history
 

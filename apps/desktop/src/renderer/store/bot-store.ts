@@ -17,6 +17,7 @@ import {
 } from '@shared/models'
 import { HostClient, HostError, type HostEvent, type HostRoute, type HostTransport } from '../client/host-client'
 import { Observable } from '../lib/observable'
+import { ComposerDrafts } from '@shared/composer-drafts'
 
 export type Connection =
   | { kind: 'unpaired' }
@@ -65,6 +66,7 @@ export class BotStore extends Observable {
   cloud: CloudStatus | null = null
   historyComplete = new Set<string>()
   routineDrafts = new Map<string, string>()
+  readonly composerDrafts: ComposerDrafts
   lastError: string | null = null
   /** A kit view selected a bot on this store (new chat, editor); the account picks it up. */
   selection: string | null = null
@@ -99,6 +101,8 @@ export class BotStore extends Observable {
   ) {
     super()
     this.computer = computer
+    this.composerDrafts = new ComposerDrafts(localStorage, `codync-drafts-v1-${JSON.stringify([contextId, computer.id])}`,
+      () => this.setError("Couldn't save the draft on this device. Your text is still here; keep this window open until you send or copy it."))
     this.loadCache()
   }
 
@@ -205,6 +209,7 @@ export class BotStore extends Observable {
 
   retire() {
     this.retired = true
+    this.composerDrafts.retire()
     this.stopTransport()
     if (this.saveTimer) clearTimeout(this.saveTimer)
     this.onRosterChanged = null
@@ -363,6 +368,7 @@ export class BotStore extends Observable {
         if (event.bot.unread > 0) this.acknowledgeVisible(event.bot.id)
         break
       case 'botDeleted':
+        this.composerDrafts.removeBot(event.id)
         this.bots.delete(event.id)
         this.entries.delete(event.id)
         this.bump(event.rev)
@@ -406,6 +412,7 @@ export class BotStore extends Observable {
   }
 
   private resetMirror() {
+    this.composerDrafts.clear()
     this.bots = new Map()
     const kept = new Map<string, Entry[]>()
     for (const [id, list] of this.entries) {
@@ -730,6 +737,7 @@ export class BotStore extends Observable {
   }
 
   delete(bot: Bot) {
+    this.composerDrafts.removeBot(bot.id)
     this.bots.delete(bot.id)
     this.entries.delete(bot.id)
     this.onRosterChanged?.()
