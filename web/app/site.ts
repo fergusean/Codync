@@ -1,0 +1,5 @@
+// Canonical site URL and the description shared by metadata, JSON-LD, robots and the sitemap.
+export const SITE = "https://www.codync.dev";
+
+export const DESCRIPTION =
+  "Codync is a 100% free, open-source alternative to Grok Bot, Muse and Dots. Message Claude Code, Codex, Cursor and 40+ coding agents as persistent bots from your iPhone, Mac or Linux desktop. Group chats, threads, approvals, memory, remote screen and voice, on your own computer. Native on iPhone, Mac and Linux, with a terminal UI over SSH. No subscription, no hidden fees.";

@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import JsonLd from "./json-ld";
+import { APP_STORE } from "./links";
+import { DESCRIPTION, SITE } from "./site";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -13,10 +16,26 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Codync: the 100% free, open-source Grok Bot / Muse alternative for any coding agent",
-  description:
-    "A 100% free, open-source 1:1 alternative to Grok Bot and Muse. Message Claude Code, Codex, Cursor and 40+ coding agents as persistent bots from your iPhone, Mac or Linux desktop. Group chats, threads, approvals, memory, remote screen and voice, on your own computer. Native on iPhone, Mac and Linux, with a terminal UI over SSH. No subscription, no hidden fees.",
-  metadataBase: new URL("https://www.codync.dev"),
+  title: "Codync: the free, open-source Grok Bot, Muse and Dots alternative for any coding agent",
+  description: DESCRIPTION,
+  applicationName: "Codync",
+  keywords: [
+    "Grok Bot alternative",
+    "Muse alternative",
+    "Dots alternative",
+    "Claude Code on iPhone",
+    "Codex on iPhone",
+    "coding agent remote",
+    "Agent Client Protocol",
+    "ACP",
+    "open source",
+    "free",
+  ],
+  metadataBase: new URL(SITE),
+  openGraph: { type: "website", siteName: "Codync", locale: "en_US" },
+  twitter: { card: "summary_large_image" },
+  appLinks: { ios: { url: APP_STORE, app_store_id: "6760984418" } },
+  itunes: { appId: "6760984418" },
   icons: {
     icon: [
       { url: "/icon.svg", type: "image/svg+xml" },
@@ -37,6 +56,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}
     >
       <body className="min-h-full flex flex-col bg-black text-neutral-200">
+        <JsonLd />
         {children}
       </body>
     </html>
