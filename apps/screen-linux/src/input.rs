@@ -1,4 +1,4 @@
-//! Input events (see `host/src/screen.rs`) through the `RemoteDesktop` portal.
+//! Input events (see `host/src/screen/mod.rs`) through the `RemoteDesktop` portal.
 
 use crate::portal::{Display, Portal};
 use anyhow::{Result, anyhow};
