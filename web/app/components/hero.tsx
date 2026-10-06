@@ -137,7 +137,7 @@ export default function Hero() {
           transition={{ duration: 0.9, delay: 0.25, ease }}
           className="relative mx-auto mt-16 max-w-6xl scroll-mt-24 md:mt-20"
         >
-          <MediaLabel label="Live demo" live>
+          <MediaLabel label="Live demo">
             The real Codync desktop app, running in your browser. Click a bot, open a room, send a message.
           </MediaLabel>
           <MacWindow />
