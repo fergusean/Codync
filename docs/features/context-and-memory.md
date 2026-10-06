@@ -17,8 +17,9 @@ its own context and compacts it itself.
 
 ## Instruction snapshot (`host/src/chat/context.rs`)
 
-- The bot's instructions are rendered once: profile (name, description, skills, phone-friendly rule) plus the
-  memory section. They're stored as a snapshot in `kv` under `context.<bot>`, keyed by **session + compaction
+- The bot's instructions are rendered once, in English and kept general: profile (name, description), how to
+  message the user, other conversations, workspace, skills, plus the memory section. How to use each tool
+  lives with the tool (MCP server instructions, tool descriptions), not here. They're stored as a snapshot in `kv` under `context.<bot>`, keyed by **session + compaction
   epoch**, and don't change until one of those changes. This keeps the prompt byte-identical so the prompt
   cache stays warm.
 - **Claude** (`agentCapabilities._meta.claudeCode` present) receives the snapshot as a real system prompt:
