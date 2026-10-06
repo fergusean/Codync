@@ -564,9 +564,9 @@ impl Channel {
         }
         let b = &v["b"];
         let name = b["name"].as_str().map(str::trim).filter(|n| !n.is_empty() && n.chars().count() <= 100);
-        let platform = b["platform"].as_str().filter(|p| matches!(*p, "ios" | "macos"));
+        let platform = b["platform"].as_str().filter(|p| matches!(*p, "ios" | "macos" | "android"));
         let (Some(name), Some(platform)) = (name, platform) else {
-            self.send(err(id, 400, "`name` and `platform` (ios or macos) are required")).await;
+            self.send(err(id, 400, "`name` and `platform` (ios, macos or android) are required")).await;
             return protocol;
         };
         if !self.hub.pairing.locked().attempt(source) {
@@ -722,6 +722,30 @@ mod tests {
         assert_eq!(reply["ok"]["computerId"], hub.identity.computer_id());
         assert_eq!(p.recv().await.unwrap_err().0, close::PAIRED);
         key
+    }
+
+    #[tokio::test]
+    async fn android_pairing_preserves_authorization_and_one_time_code() {
+        let hub = temp_hub();
+        let key = SigningKey::from_bytes(&crypto::random());
+        let code = hub.pairing.locked().issue().code;
+        let mut phone = Phone::direct(&hub, key.clone());
+        assert!(matches!(phone.hello(&hub, true).await, Out::Msg(v) if v["t"] == "welcome"));
+        let reply = phone.call(1, "pair", json!({"code": code, "name": "Android phone", "platform": "android"})).await;
+        assert_eq!(reply["ok"]["computerId"], hub.identity.computer_id());
+        assert_eq!(phone.recv().await.unwrap_err().0, close::PAIRED);
+        let device = hub.store.device(&phone.dk()).unwrap();
+        assert_eq!(device.platform, "android");
+        assert_eq!(device.source, DeviceSource::Local);
+        assert_eq!(device.scopes, [Scope::Control, Scope::Screen]);
+        assert!(!hub.pairing.locked().open());
+
+        let mut connected = Phone::direct(&hub, key);
+        assert!(matches!(connected.hello(&hub, false).await, Out::Msg(v) if v["t"] == "welcome"));
+        let hello = connected.call(1, "hello", json!({})).await;
+        assert_eq!(hello["ok"]["computerId"], hub.identity.computer_id());
+        let refused = connected.call(2, "setScreenEnabled", json!({"enabled": true})).await;
+        assert_eq!(refused["err"]["status"], 403);
     }
 
     #[tokio::test]
