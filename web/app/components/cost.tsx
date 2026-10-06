@@ -1,3 +1,4 @@
+import Link from "next/link";
 import Eyebrow from "./eyebrow";
 import Halftone from "./halftone";
 import Reveal from "./reveal";
@@ -15,9 +16,9 @@ export default function Cost() {
           Codync is 100% free. No hidden fees, no paid tier, no locked features. Your bots run on the Claude,
           ChatGPT or other agent plans you already pay for.
         </p>
-        <a href="#compare" className="mt-8 font-medium text-neutral-200 underline underline-offset-4 hover:text-white">
+        <Link href="/#compare" className="mt-8 font-medium text-neutral-200 underline underline-offset-4 hover:text-white">
           See how Codync compares with Grok Bot
-        </a>
+        </Link>
       </Reveal>
     </section>
   );

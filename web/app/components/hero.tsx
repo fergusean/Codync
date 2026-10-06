@@ -136,8 +136,17 @@ export default function Hero() {
           transition={{ duration: 0.9, delay: 0.25, ease }}
           className="relative mx-auto mt-16 max-w-6xl scroll-mt-24 md:mt-20"
         >
+          <div className="mb-5 flex flex-col items-center gap-2 text-center">
+            <span className="inline-flex items-center gap-2 rounded-full bg-neutral-900 px-3 py-1 text-xs font-medium tracking-[0.2em] text-neutral-200 uppercase">
+              <span className="relative flex size-2">
+                <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-75 motion-reduce:hidden" />
+                <span className="relative inline-flex size-2 rounded-full bg-emerald-400" />
+              </span>
+              Live demo
+            </span>
+            <p className="text-sm text-neutral-400">The real Codync desktop app, running in your browser. Click a bot, open a room, send a message.</p>
+          </div>
           <MacWindow />
-          <p className="mt-4 text-center text-sm text-neutral-500">The real Codync app, live. Click a bot, open a room, send a message.</p>
         </motion.div>
       </section>
     </MotionConfig>
