@@ -4,7 +4,7 @@
 
 - `host/`: Rust daemon, ACP integration, SQLite storage, HTTP/SSE API, and terminal UI; unit tests live alongside modules in `src/`.
 - `apps/ios/`: iPhone app (SwiftUI); widgets live in `apps/ios/Widgets/`. `apps/ios/Kit/` is its Swift package: `CodyncKit` (models, clients, design primitives) and `CodyncUI` (screens and stores); tests in `apps/ios/Kit/Tests/CodyncKitTests/`.
-- `apps/desktop/`: desktop app for macOS and Linux (Electron, React, TypeScript): [docs/architecture/desktop-app.md](docs/architecture/desktop-app.md).
+- `apps/desktop/`: desktop app for macOS, Linux and Windows (Electron, React, TypeScript): [docs/architecture/desktop-app.md](docs/architecture/desktop-app.md).
 - `apps/screen-macos` and `apps/screen-linux`: Remote screen helpers.
 - `cloud/`: Cloudflare accounts, encrypted relay, Durable Objects and D1; tests live in `cloud/test/`.
 - `relay/`: Cloudflare push worker and `test/`; `web/`: website (Next.js); `packaging/`: distribution templates; `docs/`: architecture and naming guidance.
@@ -30,7 +30,7 @@ Keep only the latest build: in this checkout, Apple builds go to `build/dd` only
 
 ## Versioning & releases
 
-- **Every source change ships as a release.** A version bump on `main` is the only release trigger (Auto Tag → desktop app for macOS and Linux, host, Homebrew, in-app update), so any change to shipped code (`apps/`, `host/`, `packaging/`) bumps the version before it reaches `main`, without being asked. Docs, `web/`, `cloud/`, `relay/` and CI-only changes don't bump.
+- **Every source change ships as a release.** A version bump on `main` is the only release trigger (Auto Tag → desktop app for macOS, Linux and Windows, host, Homebrew, in-app update), so any change to shipped code (`apps/`, `host/`, `packaging/`) bumps the version before it reaches `main`, without being asked. Docs, `web/`, `cloud/`, `relay/` and CI-only changes don't bump.
 - Phone ↔ host compatibility: each side names the oldest version of the other it works with (`minApp` in the host's `hello`, `minHost` in each client). Additive changes need nothing; a rename/removal raises `minApp` in the same release, and hosts hold that release until the App Store has the iPhone app: [docs/reference/compatibility.md](docs/reference/compatibility.md)
 - Pick the bump yourself: patch for fixes and small tweaks, minor for new features or protocol additions. Never bump major (stay on 2.x). One bump per merge into `main`: if `MARKETING_VERSION` is already ahead of the latest `v*` tag, leave it.
 - How: set `MARKETING_VERSION` in `apps/project.yml` and `version` in `host/Cargo.toml` (+ its `Cargo.lock` entry) and `apps/desktop/package.json` (+ `package-lock.json`) to the same value, run `xcodegen generate --spec apps/project.yml`, commit as `build: bump version to X.Y.Z`. Never touch `CURRENT_PROJECT_VERSION` (Xcode Cloud sets the iOS build number). When the iOS app changes, also write that version's section in `apps/ios/WhatsNew.md` (zh-Hant + en-US, what iPhone users notice); it becomes the App Store "What's New".
@@ -49,11 +49,11 @@ Name Swift files after their main `UpperCamelCase` type; use `snake_case.rs` and
 
 ## Cross-platform UI changes
 
-- Any UI change in any client must include the corresponding updates to the other clients in the same change: iOS (`apps/ios/`, `apps/ios/Kit/Sources/CodyncUI/`), desktop (`apps/desktop/src/renderer/`, macOS and Linux), and terminal UI (`host/src/tui/`). This applies in every direction.
+- Any UI change in any client must include the corresponding updates to the other clients in the same change: iOS (`apps/ios/`, `apps/ios/Kit/Sources/CodyncUI/`), desktop (`apps/desktop/src/renderer/`, macOS, Linux and Windows), and terminal UI (`host/src/tui/`). This applies in every direction.
 - Keep shared features, actions, terminology, displayed information, and loading, empty, error, and permission states consistent. Adapt layout, controls, and input to each platform, including terminal keyboard interaction, while preserving the same user-facing behavior.
 - Inspect every client's corresponding implementation before finishing a UI task. Implement applicable changes together; do not silently defer another client. For a platform-only change or an unsupported capability, document which clients are unaffected and the concrete reason in the change summary.
 - Validate each affected client with its relevant build/tests and UI checks. Report any checks that could not run and why.
-- The desktop app is one codebase for macOS and Linux: platform differences go through `window.codync.platform` checks or the main process, never a fork of a view.
+- The desktop app is one codebase for macOS, Linux and Windows: platform differences go through `window.codync.platform` checks or the main process, never a fork of a view.
 
 ## Testing Guidelines
 

@@ -1,6 +1,6 @@
-# Desktop app (macOS and Linux)
+# Desktop app (macOS, Linux and Windows)
 
-Codync's computer-side app is one Electron app in `apps/desktop/` for macOS and Linux. It
+Codync's computer-side app is one Electron app in `apps/desktop/` for macOS, Linux and Windows. It
 replaced the SwiftUI Mac app (`apps/macos/`) and the GTK 4 Linux app (`apps/linux/`) in 2.7.0.
 The iPhone app stays native SwiftUI; its package moved from `kit/` into `apps/ios/Kit/`.
 
@@ -43,6 +43,17 @@ same way; the shared desktop behavior covers macOS and Linux.
 - **On-device speech** is macOS only; Linux calls use OpenAI or Gemini on the user's key.
 - **Host**: the Mac app bundles `codync-host` in `Contents/Resources`; Linux uses the installed
   host (an AppImage's mount path changes on every launch, so a service can't point into it).
+- **Windows** (x64, per-user NSIS install, unsigned for now so SmartScreen warns once) bundles
+  `codync-host.exe` and `codync-hostw.exe` in `resources/`. `codync-host install` writes the
+  per-user Run key (`HKCU\…\Run\CodyncHost`), which starts `codync-hostw.exe` at sign-in: a
+  windowless launcher that runs the host with a hidden console (the agents share it, so none
+  opens a window) and restarts it when it exits. App updates stop the host first, as on macOS.
+  Agents start through `cmd /c` (`host/src/shell.rs`), setup terminals use ConPTY
+  (`portable-pty`), and the vault key lives in Credential Manager. Not on Windows yet: Remote
+  screen and the `computer` MCP (no screen helper), on-device speech, the Claude Code status
+  line hook (usage still comes from `claude -p /usage` and ACP), SSH tunnels to other
+  computers, and `curl | bash` installers (npm installs and Claude Code's PowerShell installer
+  work). The tray icon is the app icon; left-click opens the chat, right-click the menu.
 - **Remote screen** on macOS registers `CodyncScreen.app` (built from the Xcode `Screen` target)
   as an SMAppService agent; Linux starts its helper from the host, as before.
 - **Other computers in the account** are reached through this computer's own host and SSH
@@ -73,6 +84,7 @@ Each packaging script names its environment:
 npm run dist:mac:dev      # dev cloud, Clerk development
 npm run dist:mac:main     # main: what the release workflow ships
 npm run dist:linux:dev    # / dist:linux:main
+npm run dist:win:dev      # / dist:win:main, on Windows (builds the bundled host with rustup)
 ```
 
 They write `resources/account-config.json` for that environment, and the Mac ones build the
