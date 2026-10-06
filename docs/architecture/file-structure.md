@@ -9,7 +9,7 @@ Codync/
 ├── host/                      # Rust daemon and terminal client
 │   ├── src/
 │   │   ├── main.rs            # CLI entry, shared helpers (LockExt, http)
-│   │   ├── hub.rs, store.rs   # Shared state + event fan-out / SQLite persistence
+│   │   ├── hub.rs, store/     # Shared state + event fan-out / SQLite persistence (schema, model, bots, entries, devices)
 │   │   ├── service.rs         # Data dir, launchd/systemd install, keep-awake
 │   │   ├── usage.rs, screen.rs, mcp.rs
 │   │   ├── api/               # Dispatch (mod.rs), HTTP/SSE routes (http.rs, events.rs), method groups (bots.rs, host.rs, marketplace.rs, remote.rs), caller permissions (devices.rs)
@@ -79,7 +79,7 @@ Codync/
 |---|---|
 | CLI and background service | `host/src/main.rs`, `service.rs` |
 | API, caller permissions, event ordering | `host/src/api/`, `hub.rs` |
-| SQLite transcript, bots, lanes and sessions | `host/src/store.rs` |
+| SQLite transcript, bots, lanes and sessions | `host/src/store/` (`entries.rs`, `bots.rs`, `model.rs`, `devices.rs`, `schema.rs`) |
 | Agent process, ACP, queue and session lifecycle | `host/src/agent/bot/` (`queue.rs`, `session.rs`, `turn.rs`, `updates.rs`), `acp.rs` |
 | Group room turns / bot-to-bot requests | `host/src/chat/group.rs` / `team.rs` |
 | Prompt snapshots and memory keeper | `host/src/chat/context.rs`, `memory.rs` |

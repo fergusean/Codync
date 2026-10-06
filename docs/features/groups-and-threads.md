@@ -11,7 +11,7 @@ replies itself.
   Entries with `threadId == <root entry id>`. Threads are flat: a reply can't start a thread.
 - **Group**: a roster row (`kind: "group"`) holding several bots and the user. It has a
   transcript but no agent, folder or harness of its own.
-- **Lane**: where a turn talks, `(chat, thread)`. `host/src/store.rs` `Lane`.
+- **Lane**: where a turn talks, `(chat, thread)`. `host/src/store/model.rs` `Lane`.
 
 ## Data (all over the existing sync: `bot` and `entry` events)
 
