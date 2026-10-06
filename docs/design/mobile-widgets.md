@@ -26,7 +26,10 @@
 | 類型 | Small | Medium | Large |
 | --- | --- | --- | --- |
 | Provider usage | provider、最接近上限的用量、細刻度條、重置時間 | 同一 provider 的兩個用量視窗與重置時間 | 主要用量摘要、最多四個用量視窗 |
-| Bots | 待回應／工作中的數量與角色圖示 | 狀態摘要與最多三個 bot，待回應優先 | 數量摘要與最多六個 bot |
+| Bots | 待回應／工作中的數量與角色圖示 | 狀態摘要與最多三個 bot，待回應優先；每列右側是上色的狀態（Needs you 琥珀、Failed 紅、Working 主色、Ready 灰） | 數量摘要與最多六個 bot |
+| Team | 2×2 角色格：最多四個 bot（待回應優先），頭像顯示當下 mood、工作中的角落有狀態點；空位是淡化的角色；點擊開最需要你的 bot | — | — |
+
+Widget 與 Live Activity 的頭像用 `CharacterAvatar(… still: true)`：畫出 mood（工作中、待回應的漣漪）但不動畫，因為 WidgetKit 只渲染一幀。Control Center 另有一個「Bots」控制項（`LeadBotControl`）：顯示最需要你的 bot 與狀態，點擊開啟它；App 在 bot 狀態改變時重新載入 Bots、Team 與這個控制項。
 
 既有 Usage limits 保留 Small／Medium 的跨 provider 用量摘要。Bots 與 Usage limits 另支援 Lock Screen 的圓形、矩形與行內形式；行內放在時鐘上方日期列。
 
@@ -51,10 +54,12 @@ State 分頁的 Live Activity 頁顯示鎖定畫面形式，Dynamic Island 頁�
 
 | 形式 | 資訊與互動 |
 | --- | --- |
-| Lock Screen／橫幅 | bot 頭像與名稱、一行說明、右側 orb；點擊回到對話 |
-| Compact | 左側 bot、右側 orb；完成／錯誤時改為勾號／警告符號 |
+| Lock Screen／橫幅 | bot 頭像（mood）與名稱、上色的一行說明與經過時間、右側 orb；待回應時下方多一個 Review 按鈕開啟請求；點擊回到對話 |
+| Compact | 左側 bot（mood）、右側 orb；完成／錯誤時改為勾號／警告符號；島的外框（keyline）帶狀態色 |
 | Minimal | 只有 orb（或結束符號），VoiceOver 包含 bot 名稱 |
-| Expanded | bot、一行說明、orb；整塊點擊回到對話，不另放連結文字 |
+| Expanded | bot、上色的一行說明、orb；底部是經過時間，待回應時換成 Review；整塊點擊回到對話 |
+
+狀態色：待回應琥珀（`Palette.attention`）、失敗紅、完成綠；工作中的說明維持灰色，只有需要注意的狀態跳出來。經過時間用 `Text(startedAt, style: .timer)` 由系統自己往上數，不需要推播（`startedAt` 已在 remote content state 裡）。狀態切換時頭像舊臉放大淡出、新臉縮放進場，文字用 `.contentTransition(.interpolate)`，Review／時間列由下往上進場，全部用 `Motion.activityPhase`（0.6 s spring，在 iOS 給 activity 更新的 2 s 內）。Review 只開啟對話，核准仍在 App 的 permission card。
 
 實際形式由 iOS 根據裝置、活動數量與互動決定；App 內的形式選單只控制設計預覽。[Apple Live Activities 設計指南](https://developer.apple.com/design/human-interface-guidelines/live-activities)
 
