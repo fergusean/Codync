@@ -95,37 +95,6 @@ export const rivals: Rival[] = [
     ],
   },
   {
-    slug: "openbot",
-    name: "OpenBot",
-    card: "Both free and local. Codync is MIT and lives on your phone.",
-    summary:
-      "OpenBot is a free desktop app for a team of AI agents on your computer, with source published under a noncommercial license. Codync is also free and local, MIT licensed, and built around your phone: approvals, notifications, voice and remote screen on iPhone.",
-    rows: [
-      ["Price", us.price, "$0; you pay only your AI provider."],
-      ["Where bots run", us.runs, "On your computer, or as a server on a VPS or in Docker."],
-      ["Agents and models", us.agents, "Codex, Claude Code, Grok, OpenCode, Gemini, Cursor and Cline, plus OpenAI-compatible endpoints, Ollama and LM Studio."],
-      ["Apps", us.apps, "Desktop for macOS, Windows and Linux, and a browser client. No phone app is listed."],
-      ["Your data", us.data, "Workspaces, conversations, files and browser data stay on your computer."],
-      ["Source", us.source, "Source available under PolyForm Noncommercial 1.0.0, which doesn't allow commercial use."],
-      ["Account", us.account, "Optional; needed to invite people or run a server."],
-      ["Approvals", us.approvals, "None: a development preview where agents run with full access after a one-time consent."],
-      ["Group chats and threads", us.rooms, "Channels and threads; agents message each other and hand off tasks."],
-      ["Memory and routines", us.memory, "Yes: channel and agent memories, and routines."],
-      ["Voice and screen", us.extras, "Voice prompts (not on Linux), remote desktop, and a built-in browser agents control."],
-    ],
-    pickUs:
-      "you want to run your agents from your iPhone, approve each edit and command before it happens, and use software you're free to use at work under MIT.",
-    pickThem:
-      "you're on Windows, want local models through Ollama or LM Studio, or want a built-in browser and plugin marketplace on the desktop.",
-    checked: CHECKED,
-    sources: [
-      ["openbot.run", "https://openbot.run"],
-      ["Download and requirements", "https://openbot.run/download"],
-      ["OpenBot 101", "https://openbot.run/guides/openbot-101"],
-      ["GitHub and license", "https://github.com/nightly-labs/openbot"],
-    ],
-  },
-  {
     slug: "claude-remote-control",
     name: "Claude Remote Control",
     card: "Anthropic's phone remote is Claude only. Codync runs any agent.",

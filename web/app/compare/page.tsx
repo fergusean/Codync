@@ -5,7 +5,7 @@ import CompareCards from "../components/compare-cards";
 export const metadata: Metadata = {
   title: "Compare Codync",
   description:
-    "How Codync, the 100% free and open-source way to message coding agents as bots, compares with Grok Bot, Muse, OpenBot and phone apps for Claude Code.",
+    "How Codync, the 100% free and open-source way to message coding agents as bots, compares with Grok Bot, Muse and phone apps for Claude Code.",
 };
 
 export default function CompareIndex() {

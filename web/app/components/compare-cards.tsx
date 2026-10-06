@@ -9,7 +9,7 @@ const corners = ["bottom-right", "top-left", "bottom-left", "top-right"] as cons
 export default function CompareCards({ except }: { except?: string }) {
   const shown = rivals.filter((r) => r.slug !== except);
   return (
-    <ul className={`grid grid-cols-1 gap-4 sm:grid-cols-2 ${shown.length === 5 ? "lg:grid-cols-5" : "lg:grid-cols-4"}`}>
+    <ul className={`grid grid-cols-1 gap-4 sm:grid-cols-2 ${shown.length % 3 === 0 ? "lg:grid-cols-3" : "lg:grid-cols-4"}`}>
       {shown.map((r, i) => (
         <li key={r.slug}>
           <Link
