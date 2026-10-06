@@ -4,8 +4,10 @@
 
 # Codync
 
-**The open-source, 1:1 alternative to Grok Bot and Muse.**<br>
+**The free, open-source alternative to Grok Bot, Muse and Dots.**<br>
 Your coding agents, as teammates you can message.
+
+[Website](https://www.codync.dev) · [Compare](https://www.codync.dev/compare) · [Launch film](https://youtu.be/awhZJPjJaPc)
 
 [![Download for macOS](https://img.shields.io/badge/Download-macOS-000000?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/leepokai/Codync/releases/latest/download/codync-macos.dmg)
 [![Download for Linux x86_64](https://img.shields.io/badge/Download-Linux_x86__64-FCC624?style=for-the-badge&logo=linux&logoColor=black)](https://github.com/leepokai/Codync/releases/latest/download/codync-linux-x86_64.AppImage)
@@ -42,7 +44,7 @@ Codync turns the coding agents on your computer — Claude Code, Codex, Cursor, 
 - **Many bots, one team.** Run as many bots as you like side by side, each with its own agent, project folder and approvals, all working at once. Put several in a **group chat** and they answer in turn, like a team channel; `@name` picks who replies. Start a **thread** on any message to branch off without cluttering the main chat.
 - **Built in Rust.** `codync-host` is one small, fast Rust binary for macOS and Linux (static on Linux, runs on any distro) that drives every agent, keeps the transcripts and serves every client.
 - **One app per kind of device.** Native SwiftUI on the iPhone, one desktop app for Mac and Linux (Electron), and a terminal UI for SSH.
-- **A 1:1 Grok Bot / Muse alternative.** Persistent named bots, group chats, reply threads, bots asking each other for help, approval cards, per-bot memory, remote screen, voice calls and "needs you / done" notifications — the same features, without being tied to one model or one subscription.
+- **A Grok Bot, Muse and Dots alternative.** Persistent named bots, group chats, reply threads, bots asking each other for help, approval cards, per-bot memory, remote screen, voice calls and "needs you / done" notifications — the same features, without being tied to one model or one subscription.
 - **Reach your computer from anywhere, free.** The hosted Cloudflare relay is included at no cost: no Tailscale, no VPN, no port forwarding. Traffic is end-to-end encrypted between your phone and your computer, so the relay only forwards ciphertext. Same Wi-Fi or Tailscale? The phone connects directly instead.
 - **Every computer, one app.** Sign in and your iPhone lists every computer on your account (Mac, Linux desktop, server or cloud VM); tap **Connect**, confirm a 6-digit code on that computer, and its bots show up next to the others. A new bot can live on any of them, and the Mac app reaches your SSH machines too. Each computer approves each device itself, so an account alone never unlocks a computer.
 - **Remote screen.** See and control your computer from the iPhone over WebRTC (hardware H.264), and let bots use the screen themselves through the built-in `computer` tool.
@@ -145,6 +147,22 @@ Building the desktop app yourself: `cd apps/desktop && npm ci && npm run dev`.
 | `codync-host access` | review device access requests |
 
 Data lives in `~/.codync`. The local bearer token authorizes loopback helpers and SSH-forwarded callers. Remote devices use individual keys and grants over the encrypted channel; revoke a lost device through device management rather than rotating the loopback token. Host methods and caller permissions live in `host/src/api/`.
+
+## FAQ
+
+**Is Codync free?** Yes. $0 with every feature included, MIT licensed. You pay only your agent's provider, through the plan or key you already have.
+
+**Can I use my Claude or ChatGPT plan?** Yes. Codync runs the agents already signed in on your computer: Claude Code with your Claude plan, Codex with your ChatGPT plan, and so on. It never calls a provider's API with your login.
+
+**Which agents can it run?** Claude Code, Codex, Cursor, Gemini, Copilot, OpenCode and about 40 more through the [ACP registry](https://agentclientprotocol.com/registry). Each bot picks its own.
+
+**How is it different from Grok Bot, Muse or Dots?** The same bot-based way of working (named bots, group chats, threads, approvals, memory), but open source, free, running on your own computer and with any coding agent. Side-by-side pages: [codync.dev/compare](https://www.codync.dev/compare).
+
+**Where does my data go?** Bots, chats and memory stay on your computer. The phone reaches it directly on the same network, or through an end-to-end encrypted relay that can't read your messages.
+
+**Do I need an account?** No. Pair your phone by scanning a QR code. Signing in with Apple or Google is optional.
+
+**Which computers can run it?** A Mac, or a Linux desktop or headless server. The iPhone app and the terminal UI over SSH talk to the same host.
 
 ## Repository
 
