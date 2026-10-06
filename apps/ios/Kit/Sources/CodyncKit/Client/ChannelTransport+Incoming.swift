@@ -5,6 +5,7 @@ private let log = Logger(subsystem: "com.pokai.Codync", category: "Channel")
 
 // MARK: incoming
 
+@available(watchOS, unavailable, message: "The watch reaches the host through the iPhone")
 extension ChannelTransport {
     struct Wire: Decodable {
         var t: String

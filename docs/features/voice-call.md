@@ -31,9 +31,10 @@ The bot is the same agent on the computer; the call only changes how you talk to
   Codync does not forward microphone audio to the host. Speech recognition may use Apple services
   when on-device recognition is unavailable. `UIBackgroundModes: audio` permits
   background microphone capture and speech playback during an active call.
-- While a call is listening or speaking, it retains the computer's transport across
-  foreground/background transitions. Ending or failing the last call releases that
-  connection when backgrounded, restoring normal push delivery. Removing the computer
+- While a call is listening or speaking, it holds the computer's transport through the store's
+  hold mechanism (`BotStore.beginHold`, shared with other background users such as the watch)
+  across foreground/background transitions. Ending or failing the last hold releases that
+  connection when backgrounded, restoring normal push delivery. Ending a call restores pushes even when a watch hold keeps the link: only a call's hold mutes them (`mutesPushes`), so the events stream is resubscribed without the phone client. Removing the computer
   or switching accounts ends its calls and closes the transport.
 - Final replies and approval notices are delivered from the store's incoming events
   directly to the audio session, rather than waiting for a SwiftUI view update.

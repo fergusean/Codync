@@ -27,6 +27,7 @@ Source review, a passing build, local integration tests and production acceptanc
 - [Context and memory](features/context-and-memory.md)
 - [Bot workspaces](features/bot-workspaces.md)
 - [Voice calls](features/voice-call.md)
+- [Apple Watch app](features/watch-app.md)
 - [File attachments](features/file-attachments.md)
 - [Remote screen](features/remote-screen.md)
 - [Marketplace and agent setup](features/marketplace.md)

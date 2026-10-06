@@ -47,7 +47,7 @@ extension BotStore {
         send(text, to: botId, thread: thread, nonce: UUID().uuidString, files: files)
     }
 
-    private func send(_ text: String, to botId: String, thread: String?, nonce: String, files: [OutgoingFile] = []) {
+    func send(_ text: String, to botId: String, thread: String?, nonce: String, files: [OutgoingFile] = []) {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty || !files.isEmpty, !retired else { return }
         var data = EntryData(text: trimmed, status: "sending", clientNonce: nonce)

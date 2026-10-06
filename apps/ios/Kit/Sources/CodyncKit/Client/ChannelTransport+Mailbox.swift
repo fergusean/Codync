@@ -2,6 +2,7 @@ import Foundation
 
 // MARK: mailbox (§6.4, §7.4)
 
+@available(watchOS, unavailable, message: "The watch reaches the host through the iPhone")
 extension ChannelTransport {
     private func relaySocket() throws -> Link {
         guard let link, link.route == .relay else { throw HostError.unreachable }

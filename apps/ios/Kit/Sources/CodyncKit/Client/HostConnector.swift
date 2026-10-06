@@ -1,6 +1,7 @@
 import Foundation
 
 /// Opens channels to computers (§7.5) and pairs new ones from a QR (§4.1).
+@available(watchOS, unavailable, message: "The watch reaches the host through the iPhone")
 public enum HostConnector {
     /// Direct first (1.5 s), else the relay. The returned transport stays alive while the
     /// computer is offline (presence, mailbox) and reconnects on its own; `shutdown()` ends it.
@@ -47,6 +48,12 @@ protocol ChannelSocket: Sendable {
     /// Direct: a WebSocket ping frame, returning on pong. Relay: `{"t":"ping"}` (the DO answers).
     func ping() async throws
     func close(code: Int)
+    /// Returns once a `close` has completed on the wire (or after about a second).
+    func drain() async
+}
+
+extension ChannelSocket {
+    func drain() async {}
 }
 
 struct SocketClosed: Error, Equatable { var code: Int }
@@ -104,6 +111,13 @@ final class URLSessionSocket: ChannelSocket {
 
     func close(code: Int) {
         task.cancel(with: URLSessionWebSocketTask.CloseCode(rawValue: code) ?? .normalClosure, reason: nil)
+    }
+
+    /// `cancel(with:)` only enqueues the close frame: the task completes once it has been sent.
+    func drain() async {
+        for _ in 0..<50 where task.state != .completed {
+            try? await Task.sleep(for: .milliseconds(20))
+        }
     }
 
     private func ended() -> Error {

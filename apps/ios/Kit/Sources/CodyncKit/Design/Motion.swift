@@ -1,5 +1,9 @@
 import SwiftUI
+#if os(watchOS)
+import WatchKit
+#else
 import UIKit
+#endif
 
 /// Grok Bot's motion, taken from its stylesheet and motion constants so ours feels the same.
 /// With Reduce Motion on, Grok drops every duration to 0; use `Motion.reduced(_:)` for that.
@@ -34,7 +38,11 @@ public enum Motion {
     /// Runs a model change outside any view (connection state, account lists) with `layout`,
     /// so every screen showing it cross-fades instead of jumping. Honors Reduce Motion.
     @MainActor public static func animate(_ change: () -> Void) {
+        #if os(watchOS)
+        let reduce = WKAccessibilityIsReduceMotionEnabled()
+        #else
         let reduce = UIAccessibility.isReduceMotionEnabled
+        #endif
         withAnimation(reduced(layout, reduce), change)
     }
 }

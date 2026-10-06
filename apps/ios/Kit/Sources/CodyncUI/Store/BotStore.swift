@@ -38,6 +38,23 @@ public final class BotStore {
     /// The first catch-up has arrived: everything up to the host's rev when this app connected.
     public internal(set) var caughtUp = false
     var catchUpRev = Int64.max
+    /// This link's catch-up has arrived. `caughtUp` is sticky for the app's lifetime; this one
+    /// resets whenever the link or its event stream stops, so `isLive` is never true on stale data.
+    var linkCaughtUp = false
+    /// The bot state held here came from this transport (a catch-up on it finished), so an events-only
+    /// restart's catch-up can report a transition; a cache from disk or an older transport can't.
+    var stateFromThisTransport = false
+    /// The host marks no end of catch-up (its hello carries the rev, but a catch-up from rev 0 skips
+    /// deleted bots and capped entries, so the rev may never be reached). A stream quiet this long
+    /// after its last event has delivered its catch-up: the host sends it in one burst.
+    var catchUpIdle: Duration = .seconds(1)
+    var catchUpIdleTask: Task<Void, Never>?
+    /// The link was stopped: the next event it delivers is a recovery (reading scopes are re-acknowledged).
+    var reconnecting = false
+    /// The client value the open events subscription was made with.
+    var subscribedClient: String?
+    /// The latest transport shutdown, for a caller that must outlive it after `retire()`.
+    var closing: Task<Void, Never>?
     static let dropGrace: Duration = .seconds(5)
     static let initialConnectionGrace: Duration = .seconds(1)
     var heldDrop: Connection?
@@ -99,15 +116,20 @@ public final class BotStore {
     var streamTask: Task<Void, Never>?
     var eventsTask: Task<Void, Never>?
     var isActive = true
-    struct VoiceCall {
-        let botId: String
+    /// Something that needs this store's link to outlive the foreground: a voice call, the
+    /// watch bridge. `botId` nil keeps the link only, with no bot callbacks.
+    struct Hold {
+        let botId: String?
         let startRev: Int64
-        let speak: @MainActor (String) -> Void
-        /// A notice from the computer (approval needed), as opposed to the bot's reply.
+        let reply: @MainActor (Entry) -> Void
+        let needsInput: @MainActor (Bot) -> Void
         let announce: @MainActor (String) -> Void
+        let settled: @MainActor (String) -> Void
         let end: @MainActor () -> Void
+        /// The events stream counts as a phone for the host, which then holds its pushes back (a call).
+        let mutesPushes: Bool
     }
-    @ObservationIgnored var voiceCalls: [UUID: VoiceCall] = [:]
+    @ObservationIgnored var holds: [UUID: Hold] = [:]
     var saveTask: Task<Void, Never>?
     var rewound = false
     /// Events stayed undecodable after the rewind.

@@ -2,6 +2,7 @@ import Foundation
 
 // MARK: calls and streams
 
+@available(watchOS, unavailable, message: "The watch reaches the host through the iPhone")
 extension ChannelTransport {
     public nonisolated func call(_ method: String, body: Data, timeout: TimeInterval) async throws -> Data {
         try await perform(method, body: body, timeout: timeout)
@@ -92,7 +93,8 @@ extension ChannelTransport {
             try Task.checkCancellation()
             let id = nextId()
             let sub: [String: Any] = switch request {
-            case let .events(since, client): ["id": id, "sub": "events", "b": ["since": since, "client": client]]
+            case let .events(since, client):
+                ["id": id, "sub": "events", "b": client.map { ["since": since, "client": $0] as [String: Any] } ?? ["since": since]]
             case let .term(term): ["id": id, "sub": "term", "b": ["term": term]]
             }
             streams[id] = continuation

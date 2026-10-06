@@ -56,7 +56,7 @@ public struct HostClient: Sendable {
     }
 
     /// Catch-up since `since`, then live updates.
-    public func events(since: Int64, client: String) -> AsyncThrowingStream<HostEvent, Error> {
+    public func events(since: Int64, client: String?) -> AsyncThrowingStream<HostEvent, Error> {
         map(transport.stream(.events(since: since, client: client)), Self.parseEvent)
     }
 
@@ -280,6 +280,7 @@ public extension HostClient {
 
     func screenStatus() async throws -> ScreenState { try await call("screenStatus") }
 
+    @available(watchOS, unavailable)
     func screenPrepare() async throws -> ScreenConnection {
         let relay = if let channel = transport as? ChannelTransport { try await channel.screenRelayRequired() } else { false }
         return try await call("screenPrepare", ["relay": relay])

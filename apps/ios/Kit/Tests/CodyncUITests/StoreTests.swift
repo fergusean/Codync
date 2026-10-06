@@ -15,8 +15,12 @@ actor FakeRemote: RemoteTransport {
     private var failReadReceipts = false
     private(set) var readAttempts = 0
     private(set) var shutdownCount = 0
+    /// Shutdowns that ran to the end, after `shutdownDelay`: what `endHold` must have awaited.
+    private(set) var shutdownFinished = 0
+    private var shutdownDelay: Duration?
     private var isShutdown = false
 
+    func setShutdownDelay(_ delay: Duration?) { shutdownDelay = delay }
     func setReadFailure(_ fail: Bool) { failReadReceipts = fail }
     private(set) var calls: [String] = []
     private var failures: [String: Int] = [:]
@@ -76,7 +80,12 @@ actor FakeRemote: RemoteTransport {
         try await respond(method, body)
     }
 
-    private func addEvents(_ c: AsyncThrowingStream<Data, Error>.Continuation) { eventSinks.append(c) }
+    /// The `client` each events subscription was made with (nil: none sent).
+    private(set) var eventClients: [String?] = []
+    private func addEvents(_ c: AsyncThrowingStream<Data, Error>.Continuation, client: String?) {
+        eventSinks.append(c)
+        eventClients.append(client)
+    }
     private func addState(_ c: AsyncStream<LinkState>.Continuation) {
         isShutdown = false
         c.yield(state)
@@ -85,7 +94,9 @@ actor FakeRemote: RemoteTransport {
     private func addMailbox(_ c: AsyncStream<MailboxEvent>.Continuation) { mailboxSinks.append(c) }
 
     nonisolated func stream(_ request: HostStreamRequest) -> AsyncThrowingStream<Data, Error> {
-        AsyncThrowingStream { c in Task { await self.addEvents(c) } }
+        var client: String?
+        if case let .events(_, sent) = request { client = sent }
+        return AsyncThrowingStream { [client] c in Task { await self.addEvents(c, client: client) } }
     }
 
     nonisolated func states() -> AsyncStream<LinkState> {
@@ -109,6 +120,8 @@ actor FakeRemote: RemoteTransport {
         for s in stateSinks { s.finish() }
         eventSinks = []
         stateSinks = []
+        if let shutdownDelay { try? await Task.sleep(for: shutdownDelay) }
+        shutdownFinished += 1
     }
 }
 
@@ -144,7 +157,7 @@ private func botEvent(_ id: String, name: String, rev: Int) -> String {
     #"{"type":"bot","bot":{"id":"\#(id)","name":"\#(name)","rev":\#(rev),"lastAt":\#(rev)}}"#
 }
 
-@MainActor @Test func voiceCallSendsAndReceivesInBackgroundWithoutViewUpdates() async throws {
+@MainActor @Test func holdSendsAndReceivesInBackgroundWithoutViewUpdates() async throws {
     let (storage, suite) = context()
     defer { UserDefaults(suiteName: suite)?.removePersistentDomain(forName: suite) }
     let fake = FakeRemote(.ready(.direct))
@@ -157,7 +170,7 @@ private func botEvent(_ id: String, name: String, rev: Int) -> String {
 
     let call = UUID()
     var spoken: [String] = []
-    store.beginVoiceCall(call, botId: "b1", speak: { spoken.append($0) }, end: {})
+    store.beginHold(call, botId: "b1", reply: { spoken.append($0.data.text ?? "") })
     store.setActive(false)
     // Allow shutdown to run if backgrounding incorrectly scheduled one.
     try await Task.sleep(for: .milliseconds(30))
@@ -177,13 +190,13 @@ private func botEvent(_ id: String, name: String, rev: Int) -> String {
 
     store.setActive(true)
     #expect(await fake.shutdownCount == 0)
-    store.endVoiceCall(call)
+    await store.endHold(call)
     #expect(await fake.shutdownCount == 0) // Foreground keeps the ordinary connection.
     store.setActive(false)
     #expect(await until { await fake.shutdownCount == 1 })
 }
 
-@MainActor @Test func lastVoiceCallEndingDisconnectsBackgroundStore() async throws {
+@MainActor @Test func lastHoldEndingDisconnectsBackgroundStore() async throws {
     let (storage, suite) = context()
     defer { UserDefaults(suiteName: suite)?.removePersistentDomain(forName: suite) }
     let fake = FakeRemote(.ready(.relay))
@@ -194,17 +207,126 @@ private func botEvent(_ id: String, name: String, rev: Int) -> String {
     await fake.emit(botEvent("b1", name: "Bot", rev: 1))
     #expect(await until { store.connection == .online })
     let first = UUID(), second = UUID()
-    store.beginVoiceCall(first, botId: "b1", speak: { _ in }, end: {})
-    store.beginVoiceCall(second, botId: "b1", speak: { _ in }, end: {})
+    store.beginHold(first, botId: "b1")
+    store.beginHold(second, botId: nil) // A link-only hold coexists with a call.
     store.setActive(false)
-    store.endVoiceCall(first)
+    await store.endHold(first)
     try await Task.sleep(for: .milliseconds(30))
     #expect(await fake.shutdownCount == 0)
-    store.endVoiceCall(second)
-    #expect(await until { await fake.shutdownCount == 1 })
+    await store.endHold(second)
+    #expect(await fake.shutdownCount == 1)
 }
 
-@MainActor @Test func retiringStoreEndsVoiceCallAndPreventsLaterSends() async throws {
+@MainActor @Test func linkOnlyHoldKeepsTheTransportWhileInactive() async throws {
+    let (storage, suite) = context()
+    defer { UserDefaults(suiteName: suite)?.removePersistentDomain(forName: suite) }
+    let fake = FakeRemote(.ready(.relay))
+    let store = BotStore(computer: randomComputer("Mac"), clientKind: "ios", storage: storage) { fake }
+    defer { store.retire() }
+    store.setActive(true)
+    #expect(await until { await fake.subscribed })
+    await fake.emit(#"{"type":"hello","hostId":"h1","rev":1}"#)
+    await fake.emit(botEvent("b1", name: "Bot", rev: 1))
+    #expect(await until { store.connection == .online && store.isLive })
+    let hold = UUID()
+    store.beginHold(hold, botId: nil)
+    store.setActive(false)
+    // Still connected; the events stream is resubscribed without a client the host counts as a
+    // phone, so it is live again once that catch-up arrives.
+    #expect(await until { await fake.eventClients == ["ios", nil] })
+    #expect(await fake.shutdownCount == 0)
+    #expect(!store.isLive)
+    await fake.emit(#"{"type":"hello","hostId":"h1","rev":1}"#)
+    #expect(await until { store.isLive })
+    await store.endHold(hold)
+    #expect(await fake.shutdownCount == 1)
+    #expect(!store.isLive)
+}
+
+@MainActor @Test func endHoldWaitsForTheCloseFrame() async throws {
+    let (storage, suite) = context()
+    defer { UserDefaults(suiteName: suite)?.removePersistentDomain(forName: suite) }
+    let fake = FakeRemote(.ready(.relay))
+    await fake.setShutdownDelay(.milliseconds(80))
+    let store = BotStore(computer: randomComputer("Mac"), clientKind: "ios", storage: storage) { fake }
+    defer { store.retire() }
+    store.setActive(true)
+    #expect(await until { await fake.subscribed })
+    await fake.emit(botEvent("b1", name: "Bot", rev: 1))
+    #expect(await until { store.connection == .online })
+    let hold = UUID()
+    store.beginHold(hold, botId: nil)
+    store.setActive(false)
+    await store.endHold(hold)
+    #expect(await fake.shutdownFinished == 1)
+}
+
+@MainActor @Test func settledFiresOnceWhenAHeldBotGoesIdle() async throws {
+    let (storage, suite) = context()
+    defer { UserDefaults(suiteName: suite)?.removePersistentDomain(forName: suite) }
+    let fake = FakeRemote(.ready(.direct))
+    let store = BotStore(computer: randomComputer("Mac"), clientKind: "ios", storage: storage) { fake }
+    defer { store.retire() }
+    store.setActive(true)
+    #expect(await until { await fake.subscribed })
+    await fake.emit(#"{"type":"hello","hostId":"h1","rev":1}"#)
+    await fake.emit(#"{"type":"bot","bot":{"id":"b1","name":"Ada","rev":1,"lastAt":1}}"#)
+    #expect(await until { store.connection == .online })
+    var settled: [String] = []
+    store.beginHold(UUID(), botId: "b1", settled: { settled.append($0) })
+    await fake.emit(#"{"type":"bot","bot":{"id":"b1","name":"Ada","rev":2,"lastAt":2,"status":"working"}}"#)
+    await fake.emit(#"{"type":"bot","bot":{"id":"b1","name":"Ada","rev":3,"lastAt":3,"status":"needsInput"}}"#)
+    await fake.emit(#"{"type":"bot","bot":{"id":"b1","name":"Ada","rev":4,"lastAt":4,"status":"working"}}"#)
+    await fake.emit(#"{"type":"bot","bot":{"id":"b1","name":"Ada","rev":5,"lastAt":5,"status":"idle"}}"#)
+    await fake.emit(#"{"type":"bot","bot":{"id":"b1","name":"Ada","rev":6,"lastAt":6,"status":"idle"}}"#)
+    await fake.emit(#"{"type":"bot","bot":{"id":"b2","name":"Other","rev":7,"lastAt":7,"status":"working"}}"#)
+    await fake.emit(#"{"type":"bot","bot":{"id":"b2","name":"Other","rev":8,"lastAt":8,"status":"idle"}}"#)
+    #expect(await until { store.bots["b2"]?.isWorking == false && store.bots["b1"]?.status == "idle" })
+    #expect(settled == ["b1"])
+}
+
+@MainActor @Test func settleInsideAnEventsOnlyRestartCatchUpFires() async throws {
+    let (storage, suite) = context()
+    defer { UserDefaults(suiteName: suite)?.removePersistentDomain(forName: suite) }
+    let fake = FakeRemote(.ready(.direct))
+    let store = BotStore(computer: randomComputer("Mac"), clientKind: "ios", storage: storage) { fake }
+    defer { store.retire() }
+    store.setActive(true)
+    #expect(await until { await fake.subscribed })
+    await fake.emit(#"{"type":"hello","hostId":"h1","rev":1}"#)
+    await fake.emit(#"{"type":"bot","bot":{"id":"b1","name":"Ada","rev":1,"lastAt":1}}"#)
+    #expect(await until { store.isLive })
+    var settled: [String] = []
+    store.beginHold(UUID(), botId: "b1", settled: { settled.append($0) })
+    await fake.emit(#"{"type":"bot","bot":{"id":"b1","name":"Ada","rev":2,"lastAt":2,"status":"working"}}"#)
+    #expect(await until { store.bots["b1"]?.isWorking == true })
+    // Events-only restart: the working state came from this transport, so the new catch-up's idle counts.
+    await fake.emit(#"{"type":"resync"}"#)
+    #expect(await until { await fake.eventSubscriptionCount == 2 })
+    #expect(!store.isLive)
+    await fake.emit(#"{"type":"hello","hostId":"h1","rev":3}"#)
+    await fake.emit(#"{"type":"bot","bot":{"id":"b1","name":"Ada","rev":3,"lastAt":3,"status":"idle"}}"#)
+    #expect(await until { settled == ["b1"] })
+}
+
+@MainActor @Test func catchUpThatNeverReachesTheHelloRevStillGoesLiveWhenTheStreamGoesQuiet() async throws {
+    let (storage, suite) = context()
+    defer { UserDefaults(suiteName: suite)?.removePersistentDomain(forName: suite) }
+    let fake = FakeRemote(.ready(.direct))
+    let store = BotStore(computer: randomComputer("Mac"), clientKind: "ios", storage: storage) { fake }
+    defer { store.retire() }
+    store.catchUpIdle = .milliseconds(150)
+    store.setActive(true)
+    #expect(await until { await fake.subscribed })
+    // The host's rev is 10, but the bot that held it was deleted: a catch-up from 0 stops at 3.
+    await fake.emit(#"{"type":"hello","hostId":"h1","rev":10}"#)
+    await fake.emit(#"{"type":"bot","bot":{"id":"b1","name":"Ada","rev":3,"lastAt":3}}"#)
+    #expect(await until { store.connection == .online })
+    #expect(!store.isLive)
+    #expect(await until { store.isLive && store.caughtUp })
+}
+
+@MainActor @Test func retiringStoreEndsHoldsAndPreventsLaterSends() async throws {
     let (storage, suite) = context()
     defer { UserDefaults(suiteName: suite)?.removePersistentDomain(forName: suite) }
     let fake = FakeRemote(.ready(.direct))
@@ -215,13 +337,13 @@ private func botEvent(_ id: String, name: String, rev: Int) -> String {
     #expect(await until { store.connection == .online })
     let call = UUID()
     var ended = false
-    store.beginVoiceCall(call, botId: "b1", speak: { _ in Issue.record("Retired call received speech") }, end: { ended = true })
+    store.beginHold(call, botId: "b1", reply: { _ in Issue.record("Retired hold received a reply") }, end: { ended = true })
     store.setActive(false)
     store.retire()
     #expect(ended)
     #expect(await until { await fake.shutdownCount == 1 })
     store.send("must not send", to: "b1")
-    store.beginVoiceCall(UUID(), botId: "b1", speak: { _ in }, end: {})
+    store.beginHold(UUID(), botId: "b1")
     #expect(store.chat("b1").isEmpty)
     #expect(await fake.sent.isEmpty)
 }
@@ -592,8 +714,8 @@ extension FakeRemote {
     #expect(op.reply("**Done**, see `x`").hasPrefix("[Ada replied] "))
 }
 
-/// Approvals reach a call as notices, replies as replies (a realtime operator words them differently).
-@MainActor @Test func voiceCallGetsApprovalsAsNotices() async throws {
+/// Approvals reach a hold through `needsInput`, replies through `reply` (a call words them differently).
+@MainActor @Test func holdGetsApprovalsSeparatelyFromReplies() async throws {
     let (storage, suite) = context()
     defer { UserDefaults(suiteName: suite)?.removePersistentDomain(forName: suite) }
     let fake = FakeRemote(.ready(.direct))
@@ -605,9 +727,9 @@ extension FakeRemote {
     #expect(await until { store.connection == .online })
     var replies: [String] = []
     var notices: [String] = []
-    store.beginVoiceCall(UUID(), botId: "b1", speak: { replies.append($0) }, announce: { notices.append($0) }, end: {})
+    store.beginHold(UUID(), botId: "b1", reply: { replies.append($0.data.text ?? "") }, needsInput: { notices.append($0.name) })
     await fake.emit(#"{"type":"bot","bot":{"id":"b1","name":"Ada","rev":2,"lastAt":2,"status":"needsInput"}}"#)
-    #expect(await until { notices == ["Ada needs your approval in the chat."] })
+    #expect(await until { notices == ["Ada"] })
     #expect(replies.isEmpty)
 }
 

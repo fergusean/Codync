@@ -21,7 +21,12 @@ public extension Color {
 
     /// Light/dark pair resolved by the system appearance.
     init(light: UInt32, dark: UInt32) {
+        #if os(watchOS)
+        // watchOS is always dark.
+        self.init(hex: dark)
+        #else
         self.init(uiColor: UIColor { $0.userInterfaceStyle == .dark ? UIColor(hex: dark) : UIColor(hex: light) })
+        #endif
     }
 }
 
