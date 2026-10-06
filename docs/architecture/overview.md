@@ -62,6 +62,6 @@ Remote screen uses the channel for signaling and WebRTC for media/input. Cloudfl
 
 ## Release and environment boundaries
 
-Application/host major versions must match. The channel wire version (`v=1`), pairing URL version (`v=3`) and the cloud health endpoint's service version are separate values.
+Client/host compatibility uses mutual minimum versions (`minApp` / `minHost`, see [compatibility](../reference/compatibility.md)). The channel wire version (`v=1`), pairing URL version (`v=3`) and the cloud health endpoint's service version are separate values.
 
 Debug iOS builds use `apps/shared/Config/dev.plist`; Release uses `main.plist`. The desktop app takes the same values through `apps/desktop/tools/account-config.mjs`. The host compiles in its cloud from `CODYNC_ENV` (`main`, else dev), set by the same packaging script (`dist:mac:dev` / `dist:mac:main`). Production fields are currently incomplete in checked-in configuration, so a successful Debug install is not production readiness. See [environments](../guides/environments-and-deployment.md).

@@ -64,7 +64,7 @@ Shared deterministic [vectors](fixtures/remote-relay-vectors.json) and their [ge
 | iOS account integration | `apps/shared/AccountSession.swift` |
 | Desktop account, device key, cloud API | `apps/desktop/src/main/account.ts`, `cloud.ts` |
 
-See [architecture](../architecture/overview.md) and [file structure](../architecture/file-structure.md). Application/host compatibility follows their major version; channel `v`, QR version and Worker package version are separate values.
+See [architecture](../architecture/overview.md) and [file structure](../architecture/file-structure.md). Application/host compatibility follows mutual minimum versions ([compatibility](compatibility.md)); channel `v`, QR version and Worker package version are separate values.
 
 ## 3. 身分與金鑰
 

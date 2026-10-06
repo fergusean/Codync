@@ -221,7 +221,7 @@ For release-by-release changes, see [GitHub Releases](https://github.com/leepoka
 
 ## Versioning
 
-The major version is the phone ↔ host protocol: apps work with hosts of the same major version.
+Clients and the host each name the oldest version of the other they still work with (`minApp` in the host's `hello`, `minHost` in each client), so an app can meet an older or newer host. Details: [compatibility](docs/reference/compatibility.md).
 
 ## License
 
