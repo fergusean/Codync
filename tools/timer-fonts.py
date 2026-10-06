@@ -18,6 +18,7 @@ The frames come from the app's own drawing code (`DottedBody.workingLoop`,
 
 import json
 import math
+import subprocess
 import sys
 from pathlib import Path
 
@@ -64,6 +65,14 @@ feature calt {
 """
 
 
+def names(name):
+    """The name records App Store font validation requires (family, style, unique, full,
+    version, PostScript); without the full name and version it rejects the build (ITMS-90853)."""
+    family = name.replace("-", " ")
+    return {"familyName": family, "styleName": "Regular", "uniqueFontIdentifier": f"Codync: {name}",
+            "fullName": family, "version": "Version 1.000", "psName": name}
+
+
 def build(name, frames, size, out):
     order = [".notdef", "blank", *SEPARATORS, *DIGITS]
     glyphs = {g: empty() for g in [".notdef", "blank", *SEPARATORS]}
@@ -79,7 +88,7 @@ def build(name, frames, size, out):
     fb.setupHorizontalMetrics(metrics)
     fb.setupHorizontalHeader(ascent=EM, descent=0)
     fb.setupOS2(sTypoAscender=EM, sTypoDescender=0, sTypoLineGap=0, usWinAscent=EM, usWinDescent=0)
-    fb.setupNameTable({"familyName": name.replace("-", " "), "styleName": "Regular", "psName": name})
+    fb.setupNameTable(names(name))
     fb.setupPost()
     fb.addOpenTypeFeatures(FEATURES)
     fb.save(out / f"{name}.ttf")
@@ -93,6 +102,26 @@ def main():
         assert len(frames) == 10, f"{name}: a timer digit needs 10 frames"
         build(name, frames, data["size"], out_dir)
     print(f"wrote {len(data['fonts'])} fonts to {out_dir}")
+    validate(out_dir)
+
+
+# The same check App Store ingestion runs on every font (TN3214); WidgetKit apps get `strict`.
+FONT_VALIDATOR = ("/System/Library/Frameworks/ApplicationServices.framework/Frameworks/"
+                  "ATS.framework/Support/FontValidator")
+
+
+def validate(path):
+    """Fails unless every font under `path` passes FontValidator, before it reaches App Review."""
+    if not Path(FONT_VALIDATOR).exists():
+        sys.exit("FontValidator is macOS-only: run this on a Mac so the fonts get validated")
+    # FontValidator 3.5 (macOS 27.2) takes the App Store's options; older ones exit 252 on them.
+    for options in (["-platform", "iOS", "-level", "strict", "-reportType", "detailed"], ["-ios_only", "-report"]):
+        result = subprocess.run([FONT_VALIDATOR, *options, str(path)], capture_output=True, text=True)
+        if result.returncode != 252:
+            break
+    if result.returncode != 0:
+        sys.exit(f"FontValidator rejected the fonts:\n{result.stdout}{result.stderr}")
+    print("FontValidator: all fonts pass")
 
 
 if __name__ == "__main__":

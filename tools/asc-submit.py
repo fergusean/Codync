@@ -168,10 +168,11 @@ def main(version):
 
     current = in_flight()
     state = current and current["attributes"]["appVersionState"]
-    if state == "WAITING_FOR_REVIEW":
+    # An invalid binary leaves its submission waiting too; pull it back so the new build can go.
+    if state in ("WAITING_FOR_REVIEW", "INVALID_BINARY"):
         for s in call("GET", f"/reviewSubmissions?filter[app]={APP_ID}&filter[platform]=IOS"
                       "&filter[state]=WAITING_FOR_REVIEW")["data"]:
-            print(f"pulling {current['attributes']['versionString']} back from review")
+            print(f"pulling {current['attributes']['versionString']} ({state}) back from review")
             call("PATCH", f"/reviewSubmissions/{s['id']}",
                  {"data": {"type": "reviewSubmissions", "id": s["id"], "attributes": {"canceled": True}}})
         if not DRY_RUN:
