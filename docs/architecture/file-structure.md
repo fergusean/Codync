@@ -11,7 +11,8 @@ Codync/
 │   │   ├── main.rs            # CLI entry, shared helpers (LockExt, http)
 │   │   ├── hub.rs, store/     # Shared state + event fan-out / SQLite persistence (schema, model, bots, entries, devices)
 │   │   ├── service.rs         # Data dir, launchd/systemd install, keep-awake
-│   │   ├── usage.rs, screen.rs, mcp.rs
+│   │   ├── usage.rs, mcp.rs
+│   │   ├── screen/            # Remote screen: helper protocol, helper socket, phone viewers, bot computer use
 │   │   ├── api/               # Dispatch (mod.rs), HTTP/SSE routes (http.rs, events.rs), method groups (bots.rs, host.rs, marketplace.rs, remote.rs), caller permissions (devices.rs)
 │   │   ├── agent/             # ACP client, harness discovery, registry, sign-in, setup PTYs, bot actor
 │   │   ├── chat/              # Groups, bot-to-bot requests, prompt snapshots, memory
@@ -87,7 +88,7 @@ Codync/
 | Host cloud state and relay connection | `host/src/remote/cloud.rs`, `relay.rs` |
 | Agent discovery, sign-in, setup terminal | `host/src/agent/backends.rs`, `registry.rs`, `auth.rs`, `term.rs` |
 | Marketplace, Composio, connector OAuth | `host/src/market/` |
-| Screen bridge and built-in MCP tools | `host/src/screen.rs`, `mcp.rs` |
+| Screen bridge and built-in MCP tools | `host/src/screen/`, `mcp.rs` |
 | Swift transport and cloud API | `apps/ios/Kit/Sources/CodyncKit/Client/` |
 | Account aggregation / one host mirror | `apps/ios/Kit/Sources/CodyncUI/Store/AccountStore.swift` / `BotStore.swift` |
 | iPhone chat, replies, composer and trace | `apps/ios/Kit/Sources/CodyncUI/Thread/` |

@@ -1,6 +1,6 @@
 //! `codync-screen`: Remote screen for Linux. The host (`codync-host`) starts it
 //! while Remote screen is on; it connects to `~/.codync/screen.sock` and serves
-//! the same JSON-RPC as the macOS helper (see `host/src/screen.rs`):
+//! the same JSON-RPC as the macOS helper (see `host/src/screen/mod.rs`):
 //! capture and input through the xdg `RemoteDesktop` + `ScreenCast` portals
 //! (approved once, then restored from a saved token), video as H.264 over
 //! GStreamer `webrtcbin`, and the accessibility tree over AT-SPI.
