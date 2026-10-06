@@ -18,6 +18,7 @@ Source review, a passing build, local integration tests and production acceptanc
 | Change transport or cryptography | [Remote protocol](reference/remote-relay.md) and [shared vectors](reference/fixtures/README.md) |
 | Change what the host and clients exchange | [Client and host compatibility](reference/compatibility.md) |
 | Change an iPhone or desktop screen or button | [UI conventions](design/ui-conventions.md) |
+| Write or refactor code in any module | [Clean code](guides/clean-code.md) |
 
 ## Features
 
