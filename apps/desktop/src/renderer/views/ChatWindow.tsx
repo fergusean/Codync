@@ -363,7 +363,7 @@ function ChatSplitView() {
           {visibleRoster.length === 0 && !compact && mismatchStores.length === 0 ? (
             <div className="roster-empty">
               <div style={font(13, 'medium')}>{onlineStores.length ? 'No bots yet' : 'Waiting for a computer'}</div>
-              <div style={{ ...font(12), color: 'var(--secondary)' }}>{onlineStores.length ? 'Use + to start a new chat.' : 'Connection status is shown above.'}</div>
+              {onlineStores.length ? <div style={{ ...font(12), color: 'var(--secondary)' }}>Use + to start a new chat.</div> : null}
             </div>
           ) : null}
         </div>
