@@ -99,6 +99,36 @@ export const rivals: Rival[] = [
     ],
   },
   {
+    slug: "dots",
+    name: "Dots",
+    card: "OpenAI's always-on cloud agent, or any agent on your computer.",
+    summary:
+      "Dots are OpenAI's always-on agents: one dot per person, on GPT-6 Astra, working from its own cloud computer, with a ChatGPT Pro or Business Premium plan. Codync gives you a team of bots on your own computer that run Claude Code, Codex or any other agent you already use, for free.",
+    rows: [
+      ["Price", us.price, "Your first dot comes with ChatGPT Pro (from $100/mo) or Business Premium; deeper work draws on a plan allowance."],
+      ["Where bots run", us.runs, "On its own cloud computer and browser, run by OpenAI. It can use your laptop if you allow it."],
+      ["Agents and models", us.agents, "GPT-6 Astra. A dot can start tasks in Codex."],
+      ["Apps", us.apps, "ChatGPT on desktop, web and mobile, plus Slack and Teams."],
+      ["Your data", us.data, "In OpenAI's cloud. Personal plans can opt out of training."],
+      ["Source", us.source, "Not open source."],
+      ["Account", us.account, "Required: ChatGPT Pro or Business Premium, 18 or older, in eligible markets."],
+      ["Approvals", us.approvals, "Yes: auto-review, and Custom Rules to allow, require approval for or block actions."],
+      ["Group chats and threads", us.rooms, "One primary dot per person for now; teams of dots are planned. It joins Slack and Teams conversations."],
+      ["Memory and routines", us.memory, "Yes: memory, recurring tasks and background \"proactive research\"."],
+      ["Connected apps and tools", us.tools, "Over 4,000 apps through OpenAI plugins, and its own browser."],
+      ["Voice and screen", us.extras, "Voice calls. You can open its cloud computer to watch its work."],
+    ],
+    pickUs:
+      "you want more than one bot, on your own machine next to your files, running Claude Code, Codex or any agent you choose, without a $100 a month plan.",
+    pickThem: "you already pay for ChatGPT Pro or Business Premium and want one always-on assistant in OpenAI's cloud that also works in Slack and Teams.",
+    checked: "October 7, 2026",
+    sources: [
+      ["Introducing dots (OpenAI)", "https://openai.com/index/introducing-dots/"],
+      ["Getting started with your dot", "https://help.openai.com/en/articles/20001530-getting-started-with-your-dot"],
+      ["ChatGPT pricing", "https://chatgpt.com/pricing"],
+    ],
+  },
+  {
     slug: "claude-remote-control",
     name: "Claude Remote Control",
     card: "Anthropic's phone remote is Claude only. Codync runs any agent.",
