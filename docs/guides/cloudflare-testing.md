@@ -4,7 +4,7 @@ The remote channel, account approval and relay implementation exist. You can beg
 
 ## Prerequisites
 
-- Run matching app/host major versions and replace old running processes after installation ([development](development.md)).
+- Run app/host versions within each other's `minApp` / `minHost` floors ([compatibility](../reference/compatibility.md)) and replace old running processes after installation ([development](development.md)).
 - Point both app and host at the intended cloud. Debug app configuration uses `https://dev-api.codync.dev`; check `codync-host cloud` on the computer. Enable/configure it through **Reach from anywhere** or the CLI when needed.
 - Keep the computer awake, online, and its host running. Ensure the selected agent works locally first.
 - Pair through a fresh QR, or sign in and approve device access by comparing the six-digit code on the computer. A Google login alone does not authorize access.
