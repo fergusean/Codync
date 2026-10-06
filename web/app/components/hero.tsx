@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, MotionConfig } from "framer-motion";
-import { AppleLogo, DeviceMobile, GithubLogo, LinuxLogo, OpenAiLogo, Terminal } from "@phosphor-icons/react";
+import { AppleLogo, DeviceMobile, GithubLogo, LinuxLogo, OpenAiLogo, Terminal, WindowsLogo } from "@phosphor-icons/react";
 import DownloadButton from "./download-button";
 import Halftone from "./halftone";
 import MacWindow from "./mac-window";
@@ -115,6 +115,7 @@ export default function Hero() {
 
             <motion.p {...rise(0.2)} className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-neutral-500">
               <span className="inline-flex items-center gap-1.5"><AppleLogo size={15} weight="fill" /> macOS</span>
+              <span className="inline-flex items-center gap-1.5"><WindowsLogo size={15} weight="fill" /> Windows</span>
               <span className="inline-flex items-center gap-1.5"><LinuxLogo size={15} weight="fill" /> Linux</span>
               <span className="inline-flex items-center gap-1.5"><DeviceMobile size={15} weight="fill" /> iPhone</span>
               <span className="inline-flex items-center gap-1.5"><Terminal size={15} weight="bold" /> Terminal</span>

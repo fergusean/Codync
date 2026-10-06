@@ -18,10 +18,10 @@ export type Rival = {
 
 const us = {
   price: "$0, every feature included. MIT licensed.",
-  runs: "On your own computer: a Mac, a Linux desktop or a headless server.",
+  runs: "On your own computer: a Mac, a Windows PC, a Linux desktop or a headless server.",
   agents:
     "Claude Code, Codex, Cursor, Gemini, Copilot, OpenCode and about 40 more over ACP, on the plans and logins you already have.",
-  apps: "iPhone, Mac and Linux apps, plus a terminal UI over SSH.",
+  apps: "iPhone, Mac, Windows and Linux apps, plus a terminal UI over SSH.",
   data: "Stays on your computer. The phone connects directly, or through an end-to-end encrypted relay.",
   source: "Open source, MIT.",
   account: "Not required: pair by scanning a code. Signing in is optional.",

@@ -1,6 +1,6 @@
 # Client and host compatibility
 
-Clients (iPhone, desktop app on macOS and Linux, terminal client) and the host update on
+Clients (iPhone, desktop app on macOS, Linux and Windows, terminal client) and the host update on
 different schedules: the iPhone app waits for App Review, the desktop app and standalone hosts
 update when their owner (or the opt-in automatic updater) installs a release. Any client can
 meet an older or a newer host.

@@ -1,6 +1,6 @@
 # Environments and deployment
 
-Reviewed against repository configuration on 2026-09-26. Checked-in configuration does not prove that a deployment is healthy or that an external dashboard is configured.
+Reviewed against repository configuration on 2026-09-26; migration log updated 2026-10-07. Checked-in configuration does not prove that a deployment is healthy or that an external dashboard is configured.
 
 ## Configuration ownership
 
@@ -32,5 +32,20 @@ Use [cloud/README.md](../../cloud/README.md) for exact Wrangler commands and bin
 6. Check the deployed health endpoint, then complete the device scenarios in [Cloudflare testing](cloudflare-testing.md).
 
 Production also needs completed Apple native application registrations in Clerk and populated main app configuration. Publishable keys are public configuration; Clerk secret keys and APNs credentials do not belong in app bundles or documentation. Configure APNs using the separate relay guide.
+
+A migration that changes what the database accepts goes out before the Worker code that relies on it, in each environment: dev first, then main. `wrangler d1 migrations list <db> --remote` shows what an environment still lacks. Before applying one to main, note the restore point (`wrangler d1 time-travel info codync`) and compare the live schema with `cloud/migrations/`.
+
+## Migration log
+
+| Migration | dev (`codync-dev`) | main (`codync`) | Restore point taken just before |
+| --- | --- | --- | --- |
+| `0001_init.sql` | applied | applied | — |
+| `0002_windows_computers.sql` | 2026-10-07 | 2026-10-07 | dev `00000b79-00000000-000050fc-e6cb8fa431592b1c3d7824f3cf64afb9`, main `0000041d-0000085c-000050fc-fda9fcdf91e3498c08fa7c332a989e24` |
+
+`0002` lets `computers.platform` be `windows` (Windows hosts register with `std::env::consts::OS`). SQLite can't change a CHECK, so it rebuilds `computers` together with `access_requests` and `grants`, the tables that reference it: dropping a referenced table while foreign keys are enforced would count every referencing row as a violation. Live schemas matched `0001` beforehand; row counts were unchanged afterwards (dev 24 computers, 8 grants, 14 access requests; main 101, 38, 48) with no orphaned rows. A signed `POST /v1/host/register` with `platform: "windows"` returned 200 on both (the probe rows were deleted). Main's Worker answered with the previous version for about 20 seconds after `deploy`.
+
+The Worker accepting `windows` was deployed to both environments from the `windows` branch on 2026-10-07, ahead of its merge; its cloud code differed from `main` only in that platform list. Until the branch reaches `main`, deploying cloud from `main` turns Windows registration off again (the database keeps accepting it).
+
+Rolling back a migration restores the whole database to that point, losing every write since: `wrangler d1 time-travel restore <db> --bookmark=<restore point>`.
 
 A healthy HTTP endpoint proves Worker reachability only. It does not prove host registration, encrypted channel traffic, account approval, notification delivery or background reconnection.

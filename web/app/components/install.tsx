@@ -1,10 +1,10 @@
 import Image from "next/image";
-import { AppleLogo, DeviceMobile, LinuxLogo } from "@phosphor-icons/react/ssr";
+import { AppleLogo, DeviceMobile, LinuxLogo, WindowsLogo } from "@phosphor-icons/react/ssr";
 import CopyCommand from "./copy-command";
 import Eyebrow from "./eyebrow";
 import Halftone from "./halftone";
 import Reveal from "./reveal";
-import { APP_STORE, DMG } from "../links";
+import { APP_STORE, DMG, WINDOWS } from "../links";
 
 const INSTALL_SH = "curl -fsSL https://raw.githubusercontent.com/leepokai/Codync/main/packaging/install.sh | sh";
 
@@ -21,7 +21,7 @@ export default function Install() {
           </p>
         </Reveal>
 
-        <div className="mt-12 grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div className="mt-12 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Reveal className="h-full">
             <div className="flex h-full flex-col rounded-3xl bg-neutral-900 p-8">
               <AppleLogo size={28} weight="fill" className="text-neutral-50" />
@@ -41,6 +41,21 @@ export default function Install() {
 
           <Reveal className="h-full" delay={0.05}>
             <div className="flex h-full flex-col rounded-3xl bg-neutral-900 p-8">
+              <WindowsLogo size={28} weight="fill" className="text-neutral-50" />
+              <h3 className="mt-5 text-xl font-semibold text-neutral-50">Windows</h3>
+              <p className="mt-2 flex-1 leading-relaxed text-neutral-400">
+                Run the installer and Codync starts the host itself. The installer isn&apos;t signed yet, so Windows
+                asks you to confirm it once.
+              </p>
+              <a href={WINDOWS} className="mt-5 inline-flex h-11 items-center justify-center gap-2 rounded-full bg-neutral-50 px-5 font-medium text-neutral-950 transition hover:bg-white active:scale-[0.98]">
+                <WindowsLogo size={16} weight="fill" />
+                Download for PC
+              </a>
+            </div>
+          </Reveal>
+
+          <Reveal className="h-full" delay={0.1}>
+            <div className="flex h-full flex-col rounded-3xl bg-neutral-900 p-8">
               <LinuxLogo size={28} weight="fill" className="text-neutral-50" />
               <h3 className="mt-5 text-xl font-semibold text-neutral-50">Linux and servers</h3>
               <p className="mt-2 flex-1 leading-relaxed text-neutral-400">
@@ -53,13 +68,13 @@ export default function Install() {
             </div>
           </Reveal>
 
-          <Reveal className="h-full" delay={0.1}>
+          <Reveal className="h-full" delay={0.15}>
             <div className="flex h-full flex-col rounded-3xl bg-neutral-900 p-8">
               <DeviceMobile size={28} weight="fill" className="text-neutral-50" />
               <h3 className="mt-5 text-xl font-semibold text-neutral-50">iPhone</h3>
               <p className="mt-2 flex-1 leading-relaxed text-neutral-400">
                 Get the app, then scan the code from <span className="text-neutral-200">Pair iPhone…</span> in the
-                Mac menu bar, the Linux app or <code className="font-mono text-neutral-200">codync-host pair</code>.
+                Mac menu bar, the Windows or Linux app, or <code className="font-mono text-neutral-200">codync-host pair</code>.
               </p>
               <a
                 href={APP_STORE}
