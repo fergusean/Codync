@@ -4,7 +4,7 @@ import { Icon } from '../components/Icon'
 import { font } from '../lib/fonts'
 import { useApp } from '../store/context'
 import { HostStateView } from './HostStateView'
-import { SSHRow } from './settings/SSHViews'
+import { SSHRow } from './settings/SSHRow'
 import { useSSH } from './settings/ssh-model'
 import './startup-recovery.css'
 

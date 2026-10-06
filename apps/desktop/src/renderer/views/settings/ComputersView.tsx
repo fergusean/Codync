@@ -4,7 +4,7 @@ import type { AccountApproval, AuthorizedDevice, PairingInfo } from '@shared/mod
 import { newSSHProfile, type SSHProfile } from '@shared/ssh'
 import { Button, CardSection, IconButton, Spinner, Switch } from '../../components/Controls'
 import { Icon } from '../../components/Icon'
-import { Dialog, ModalHeader, Sheet } from '../../components/Overlay'
+import { Dialog, ModalHeader, Sheet, useDismiss } from '../../components/Overlay'
 import { font } from '../../lib/fonts'
 import { useModel } from '../../lib/observable'
 import { useAccount } from '../../store/account'
@@ -13,7 +13,7 @@ import { StoreContext, useApp } from '../../store/context'
 import { ComputerBadge } from '../ComputerBadge'
 import { deviceIcon, errorText, liveClient, relativeDay, Reveal, SectionHeader, statusText, thisMac } from './parts'
 import { sshBridge, useSSH } from './ssh-model'
-import { SSHRow, SSHProfileEditor } from './SSHViews'
+import { SSHRow } from './SSHRow'
 import { VoiceChatSettingsView } from './VoiceChatSettingsView'
 
 /**
@@ -380,4 +380,79 @@ function PairingPanel({ store }: { store: BotStore }) {
     </div>
   )
 }
+// MARK: SSH
 
+/** Add or change an SSH computer. Only fields ssh takes as separate arguments; nothing goes through a shell. */
+function SSHProfileEditor({ profile: initial, isNew }: { profile: SSHProfile; isNew: boolean }) {
+  const dismiss = useDismiss()
+  const [profile, setProfile] = useState(initial)
+  const [port, setPort] = useState(initial.port?.toString() ?? '')
+  const [remotePort, setRemotePort] = useState(String(initial.remotePort))
+  const [user, setUser] = useState(initial.user ?? '')
+  const [problem, setProblem] = useState<string | null>(null)
+  const bridge = sshBridge()
+
+  const save = async () => {
+    const isInt = (s: string) => /^-?\d+$/.test(s)
+    const portText = port.trim()
+    if (portText && !isInt(portText)) return setProblem('The SSH port must be a number.')
+    const remote = remotePort.trim()
+    if (!isInt(remote)) return setProblem('The Codync port must be a number.')
+    const u = user.trim()
+    const p: SSHProfile = {
+      ...profile,
+      host: profile.host.trim(),
+      name: profile.name.trim(),
+      user: u || null,
+      port: portText ? Number(portText) : null,
+      remotePort: Number(remote),
+    }
+    const found = bridge ? await bridge.save(p) : 'SSH computers need a newer build of Codync.'
+    if (found) return setProblem(found)
+    dismiss()
+  }
+
+  const field = (label: string, value: string, set: (v: string) => void, prompt: string) => (
+    <div className="settings-row" style={{ gap: 12 }}>
+      <span style={{ color: 'var(--text)' }}>{label}</span>
+      <input className="settings-field" aria-label={label} placeholder={prompt} value={value} spellCheck={false} onChange={(e) => set(e.target.value)} />
+    </div>
+  )
+
+  return (
+    // Return in a field saves (the default action).
+    <div style={{ width: 460, display: 'flex', flexDirection: 'column' }} onKeyDown={(e) => e.key === 'Enter' && e.target instanceof HTMLInputElement && void save()}>
+      <ModalHeader title={isNew ? 'Add SSH computer' : 'Edit SSH computer'} trailing={<IconButton title={isNew ? 'Add' : 'Save'} icon="checkmark" onClick={() => void save()} />} />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '4px 20px 20px' }}>
+        <CardSection>
+          {field('Name', profile.name, (name) => setProfile({ ...profile, name }), 'Optional')}
+          {field('Host', profile.host, (host) => setProfile({ ...profile, host }), 'SSH alias or hostname')}
+          {field('User', user, setUser, 'From SSH config')}
+          {field('SSH port', port, setPort, 'From SSH config')}
+          <div className="settings-row">
+            <span>Key</span>
+            <span style={{ flex: 1 }} />
+            <span style={{ color: 'var(--secondary)' }}>{profile.identityFile?.split('/').pop() ?? 'ssh-agent / SSH config'}</span>
+            <IconButton
+              title="Choose key file"
+              icon="key"
+              onClick={() => void bridge?.chooseKey().then((path) => path && setProfile((p) => ({ ...p, identityFile: path })))}
+            />
+            {profile.identityFile ? (
+              <span className="settings-appear" style={{ display: 'flex' }}>
+                <IconButton title="Use ssh-agent" icon="xmark.circle" onClick={() => setProfile({ ...profile, identityFile: null })} />
+              </span>
+            ) : null}
+          </div>
+          {field('Codync port', remotePort, setRemotePort, '')}
+        </CardSection>
+        <span style={{ ...font('caption'), color: 'var(--secondary)' }}>
+          Codync opens an SSH tunnel to codync-host on that computer's loopback. It uses your SSH config and ssh-agent; agent forwarding stays off.
+        </span>
+        <Reveal show={problem !== null}>
+          <span style={{ ...font('caption'), color: 'var(--danger)' }}>{problem}</span>
+        </Reveal>
+      </div>
+    </div>
+  )
+}
