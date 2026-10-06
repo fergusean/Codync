@@ -23,6 +23,7 @@ Key facts:
 ## Learn more
 
 - [Website](https://www.codync.dev): overview, pricing and FAQ
+- [Free AI agent app](https://www.codync.dev/free-ai-agent-app): what free means and what the bots do
 - [Comparisons](https://www.codync.dev/compare): Codync side by side with similar apps
 - [Source code on GitHub](https://github.com/leepokai/Codync): README, install guide and docs
 - [Group chats and threads](https://github.com/leepokai/Codync/blob/main/docs/features/groups-and-threads.md)

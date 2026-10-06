@@ -44,6 +44,7 @@ export function SiteHeader() {
 }
 
 const footerLinks: [label: string, href: string][] = [
+  ["Free AI agent app", "/free-ai-agent-app"],
   ["Claude Code on iPhone", "/claude-code-iphone"],
   ["Codex on iPhone", "/codex-iphone"],
   ["Compare", "/compare"],
