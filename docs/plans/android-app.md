@@ -83,18 +83,18 @@ payloads as Android tests. Links identify source files, not stable line numbers.
 | Responsibility | Existing reference |
 | --- | --- |
 | Root navigation and State surfaces | [RootView](../../apps/ios/Views/RootView.swift) and [CodyncApp](../../apps/ios/App/CodyncApp.swift) |
-| Pairing, computer management, account controls | [PairingView](../../apps/ios/Views/PairingView.swift), [SettingsView](../../apps/ios/Views/SettingsView.swift), [AccountSession](../../apps/shared/AccountSession.swift) |
-| Connection and cloud account protocol | [HostConnector](../../kit/Sources/CodyncKit/Client/HostConnector.swift), [ChannelTransport](../../kit/Sources/CodyncKit/Client/ChannelTransport.swift), [CloudClient](../../kit/Sources/CodyncKit/Client/CloudClient.swift) |
-| Cryptography and device identity | [RelayCrypto](../../kit/Sources/CodyncKit/Client/RelayCrypto.swift), [DeviceIdentity](../../kit/Sources/CodyncKit/Client/DeviceIdentity.swift), [shared vectors](../reference/fixtures/remote-relay-vectors.json) |
-| Account context and host mirror | [AccountStore](../../kit/Sources/CodyncUI/Store/AccountStore.swift) and [BotStore](../../kit/Sources/CodyncUI/Store/BotStore.swift) |
-| Host methods and caller restrictions | [host dispatch](../../host/src/api/mod.rs), [caller permissions](../../host/src/api/devices.rs), [HostClient](../../kit/Sources/CodyncKit/Client/HostClient.swift) |
-| Conversation UI and rendering | [ThreadView](../../kit/Sources/CodyncUI/Thread/ThreadView.swift), [ChatRows](../../kit/Sources/CodyncUI/Thread/ChatRows.swift), [ReadingConversation](../../kit/Sources/CodyncUI/Thread/ReadingConversation.swift) |
-| Bot configuration and templates | [BotEditorView](../../kit/Sources/CodyncUI/Bots/BotEditorView.swift), [BotTemplateView](../../kit/Sources/CodyncUI/Bots/BotTemplateView.swift) |
+| Pairing, computer management, account controls | [PairingView](../../apps/ios/Views/PairingView.swift), [SettingsView](../../apps/ios/Views/SettingsView.swift), [AccountSession](../../apps/ios/App/AccountSession.swift) |
+| Connection and cloud account protocol | [HostConnector](../../apps/ios/Kit/Sources/CodyncKit/Client/HostConnector.swift), [ChannelTransport](../../apps/ios/Kit/Sources/CodyncKit/Client/ChannelTransport.swift), [CloudClient](../../apps/ios/Kit/Sources/CodyncKit/Client/CloudClient.swift) |
+| Cryptography and device identity | [RelayCrypto](../../apps/ios/Kit/Sources/CodyncKit/Client/RelayCrypto.swift), [DeviceIdentity](../../apps/ios/Kit/Sources/CodyncKit/Client/DeviceIdentity.swift), [shared vectors](../reference/fixtures/remote-relay-vectors.json) |
+| Account context and host mirror | [AccountStore](../../apps/ios/Kit/Sources/CodyncUI/Store/AccountStore.swift) and [BotStore](../../apps/ios/Kit/Sources/CodyncUI/Store/BotStore.swift) |
+| Host methods and caller restrictions | [host dispatch](../../host/src/api/mod.rs), [caller permissions](../../host/src/api/devices.rs), [HostClient](../../apps/ios/Kit/Sources/CodyncKit/Client/HostClient.swift) |
+| Conversation UI and rendering | [ThreadView](../../apps/ios/Kit/Sources/CodyncUI/Thread/ThreadView.swift), [ChatRows](../../apps/ios/Kit/Sources/CodyncUI/Thread/ChatRows.swift), [ReadingConversation](../../apps/ios/Kit/Sources/CodyncUI/Thread/ReadingConversation.swift) |
+| Bot configuration and templates | [BotEditorView](../../apps/ios/Kit/Sources/CodyncUI/Bots/BotEditorView.swift), [BotTemplateView](../../apps/ios/Kit/Sources/CodyncUI/Bots/BotTemplateView.swift) |
 | Automation and integrations | [routines](../features/routines.md), [marketplace](../features/marketplace.md), [connector credentials](../features/connector-credentials.md) |
 | Mobile integrations | [voice](../features/voice-call.md), [screen](../features/remote-screen.md), [attachments](../features/file-attachments.md), [widgets](../design/mobile-widgets.md), [push](../design/push-and-live-activity.md) |
 | Push and activity lifecycle | [iOS registration and tracking](../../apps/ios/App/Push.swift), [host push](../../host/src/remote/push.rs), [push Worker](../../relay/src/index.ts) |
-| Upload retry semantics | [Swift delivery](../../kit/Sources/CodyncUI/Store/BotStore.swift) and [host chunk storage](../../host/src/chat/uploads.rs) |
-| Existing desktop and terminal parity | [Linux client](../../apps/linux/src/client.rs), [Linux UI](../../apps/linux/src/ui.rs), [TUI client](../../host/src/tui/net.rs), [TUI UI](../../host/src/tui/view.rs) |
+| Upload retry semantics | [Swift delivery](../../apps/ios/Kit/Sources/CodyncUI/Store/BotStore.swift) and [host chunk storage](../../host/src/chat/uploads.rs) |
+| Existing desktop and terminal parity | [Linux client](../../apps/desktop/src/renderer/client/host-client.ts), [Linux UI](../../apps/desktop/src/renderer/views/ChatWindow.tsx), [TUI client](../../host/src/tui/net.rs), [TUI UI](../../host/src/tui/view/mod.rs) |
 
 ## Feature parity and acceptance
 
