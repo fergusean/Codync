@@ -35,7 +35,7 @@ The chat window's account menu copies Grok Bot's: Usage, Get Codync for mobile, 
 
 The iPhone and the desktop no longer share UI code. `CodyncUI` (`apps/ios/Kit/`) is the iPhone app's own package; the desktop app (`apps/desktop/src/renderer/`) is a TypeScript port of the same screens with its own `BotStore`, chat items (`views/thread/chat-items.ts`) and Markdown blocks (`markdown-blocks.ts`).
 
-- The iPhone chat's chrome is in `ThreadView.swift` (`body`, `chrome`, `header`). The iPhone conversation renders the newest page first and earlier ones as the reader scrolls up, follows the newest message until they scroll away (`ConversationFollow.swift`, with a round "Jump to latest" button), and reveals a reply steadily as it's written (`ChatRows.swift`, `MarkdownText.swift`).
+- The iPhone chat's chrome is in `ThreadView.swift` (`body`, `chrome`, `header`). The iPhone conversation (chat and thread) is a UIKit collection view of hosted SwiftUI rows (`ConversationList.swift`): it loads earlier messages from the computer as the reader scrolls up, runs under the bars and the composer (the list sits in the safe area and reaches past it, so rows never get a safe area of their own), and follows the newest message until they scroll away (with a round "Jump to latest" button), and reveals a reply steadily as it's written (`ChatRows.swift`, `MarkdownText.swift`).
 - The desktop UI rules (custom controls, no system menus except the tray, icon-only buttons, fill or border) are implemented in `apps/desktop/src/renderer/components/` (`Controls.tsx`, `Overlay.tsx`, `Icon.tsx`).
 - A change to one lands in the other and the TUI in the same change; see [native client parity](#native-client-parity).
 
