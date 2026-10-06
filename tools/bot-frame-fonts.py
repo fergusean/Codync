@@ -48,25 +48,40 @@ def empty():
     return TTGlyphPen(None).glyph()
 
 
+# Every character a timer can print besides digits: ASCII and the ratio colon, the narrow and
+# no-break spaces and the full-width colon some locales use.
+SEPARATORS = {"space": 0x20, "colon": 0x3A, "period": 0x2E, "comma": 0x2C, "ratio": 0x2236,
+              "nbsp": 0xA0, "nnbsp": 0x202F, "thinsp": 0x2009, "fwcolon": 0xFF1A}
+# Only the last digit draws: a digit followed by anything the timer prints becomes `blank`
+# (contextual alternates, on by default), so the whole timer is exactly one face wide and
+# nothing depends on how the system aligns or clips timer text.
+FEATURES = """
+@DIGIT = [zero one two three four five six seven eight nine];
+@NEXT = [@DIGIT space colon period comma ratio nbsp nnbsp thinsp fwcolon];
+feature calt {
+    sub @DIGIT' @NEXT by blank;
+} calt;
+"""
+
+
 def build(name, frames, size, out):
-    separators = {"space": " ", "colon": ":", "period": ".", "comma": ","}
-    order = [".notdef", *separators, *DIGITS]
-    glyphs = {g: empty() for g in [".notdef", *separators]}
+    order = [".notdef", "blank", *SEPARATORS, *DIGITS]
+    glyphs = {g: empty() for g in [".notdef", "blank", *SEPARATORS]}
     for digit, dots in zip(DIGITS, frames):
         glyphs[digit] = glyph(dots, size)
     fb = FontBuilder(EM, isTTF=True)
     fb.setupGlyphOrder(order)
-    cmap = {ord(c): g for g, c in separators.items()}
+    cmap = {code: g for g, code in SEPARATORS.items()}
     cmap.update({ord(str(i)): DIGITS[i] for i in range(10)})
     fb.setupCharacterMap(cmap)
     fb.setupGlyf(glyphs)
-    # Digits are one face wide; separators take no room, so the last digit sits flush right.
     metrics = {g: (EM if g in DIGITS else 0, 0) for g in order}
     fb.setupHorizontalMetrics(metrics)
     fb.setupHorizontalHeader(ascent=EM, descent=0)
     fb.setupOS2(sTypoAscender=EM, sTypoDescender=0, sTypoLineGap=0, usWinAscent=EM, usWinDescent=0)
     fb.setupNameTable({"familyName": name.replace("-", " "), "styleName": "Regular", "psName": name})
     fb.setupPost()
+    fb.addOpenTypeFeatures(FEATURES)
     fb.save(out / f"{name}.ttf")
 
 
