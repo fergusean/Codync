@@ -2,11 +2,9 @@ name: codync-host
 
 on:
   push:
-    branches: [main, v2]
-    paths: ["host/**", "packaging/updates/**", "docs/reference/fixtures/remote-relay-vectors.json", ".github/workflows/host.yml"]
     tags: ["v*"]  # one version tag ships the host and the desktop app (release-desktop.yml)
   pull_request:
-    paths: ["host/**", "packaging/updates/**", "docs/reference/fixtures/remote-relay-vectors.json"]
+    paths: ["host/**", "packaging/updates/**", "docs/reference/fixtures/remote-relay-vectors.json", ".github/workflows/host.yml"]
 
 jobs:
   test:
