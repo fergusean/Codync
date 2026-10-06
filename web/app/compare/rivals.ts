@@ -27,7 +27,9 @@ const us = {
   account: "Not required: pair by scanning a code. Signing in is optional.",
   approvals: "Edits and commands come to your phone: allow once, always allow or deny.",
   rooms: "Group chats where every bot answers in its own session, and threads on any message.",
-  memory: "Memory per bot, and routines that run on a schedule.",
+  memory: "Memory per bot, and routines that run on a schedule or from a webhook.",
+  tools:
+    "Any connector from the MCP registry, your apps through Composio, and skills. Bots can also see and use the computer.",
   extras: "Voice calls with a bot, and remote screen to watch and control the computer from the phone.",
 };
 
@@ -39,7 +41,7 @@ export const rivals: Rival[] = [
     name: "Grok Bot",
     card: "Same bots, rooms and approvals, but on your computer and free.",
     summary:
-      "Grok Bot gives you named AI teammates that work on one shared cloud computer, with a paid Cursor or Grok plan. Codync is the same way of working, free and open source, with the bots on your own computer and any coding agent you already use.",
+      "Grok Bot gives you named AI teammates that work on one shared cloud computer, with a paid Cursor or Grok plan. Codync is the same way of working, free and open source, with the bots on your own computer and any agent you already use.",
     rows: [
       ["Price", us.price, "No free plan listed. Comes with Cursor Pro ($20/mo) and up or SuperGrok ($30/mo) and up; usage beyond the plan is billed by tokens."],
       ["Where bots run", us.runs, "On one persistent cloud computer per user, run by SpaceXAI."],
@@ -51,10 +53,11 @@ export const rivals: Rival[] = [
       ["Approvals", us.approvals, "Yes, with Auto Review for sensitive actions."],
       ["Group chats and threads", us.rooms, "Yes: group chats and bot-to-bot threads."],
       ["Memory and routines", us.memory, "Yes: memory, scheduled routines and teaching a task."],
+      ["Connected apps and tools", us.tools, "They sign in to your tools and use a browser on their cloud computer."],
       ["Voice and screen", us.extras, "Voice chat and voice memos. Bots use their own cloud computer with a browser."],
     ],
     pickUs:
-      "you want Grok Bot's way of working without a subscription, with the bots on your own machine next to your code, and the freedom to run Claude Code, Codex or any other agent you already pay for.",
+      "you want Grok Bot's way of working without a subscription, with the bots on your own machine next to your files and tools, and the freedom to run Claude Code, Codex or any other agent you already pay for.",
     pickThem:
       "you'd rather have bots on a managed cloud computer that stays on when your machine is off, and you already pay for Cursor or SuperGrok.",
     checked: CHECKED,
@@ -67,9 +70,9 @@ export const rivals: Rival[] = [
   {
     slug: "muse",
     name: "Muse",
-    card: "Meta's cloud agent for errands, next to bots for your code.",
+    card: "Meta's cloud agent and model, or bots on your own computer.",
     summary:
-      "Muse is Meta's personal AI agent for goals and errands such as email, travel and shopping, running on a cloud VM with Meta's own model. Codync is built for coding: bots that run Claude Code, Codex and other agents on your own computer, for free.",
+      "Muse is Meta's personal AI agent for goals and errands such as email, travel and shopping, running on a cloud VM with Meta's own model. Codync gives you a team of bots on your own computer, for code and everything else: they run the agents you choose, use your connected apps, browse and use the computer, and work on a schedule, for free.",
     rows: [
       ["Price", us.price, "Free with a usage limit. Power is $20/mo and Maximum $100/mo."],
       ["Where bots run", us.runs, "On Muse Secure VM, a cloud Linux VM run by Meta."],
@@ -81,11 +84,12 @@ export const rivals: Rival[] = [
       ["Approvals", us.approvals, "Yes, before sensitive actions, with a full audit trail."],
       ["Group chats and threads", us.rooms, "Not documented."],
       ["Memory and routines", us.memory, "Memory you can tell to forget, and scheduled or event-driven background work."],
+      ["Connected apps and tools", us.tools, "Email, travel and shopping; it uses a browser and terminal on its VM and can write its own tools."],
       ["Voice and screen", us.extras, "Not documented. The agent has a browser and terminal on its own VM."],
     ],
     pickUs:
-      "the work is code: you want agents like Claude Code or Codex working in your own repositories, on your own computer, and a team of them you can message from your phone.",
-    pickThem: "you want a personal assistant for email, travel and shopping inside Meta's apps, and don't need it near your code.",
+      "you want your agents on your own computer with your files, the model and agent of your choice instead of one vendor's, and a team of named bots you can put in a room and message from your phone.",
+    pickThem: "you want a personal assistant for email, travel and shopping inside Meta's apps, running in Meta's cloud with nothing to install.",
     checked: CHECKED,
     sources: [
       ["Introducing Muse (Meta)", "https://about.fb.com/news/2026/09/introducing-muse-personal-ai-agent/"],
@@ -111,6 +115,7 @@ export const rivals: Rival[] = [
       ["Approvals", us.approvals, "Yes, from the phone."],
       ["Group chats and threads", us.rooms, "No: up to 32 parallel sessions, not named bots."],
       ["Memory and routines", us.memory, "Not documented for Remote Control."],
+      ["Connected apps and tools", us.tools, "Not documented for Remote Control."],
       ["Voice and screen", us.extras, "Not documented."],
     ],
     pickUs:
@@ -139,6 +144,7 @@ export const rivals: Rival[] = [
       ["Approvals", us.approvals, "Push notifications when a permission is needed."],
       ["Group chats and threads", us.rooms, "No: parallel sessions, not named bots."],
       ["Memory and routines", us.memory, "Not documented."],
+      ["Connected apps and tools", us.tools, "Not documented."],
       ["Voice and screen", us.extras, "A voice agent. No remote screen."],
     ],
     pickUs:

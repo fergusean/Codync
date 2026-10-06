@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Codync: the free, open-source Grok Bot, Muse and Dots alternative for any coding agent",
+  title: "Codync: the 100% free, open-source Grok Bot, Muse and Dots alternative",
   description: DESCRIPTION,
   applicationName: "Codync",
   keywords: [
@@ -26,6 +26,8 @@ export const metadata: Metadata = {
     "Claude Code on iPhone",
     "Codex on iPhone",
     "coding agent remote",
+    "personal AI agent",
+    "AI assistant",
     "Agent Client Protocol",
     "ACP",
     "open source",

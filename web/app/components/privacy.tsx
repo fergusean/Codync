@@ -5,8 +5,8 @@ import Reveal from "./reveal";
 const points = [
   {
     icon: HardDrives,
-    title: "Your code stays home",
-    body: "Bots, transcripts and memory live on your Mac or Linux machine. Agents run there with your own logins. No Codync account, no cloud copy of your code or conversations.",
+    title: "Your data stays home",
+    body: "Bots, transcripts and memory live on your Mac or Linux machine. Agents run there with your own logins. No Codync account, no cloud copy of your files or conversations.",
   },
   {
     icon: WifiHigh,

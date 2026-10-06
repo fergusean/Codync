@@ -80,7 +80,7 @@ export function Features() {
             <div className="relative h-full overflow-hidden rounded-3xl bg-neutral-50 p-8">
               <Halftone className="w-48 text-neutral-950 opacity-[0.12]" />
               <LockKey size={26} className="relative text-neutral-950" />
-              <h3 className="relative mt-5 text-xl font-semibold text-neutral-950">Your code stays home</h3>
+              <h3 className="relative mt-5 text-xl font-semibold text-neutral-950">Your data stays home</h3>
               <p className="relative mt-3 leading-relaxed text-neutral-600">
                 Agents run on your machine with your own logins. The phone reaches it end-to-end encrypted.
               </p>

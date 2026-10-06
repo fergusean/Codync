@@ -8,7 +8,7 @@ export default function Privacy() {
         <p className="text-neutral-400 text-sm">Last updated: October 4, 2026</p>
 
         <Section title="Overview">
-          Codync lets you message the coding agents that run on your own computer. It is built so that your code, conversations and credentials stay on your devices.
+          Codync lets you message the AI agents that run on your own computer. It is built so that your files, conversations and credentials stay on your devices.
         </Section>
 
         <Section title="What stays on your devices">
@@ -32,7 +32,7 @@ export default function Privacy() {
           <ul className="list-disc pl-5 space-y-2">
             <li><strong>Apple Push Notification service</strong>: delivers notifications and Live Activity updates.</li>
             <li><strong>Cloudflare Workers</strong>: runs the push relay (nothing stored).</li>
-            <li><strong>The coding agents you choose</strong>: they run on your computer under their own terms and privacy policies.</li>
+            <li><strong>The AI agents you choose</strong>: they run on your computer under their own terms and privacy policies.</li>
             <li><strong>OpenAI or Google (optional, voice calls)</strong>: only if you add your own OpenAI or Gemini API key in a call&apos;s settings. Your voice then goes from your iPhone or Mac directly to that provider, under your account and its privacy policy, together with the bot&apos;s name and description and the chat messages it asks for during the call. The key is stored encrypted on your computer, which uses it only to start calls and list models. Without a key, voice calls use Apple speech recognition on your device.</li>
           </ul>
         </Section>
