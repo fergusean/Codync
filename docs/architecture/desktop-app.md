@@ -38,14 +38,16 @@ same way; the shared desktop behavior covers macOS and Linux.
 
 ## Platform notes
 
-- **SSH startup** on macOS and Linux keeps the workspace open whenever saved profiles
+- **SSH startup** in the shared desktop UI keeps the workspace open whenever saved profiles
   exist. With no online computer, the detail pane shows each profile's connection
   progress, failures, reconnect and host-key confirmation controls, plus local host
   install/retry actions. Manage computers stays reachable throughout. The computer
   filter distinguishes connecting, attention, disconnected and opening states and
   keeps local recovery actions reachable when a remote computer is already online.
   iOS uses direct/encrypted host connections, and the TUI connects to one host;
-  neither manages desktop SSH profiles. Windows does not support those profiles yet.
+  neither manages desktop SSH profiles. Windows exposes the same profile UI, but
+  the tunnel backend still uses `/usr/bin/ssh*` and Unix socket ownership checks;
+  Windows tunnel support has not been implemented.
 - **Icons**: SF Symbols may only ship in apps for Apple platforms, so the masks are generated
   on macOS at build time and never committed; Linux draws the closest Lucide icons.
 - **On-device speech** is macOS only; Linux calls use OpenAI or Gemini on the user's key.
