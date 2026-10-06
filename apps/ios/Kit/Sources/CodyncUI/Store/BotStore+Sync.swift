@@ -175,7 +175,7 @@ extension BotStore {
     }
 
     /// Resubscribes from the current `rev` on the same link.
-    private func restartEvents() {
+    func restartEvents() {
         guard let client, eventsTask != nil else { return }
         eventsTask?.cancel()
         eventsTask = Task { [weak self] in await self?.runEvents(client) }
