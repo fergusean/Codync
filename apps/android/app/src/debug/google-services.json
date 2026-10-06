@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "1097464237881",
+    "project_id": "zc-codync",
+    "storage_bucket": "zc-codync.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1097464237881:android:a58a2eaca0e7765862e2e8",
+        "android_client_info": {
+          "package_name": "com.sgnl24.codync.android"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBK0KKgpHnQ5HtqHG6ks1w_KJ72Oe_BpJw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1097464237881:android:b1ce1dc5d9d97bdf62e2e8",
+        "android_client_info": {
+          "package_name": "com.sgnl24.codync.android.dev"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBK0KKgpHnQ5HtqHG6ks1w_KJ72Oe_BpJw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
