@@ -55,7 +55,7 @@ Shared deterministic [vectors](fixtures/remote-relay-vectors.json) and their [ge
 
 | Area | Source |
 | --- | --- |
-| Worker API / authentication / DO | `cloud/src/api.ts`, `auth.ts`, `relay.ts` |
+| Worker API / authentication / DO | `cloud/src/api.ts`, `routes/`, `auth.ts`, `relay.ts` |
 | Cloud schema | `cloud/migrations/` |
 | Host identity / crypto / channel | `host/src/remote/identity.rs`, `crypto.rs`, `channel.rs` |
 | Host cloud / relay | `host/src/remote/cloud.rs`, `relay.rs` |
@@ -458,7 +458,7 @@ Close code 總表：`1000` 正常、`1011` 內部錯誤／逾時、`4001 unautho
 
 ## 8. Cloud HTTP API
 
-The route table below summarizes the contract. Executable schema and validation live in `cloud/migrations/` and `cloud/src/api.ts`; do not maintain a second copy of the schema here.
+The route table below summarizes the contract. Executable schema and validation live in `cloud/migrations/` and `cloud/src/routes/`; do not maintain a second copy of the schema here.
 
 ### 8.4 `/v1` HTTP API
 
@@ -494,9 +494,9 @@ The route table below summarizes the contract. Executable schema and validation 
    "requests":[{"requestId","deviceKey","deviceName","platform","email","commit","hostNonce"?,"deviceNonce"?,"createdAt","expiresAt"}]}
   ```
   grants 只含：grant active、device 未撤銷、device.owner == computer.owner。host 只把它當成「可續約／應刪除」的清單（§4.3）。
-- `POST /v1/host/access-requests/{id}/nonce` `{"nonce"}` → `{}`（`cloud/src/api.ts`；已設過 → `409`）
+- `POST /v1/host/access-requests/{id}/nonce` `{"nonce"}` → `{}`（`cloud/src/routes/host.ts`；已設過 → `409`）
 - `POST /v1/host/grants/{grantId}/revoke` `{}` → `{}`（host 在本機撤銷帳號來源裝置時同步 D1，`revoked_reason='owner'`；失敗記錄並存入 `grant_revokes` 重試，本機撤銷已生效）
-- `POST /v1/host/access-requests/{id}/decision` `{"decision":"approve"|"deny"}` → `{"status","grantId"?}`（`cloud/src/api.ts` 的原子更新；request 過期 → `410 requestExpired`；approve 要求 `device_nonce IS NOT NULL`，否則 `409`）
+- `POST /v1/host/access-requests/{id}/decision` `{"decision":"approve"|"deny"}` → `{"status","grantId"?}`（`cloud/src/routes/host.ts` 的原子更新；request 過期 → `410 requestExpired`；approve 要求 `device_nonce IS NOT NULL`，否則 `409`）
 - `POST /v1/host/unclaim` `{}` → `{}`（在電腦上移出帳號；同 `DELETE /v1/computers/{id}` 的效果）
 
 **Routine webhook（公開）**：`POST /v1/hooks/{computerId}/{routineId}`，§7.8。
