@@ -144,7 +144,7 @@ Building the desktop app yourself: `cd apps/desktop && npm ci && npm run dev`.
 | `codync-host devices` | list/revoke authorized remote devices |
 | `codync-host access` | review device access requests |
 
-Data lives in `~/.codync`. The local bearer token authorizes loopback helpers and SSH-forwarded callers. Remote devices use individual keys and grants over the encrypted channel; revoke a lost device through device management rather than rotating the loopback token. Host methods and caller permissions live in `host/src/api/mod.rs`.
+Data lives in `~/.codync`. The local bearer token authorizes loopback helpers and SSH-forwarded callers. Remote devices use individual keys and grants over the encrypted channel; revoke a lost device through device management rather than rotating the loopback token. Host methods and caller permissions live in `host/src/api/`.
 
 ## Repository
 

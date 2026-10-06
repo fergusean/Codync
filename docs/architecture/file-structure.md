@@ -12,7 +12,7 @@ Codync/
 │   │   ├── hub.rs, store.rs   # Shared state + event fan-out / SQLite persistence
 │   │   ├── service.rs         # Data dir, launchd/systemd install, keep-awake
 │   │   ├── usage.rs, screen.rs, mcp.rs
-│   │   ├── api/               # HTTP/SSE dispatch, caller permissions (devices.rs)
+│   │   ├── api/               # Dispatch (mod.rs), HTTP/SSE routes (http.rs, events.rs), method groups (bots.rs, host.rs, marketplace.rs, remote.rs), caller permissions (devices.rs)
 │   │   ├── agent/             # ACP client, harness discovery, registry, sign-in, setup PTYs, bot actor
 │   │   ├── chat/              # Groups, bot-to-bot requests, prompt snapshots, memory
 │   │   ├── remote/            # Identity, wire crypto, E2E channel, cloud, relay socket, push
