@@ -29,7 +29,7 @@ This first version uses synchronous request/reply over MCP and does not introduc
 ## Code and verification
 
 - `host/src/chat/team.rs`: discovery, wait graph, request lifetime and persisted notices.
-- `host/src/agent/bot.rs`: queue boundaries, recipient execution, completion and targeted cancellation.
+- `host/src/agent/bot/` (`queue.rs`, `turn.rs`): queue boundaries, recipient execution, completion and targeted cancellation.
 - `host/src/mcp.rs`: the authenticated local MCP → HTTP bridge.
 - `host/tests/team_e2e.rs`: a real host and MCP subprocess, with scripted ACP agents, covering discovery → delegation → recipient approval → reply → client sync. No paid provider calls.
 
