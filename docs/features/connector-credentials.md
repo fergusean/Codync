@@ -105,3 +105,7 @@ locked storage, secure request completion, retry idempotency, cancellation and
 failed verification. The ignored platform_keyring_roundtrip test is for an actual
 unlocked OS credential store. Run it explicitly in a disposable Secret Service
 session on Linux or the macOS login keychain.
+
+For isolated real-process installation, credential recovery, OAuth protocol,
+remote tool calls and live provider checks, see
+[Connector live verification](../guides/connector-verification.md).
