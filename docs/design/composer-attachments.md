@@ -8,9 +8,9 @@ ImageIO creates display-sized thumbnails off the main actor; the desktop app
 back to the filename chip, as do non-image files. Multiple attachments scroll
 horizontally and remain removable individually.
 
-The iPhone clipboard suggestion is not an attachment: tapping **Paste image**
-loads it into the draft and replaces the suggestion with the thumbnail. Merely
-focusing the composer does not read and attach clipboard contents. Picking a
+On the iPhone a copied image goes in through **Paste** in the + menu; the
+composer never suggests the clipboard on its own, and focusing it does not read
+or attach clipboard contents. Picking a
 photo or image file uses the same preview. A draft containing only attachments
 shows Send, including when another reply is running (the message is queued).
 

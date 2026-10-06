@@ -5,8 +5,8 @@ Photos and files sent with a message, from the iPhone and the desktop app.
 - Composer: the **+** button left of the message box. iPhone: a menu with Photos (sent as JPEG) and
   Files (plus Paste when the clipboard has an image); desktop: an open panel. Files and images can
   also be dropped on the box or pasted: ⌘V / Ctrl+V on the desktop takes a copied image or file
-  (`apps/desktop/src/renderer/views/thread/Composer.tsx`), and on the
-  iPhone a "Paste image" chip appears above the box while typing after an image was copied.
+  (`apps/desktop/src/renderer/views/thread/Composer.tsx`); on the iPhone through Paste in the
+  + menu.
   HEIC/TIFF/BMP become JPEG (`OutgoingFile.prepared`, `Thread/Attachments.swift`). Picked files show as chips above
   the text and can be removed; a message can be files only. Not in group chats (a group has no
   folder of its own). Up to 100 MB per file.
