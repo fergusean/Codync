@@ -183,7 +183,7 @@ jobs:
           npm ci
           npm run dist:win:main -- --publish never
           cd dist
-          shasum -a 256 codync-windows-x64.exe > codync-windows-x64.exe.sha256
+          sha256sum codync-windows-x64.exe > codync-windows-x64.exe.sha256
       - name: Smoke test the bundled host
         working-directory: apps/desktop/dist/win-unpacked/resources
         run: |
