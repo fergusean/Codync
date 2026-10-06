@@ -37,9 +37,24 @@ const questions: [string, string][] = [
   ],
 ];
 
+// The same questions as FAQPage structured data, so search and AI answers can quote them.
+const faqJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: questions.map(([q, a]) => ({
+    "@type": "Question",
+    name: q,
+    acceptedAnswer: { "@type": "Answer", text: a },
+  })),
+};
+
 export default function Questions() {
   return (
     <section id="questions" className="px-4 py-20 sm:px-6 md:py-28">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd).replace(/</g, "\\u003c") }}
+      />
       <div className="mx-auto grid max-w-6xl grid-cols-1 gap-10 md:grid-cols-[1fr_1.4fr] md:gap-20">
         <Reveal>
           <h2 className="text-3xl font-semibold tracking-tight text-neutral-50 md:text-4xl">Questions</h2>
