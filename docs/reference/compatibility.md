@@ -147,7 +147,7 @@ on `~/.codync` or 19222:
 
 1. Build a copy with a patched floor or version into a separate target, then restore the
    source: e.g. `MIN_APP = "9.0.0"` in `host/src/compat.rs` (app too old) or `"version": "2.2.0"`
-   in `hello` in `host/src/api/mod.rs` (host too old), built with
+   in `hello` in `host/src/api/host.rs` (host too old), built with
    `CARGO_TARGET_DIR=<scratch>/hosttarget cargo build`.
 2. `CODYNC_HOME=<scratch>/home <scratch>/hosttarget/debug/codync-host serve --port 19333`.
 3. Pair the simulator: `POST /api/pairing` with `<scratch>/home/token`, then launch with

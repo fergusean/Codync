@@ -505,7 +505,7 @@ The route table below summarizes the contract. Executable schema and validation 
 
 ## 9. Host integration
 
-`host/src/api/mod.rs` dispatches inner methods and enforces caller permissions. Bearer HTTP/SSE is loopback-only; remote callers use the encrypted channel. `host/src/remote/cloud.rs` manages registration, claims, access state and grant revocation retries; `host/src/remote/relay.rs` manages the outgoing relay connection. Inspect these implementations for current method signatures and storage keys.
+`host/src/api/mod.rs` dispatches inner methods to their method groups (`bots.rs`, `host.rs`, `marketplace.rs`, `remote.rs`) and `devices.rs` enforces caller permissions. Bearer HTTP/SSE is loopback-only; remote callers use the encrypted channel. `host/src/remote/cloud.rs` manages registration, claims, access state and grant revocation retries; `host/src/remote/relay.rs` manages the outgoing relay connection. Inspect these implementations for current method signatures and storage keys.
 
 `codync-host cloud` reports cloud status; `devices` lists/revokes device access; `access` handles pending approval. `reset-token` rotates the local bearer credential, not remote device grants.
 
