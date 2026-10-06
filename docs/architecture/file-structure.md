@@ -17,7 +17,7 @@ Codync/
 │   │   ├── chat/              # Groups, bot-to-bot requests, prompt snapshots, memory
 │   │   ├── remote/            # Identity, wire crypto, E2E channel, cloud, relay socket, push
 │   │   ├── market/            # Marketplace, Composio, MCP OAuth
-│   │   └── tui/               # Terminal client (manage.rs + sheets.rs: settings; connections.rs: secure connection requests)
+│   │   └── tui/               # Terminal client (app/: state and input; view/: drawing; manage/ + sheets.rs: settings; connections.rs: secure connection requests)
 │   └── tests/                 # Host integration tests and scripted ACP agents
 ├── apps/
 │   ├── project.yml            # XcodeGen source of truth for every Apple target
