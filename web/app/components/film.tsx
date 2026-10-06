@@ -1,3 +1,4 @@
+import MediaLabel from "./media-label";
 import Reveal from "./reveal";
 import { FILM } from "../links";
 
@@ -7,6 +8,7 @@ export default function Film() {
     <section className="px-4 pt-16 pb-20 sm:px-6 md:pt-24 md:pb-28">
       <div className="mx-auto max-w-6xl">
         <Reveal>
+          <MediaLabel label="Launch film">See Codync in action, in under two minutes.</MediaLabel>
           <iframe
             src={`https://www.youtube-nocookie.com/embed/${FILM}?rel=0`}
             title="Codync launch film"
