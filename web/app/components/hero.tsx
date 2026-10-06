@@ -71,7 +71,7 @@ export default function Hero() {
             </motion.h1>
 
             <motion.p {...rise(0.1)} className="mt-8 max-w-[36rem] text-lg leading-relaxed text-neutral-400">
-              The 100% free, open-source Grok Bot alternative. Persistent AI teammates on your own computer, for code
+              The open-source Grok Bot alternative, 100% free. Persistent AI teammates on your own computer, for code
               and everyday life. Run{" "}
               {agents.map(([name, icon], i) => (
                 <span key={name}>

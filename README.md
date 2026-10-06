@@ -4,7 +4,7 @@
 
 # Codync
 
-**The free, open-source alternative to Grok Bot, Muse and Dots.**<br>
+**The open-source Grok Bot alternative.**<br>
 Your coding agents, as teammates you can message.
 
 [Website](https://www.codync.dev) · [Compare](https://www.codync.dev/compare) · [Launch film](https://youtu.be/QAhyZWpV70U)
