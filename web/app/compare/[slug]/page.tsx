@@ -18,7 +18,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { slug } = await params;
   const r = rivals.find((x) => x.slug === slug);
   if (!r) return {};
-  return { title: `Codync vs ${r.name}`, description: r.summary };
+  return { title: `Codync vs ${r.name}`, description: r.summary, alternates: { canonical: `/compare/${r.slug}` } };
 }
 
 export default async function ComparePage({ params }: { params: Promise<{ slug: string }> }) {
