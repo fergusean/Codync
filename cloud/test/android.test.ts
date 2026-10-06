@@ -22,7 +22,9 @@ describe("Android devices", () => {
 
   it("migrates populated iOS, Mac and Windows authorizations without losing constraints", async () => {
     const db = (rawEnv as unknown as { ANDROID_MIGRATION_DB: D1Database }).ANDROID_MIGRATION_DB;
-    await applyD1Migrations(db, env.TEST_MIGRATIONS.slice(0, 2));
+    const androidMigration = env.TEST_MIGRATIONS.findIndex(migration => migration.name === "0003_android_devices.sql");
+    expect(androidMigration).toBeGreaterThan(0);
+    await applyD1Migrations(db, env.TEST_MIGRATIONS.slice(0, androidMigration));
     await db.batch([
       db.prepare("INSERT INTO accounts(user_id,created_at) VALUES ('android-owner',1)"),
       db.prepare("INSERT INTO computers(id,sign_pub,box_pub,owner_user_id,name,platform,version,created_at,updated_at) VALUES ('host','sign','box','android-owner','Host','linux','2.4.0',1,1)"),
@@ -30,7 +32,7 @@ describe("Android devices", () => {
       db.prepare("INSERT INTO grants(id,computer_id,device_id,scopes,status,created_at) VALUES ('grant','host','ios','[\"control\"]','revoked',1)"),
       db.prepare("INSERT INTO access_requests(id,computer_id,device_id,user_id,status,commit_hash,created_at,expires_at) VALUES ('request','host','windows','android-owner','denied','hash',1,2)"),
     ]);
-    await applyD1Migrations(db, env.TEST_MIGRATIONS.slice(2));
+    await applyD1Migrations(db, env.TEST_MIGRATIONS.slice(androidMigration));
     const old = await db.prepare("SELECT platform,created_at,last_used_at,revoked_at FROM devices ORDER BY platform").all();
     expect(old.results).toEqual(["ios", "macos", "windows"].map(platform => ({ platform, created_at: 1, last_used_at: 2, revoked_at: 3 })));
     const grant = await db.prepare("SELECT device_id FROM grants").first();
