@@ -6,6 +6,7 @@ import { useLayoutEffect, useRef, useState } from "react";
 const MIN_WIDTH = 960;
 const RATIO = 1096 / 1600;
 
+// The file itself, not the folder: Vercel doesn't serve a folder's index.html from public/.
 // The real desktop app (apps/desktop, `npm run build:demo`) on an in-memory host, in a Mac window.
 // The app hides the title bar on macOS, so the window draws the traffic lights.
 export default function MacWindow() {
@@ -28,7 +29,7 @@ export default function MacWindow() {
     >
       {width ? (
         <iframe
-          src="/demo/desktop/"
+          src="/demo/desktop/index.html"
           title="Codync for Mac, live demo: Ship room, where Pacer, Reviewer and Scout discuss an isoWeek fix"
           loading="lazy"
           className="absolute top-0 left-0 origin-top-left border-0"
