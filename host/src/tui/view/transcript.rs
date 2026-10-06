@@ -519,7 +519,6 @@ mod tests {
         assert!(!matches_recipient_request(&request, &Entry { thread_id: Some("thread".into()), ..reply }));
     }
 
-
     #[test]
     fn thread_summary_counts_replies() {
         assert_eq!(thread_summary(&serde_json::json!({"count": 0})), None);

@@ -277,7 +277,7 @@ private struct BotMessageBubble: View {
     let text: String
 
     @ViewBuilder private var content: some View {
-        StreamingMarkdown(text: text, live: false)
+        MarkdownText(text).equatable()
     }
 
     var body: some View {
