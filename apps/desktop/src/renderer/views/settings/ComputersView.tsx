@@ -4,7 +4,7 @@ import type { AccountApproval, AuthorizedDevice, PairingInfo } from '@shared/mod
 import { newSSHProfile, type SSHProfile } from '@shared/ssh'
 import { Button, CardSection, IconButton, Spinner, Switch } from '../../components/Controls'
 import { Icon } from '../../components/Icon'
-import { Dialog, Sheet } from '../../components/Overlay'
+import { Dialog, ModalHeader, Sheet } from '../../components/Overlay'
 import { font } from '../../lib/fonts'
 import { useModel } from '../../lib/observable'
 import { useAccount } from '../../store/account'

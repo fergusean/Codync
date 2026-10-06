@@ -5,11 +5,12 @@ import { Icon } from '../../components/Icon'
 import { ModalHeader, useDismiss } from '../../components/Overlay'
 import { font } from '../../lib/fonts'
 import { Reveal } from './parts'
+import { sshStatusDetail } from '@shared/ssh-startup'
 import { sshBridge } from './ssh-model'
 
 // MARK: SSH
 
-export function SSHRow({ profile, status, edit }: { profile: SSHProfile; status: SSHStatus; edit: () => void }) {
+export function SSHRow({ profile, status, edit, attached = true }: { profile: SSHProfile; status: SSHStatus; attached?: boolean; edit: () => void }) {
   const bridge = sshBridge()
   const target = `${profile.user ? `${profile.user}@` : ''}${profile.host}${profile.port !== null ? `:${profile.port}` : ''}`
   const line = (() => {
@@ -21,7 +22,7 @@ export function SSHRow({ profile, status, edit }: { profile: SSHProfile; status:
       case 'confirmHostKey':
         return `${target} · Confirm the host key`
       case 'connected':
-        return `${target} · Connected`
+        return `${target} · ${sshStatusDetail(status, attached)}`
       case 'retrying':
         return `${status.message} Retrying…`
       case 'failed':

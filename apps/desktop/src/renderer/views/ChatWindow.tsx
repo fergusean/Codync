@@ -25,6 +25,7 @@ import { UpdateNeededCard } from './UpdateNeededCard'
 import { SearchPalette } from './SearchPalette'
 import { AccountWelcomeView } from './AccountWelcomeView'
 import { HostStateView } from './HostStateView'
+import { StartupRecovery } from './StartupRecovery'
 export { EmptyState } from './HostStateView'
 import { AnalyticsPrompt } from './AnalyticsPrompt'
 import { StarPrompt } from './StarPrompt'
@@ -284,6 +285,8 @@ function ChatSplitView() {
         <ThreadView key={refKey(selected)} botId={selected.botId} />
       </StoreContext.Provider>
     )
+  } else if (!onlineStores.length && ssh.state.profiles.length) {
+    detail = <StartupRecovery manage={() => setSettings('computers')} />
   } else {
     detail = (
       <div className="empty-detail">
@@ -359,8 +362,8 @@ function ChatSplitView() {
           })}
           {visibleRoster.length === 0 && !compact && mismatchStores.length === 0 ? (
             <div className="roster-empty">
-              <div style={font(13, 'medium')}>No bots yet</div>
-              <div style={{ ...font(12), color: 'var(--secondary)' }}>Use + to start a new chat.</div>
+              <div style={font(13, 'medium')}>{onlineStores.length ? 'No bots yet' : 'Waiting for a computer'}</div>
+              <div style={{ ...font(12), color: 'var(--secondary)' }}>{onlineStores.length ? 'Use + to start a new chat.' : 'Connection status is shown above.'}</div>
             </div>
           ) : null}
         </div>
