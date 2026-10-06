@@ -14,15 +14,7 @@ struct PermissionCard: View {
     private var d: EntryData { entry.data }
     private var pending: Bool { d.status == "pending" }
 
-    private var headline: String {
-        switch d.toolKind {
-        case "execute": "Wants to run a command"
-        case "edit", "delete", "move": "Wants to change files"
-        case "fetch": "Wants to access the web"
-        case "read", "search": "Wants to read files"
-        default: "Wants to use a tool"
-        }
-    }
+    private var headline: String { ChatPresentation.permissionHeadline(toolKind: d.toolKind) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -74,30 +66,14 @@ struct PermissionCard: View {
         !(d.command ?? "").isEmpty || !(d.detail ?? "").isEmpty || !(d.diffs ?? []).isEmpty
     }
 
-    /// Ordered like Grok Bot: Allow once, Always allow, then Deny.
-    private var ordered: [PermissionOption] {
-        let rank = ["allow_once": 0, "allow_always": 1, "reject_once": 2, "reject_always": 3]
-        return (d.options ?? []).sorted { (rank[$0.kind] ?? 9) < (rank[$1.kind] ?? 9) }
-    }
-
-    private func label(_ o: PermissionOption) -> String {
-        switch o.kind {
-        case "allow_once": "Allow once"
-        case "allow_always": "Always allow"
-        case "reject_once": "Deny"
-        case "reject_always": "Never"
-        default: o.name
-        }
-    }
-
     private var buttons: some View {
-        let options = ordered
+        let options = ChatPresentation.orderedOptions(d.options)
         return VStack(spacing: 0) {
             ForEach(Array(options.enumerated()), id: \.element.id) { i, o in
                 if i > 0 { Rectangle().fill(Palette.border).frame(height: 0.5) }
                 Button { respond(o.optionId) } label: {
                     HStack(spacing: 8) {
-                        Text(label(o))
+                        Text(ChatPresentation.optionLabel(o))
                             .font(.body.weight(o.kind == "allow_once" ? .semibold : .regular))
                             .foregroundStyle(o.kind.hasPrefix("allow") ? Palette.text : Palette.danger)
                         Spacer(minLength: 0)
@@ -117,19 +93,7 @@ struct PermissionCard: View {
     }
 
     private var outcome: String {
-        switch d.status {
-        case "answered":
-            let chosen = d.options?.first { $0.optionId == d.selected }
-            return switch chosen?.kind {
-            case "allow_once": "Allowed once"
-            case "allow_always": "Always allowed"
-            case "reject_once": "Denied"
-            case "reject_always": "Never allowed"
-            default: chosen?.name ?? "Answered"
-            }
-        case "cancelled": return "Cancelled"
-        default: return "Expired — the agent moved on"
-        }
+        ChatPresentation.permissionOutcome(status: d.status, options: d.options, selected: d.selected)
     }
 }
 

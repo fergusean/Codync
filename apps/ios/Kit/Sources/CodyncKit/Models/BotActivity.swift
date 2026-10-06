@@ -1,3 +1,4 @@
+#if canImport(ActivityKit)
 import ActivityKit
 import Foundation
 
@@ -34,3 +35,4 @@ public struct BotActivityAttributes: ActivityAttributes {
         avatarColor = bot.avatarColor
     }
 }
+#endif

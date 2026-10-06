@@ -34,3 +34,7 @@ print("ok")
 assert not asc.ios_changed("v2.2.2", "v2.2.3")
 assert asc.ios_changed("v2.3.0", "v2.3.1")
 print("ok")
+
+# The watch app ships inside the iPhone app, so its sources count as iPhone changes.
+assert "apps/watch" in asc.IOS_PATHS
+print("ok")

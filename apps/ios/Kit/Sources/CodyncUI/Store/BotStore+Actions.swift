@@ -144,7 +144,7 @@ extension BotStore {
             if live == nil {
                 try? await Task.sleep(for: Self.initialConnectionGrace)
             }
-            guard !Task.isCancelled, isActive, let client = live else { return }
+            guard !Task.isCancelled, isActive || !holds.isEmpty, let client = live else { return }
             do {
                 try await client.markRead(botId, threadId: thread)
             } catch {
