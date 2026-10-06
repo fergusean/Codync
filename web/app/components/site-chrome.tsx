@@ -2,12 +2,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { GithubLogo } from "@phosphor-icons/react/ssr";
 import DownloadButton from "./download-button";
-import { APP_STORE, DMG, GITHUB } from "../links";
+import { GITHUB } from "../links";
 
 const nav: [href: string, label: string][] = [
   ["/#product", "Product"],
   ["/compare", "Compare"],
-  ["/#pricing", "Pricing"],
+  ["/#cost", "Pricing"],
   ["/#faq", "FAQ"],
 ];
 
@@ -43,40 +43,32 @@ export function SiteHeader() {
   );
 }
 
-const columns: [title: string, links: [label: string, href: string][]][] = [
-  ["Product", [["Download for Mac", DMG], ["iPhone app", APP_STORE], ["Linux and servers", "/#download"], ["Pricing", "/#pricing"]]],
-  ["Use it with", [["Claude Code on iPhone", "/claude-code-iphone"], ["Codex on iPhone", "/codex-iphone"], ["Compare Codync", "/compare"]]],
-  ["Open source", [["Code on GitHub", GITHUB], ["Releases", `${GITHUB}/releases`], ["Contact", `${GITHUB}/issues`]]],
-  ["Legal", [["Terms", "/terms"], ["Privacy", "/privacy"]]],
+const footerLinks: [label: string, href: string][] = [
+  ["Claude Code on iPhone", "/claude-code-iphone"],
+  ["Codex on iPhone", "/codex-iphone"],
+  ["Compare", "/compare"],
+  ["Terms", "/terms"],
+  ["Privacy", "/privacy"],
+  ["Contact", `${GITHUB}/issues`],
 ];
 
 export function SiteFooter() {
   return (
-    <footer className="border-t border-neutral-900 px-4 py-14 sm:px-6">
-      <div className="mx-auto grid max-w-6xl grid-cols-2 gap-10 md:grid-cols-[1.4fr_repeat(4,1fr)]">
-        <div className="col-span-2 md:col-span-1">
-          <Link href="/" className="flex items-center gap-2.5 font-semibold text-neutral-50">
-            <Image src="/icon.png" alt="" width={24} height={24} className="rounded-[6px]" />
-            Codync
-          </Link>
-          <p className="mt-4 max-w-[16rem] text-sm leading-relaxed text-neutral-500">
-            100% free and open source. No hidden fees, no paid tier.
-          </p>
+    <footer className="px-4 py-12 sm:px-6">
+      <div className="mx-auto flex max-w-6xl flex-col gap-6 text-sm text-neutral-500 sm:flex-row sm:items-center sm:justify-between">
+        <p>
+          100% free and open source. No hidden fees.{" "}
+          <a href={GITHUB} className="text-neutral-300 underline underline-offset-4 hover:text-white">
+            Code on GitHub
+          </a>
+        </p>
+        <div className="flex flex-wrap gap-x-6 gap-y-2">
+          {footerLinks.map(([label, href]) => (
+            <Link key={label} href={href} className="transition hover:text-neutral-300">
+              {label}
+            </Link>
+          ))}
         </div>
-        {columns.map(([title, links]) => (
-          <div key={title}>
-            <p className="text-sm font-medium text-neutral-200">{title}</p>
-            <ul className="mt-4 space-y-3 text-sm">
-              {links.map(([label, href]) => (
-                <li key={label}>
-                  <Link href={href} className="text-neutral-500 transition hover:text-neutral-200">
-                    {label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
       </div>
     </footer>
   );

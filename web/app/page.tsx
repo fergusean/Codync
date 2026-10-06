@@ -1,12 +1,15 @@
 import Hero from "./components/hero";
 import Film from "./components/film";
+import Pocket from "./components/pocket";
+import { Answers, Features } from "./components/features";
+import Surfaces from "./components/surfaces";
 import Privacy from "./components/privacy";
+import Compare from "./components/compare";
 import Cost from "./components/cost";
 import Questions from "./components/questions";
-import Install from "./components/install";
 import CompareCards from "./components/compare-cards";
+import Install from "./components/install";
 import Reveal from "./components/reveal";
-import { FinalCta, Jobs, ManyBots, Pocket, Teammates } from "./components/story";
 import { SiteFooter, SiteHeader } from "./components/site-chrome";
 
 export default function Home() {
@@ -15,27 +18,22 @@ export default function Home() {
       <SiteHeader />
       <main className="flex-1">
         <Hero />
-        <Teammates />
-        <ManyBots />
-        <Jobs />
-        <Pocket />
         <Film />
+        <Pocket />
+        <Answers />
+        <Features />
+        <Surfaces />
         <Privacy />
+        <Compare />
         <Cost />
-        <Install />
-        <section className="px-4 py-20 sm:px-6 md:py-28">
+        <Questions />
+        <section className="px-4 pb-20 sm:px-6 md:pb-28">
           <Reveal className="mx-auto max-w-6xl">
-            <h2 className="text-3xl font-semibold tracking-tight text-neutral-50 md:text-5xl">Compare Codync</h2>
-            <p className="mt-5 max-w-[36rem] text-lg leading-relaxed text-neutral-400">
-              Price, where your agents run, which agents you can use and what you can do from your phone.
-            </p>
-            <div className="mt-10">
-              <CompareCards />
-            </div>
+            <h2 className="mb-6 text-xl font-semibold text-neutral-50">Compare Codync</h2>
+            <CompareCards />
           </Reveal>
         </section>
-        <Questions />
-        <FinalCta />
+        <Install />
       </main>
       <SiteFooter />
     </>

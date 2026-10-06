@@ -4,8 +4,8 @@ import { APP_STORE, DMG } from "../links";
 const others: [label: string, detail: string, href: string, Icon: typeof AppleLogo][] = [
   ["macOS", "Apple silicon and Intel", DMG, AppleLogo],
   ["iPhone", "App Store", APP_STORE, DeviceMobile],
-  ["Linux", "AppImage, deb and servers", "/#download", LinuxLogo],
-  ["Terminal", "Over SSH, any machine", "/#download", Terminal],
+  ["Linux", "AppImage, deb and servers", "/#install", LinuxLogo],
+  ["Terminal", "Over SSH, any machine", "/#install", Terminal],
 ];
 
 // "Download for macOS" with a split menu for the other platforms; a native <details>, no script.
