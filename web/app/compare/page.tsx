@@ -3,7 +3,8 @@ import { SiteFooter, SiteHeader } from "../components/site-chrome";
 import CompareCards from "../components/compare-cards";
 
 export const metadata: Metadata = {
-  title: "Compare Codync",
+  title: "Codync vs Grok Bot, Muse and Claude Code phone apps",
+  alternates: { canonical: "/compare" },
   description:
     "How Codync, the 100% free and open-source way to message AI agents as bots, compares with Grok Bot, Muse and phone apps for Claude Code.",
 };

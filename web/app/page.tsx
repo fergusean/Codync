@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Hero from "./components/hero";
 import Film from "./components/film";
 import { Answers, Features } from "./components/features";
@@ -10,6 +11,8 @@ import CompareCards from "./components/compare-cards";
 import Install from "./components/install";
 import Reveal from "./components/reveal";
 import { SiteFooter, SiteHeader } from "./components/site-chrome";
+
+export const metadata: Metadata = { alternates: { canonical: "/" } };
 
 export default function Home() {
   return (

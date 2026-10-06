@@ -154,6 +154,8 @@ Data lives in `~/.codync`. The local bearer token authorizes loopback helpers an
 
 **Can I use my Claude or ChatGPT plan?** Yes. Codync runs the agents already signed in on your computer: Claude Code with your Claude plan, Codex with your ChatGPT plan, and so on. It never calls a provider's API with your login.
 
+**Is there a Claude Code or Codex app for iPhone?** Codync is one, free: Claude Code or Codex keeps running on your Mac or Linux machine, and you chat with it, approve its edits and get notified from the iPhone. Guides: [Claude Code on iPhone](https://www.codync.dev/claude-code-iphone) · [Codex on iPhone](https://www.codync.dev/codex-iphone).
+
 **Which agents can it run?** Claude Code, Codex, Cursor, Gemini, Copilot, OpenCode and about 40 more through the [ACP registry](https://agentclientprotocol.com/registry). Each bot picks its own.
 
 **How is it different from Grok Bot, Muse or Dots?** The same bot-based way of working (named bots, group chats, threads, approvals, memory), but open source, free, running on your own computer and with any coding agent. Side-by-side pages: [codync.dev/compare](https://www.codync.dev/compare).
