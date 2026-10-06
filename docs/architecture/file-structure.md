@@ -96,7 +96,7 @@ Codync/
 | Apple account sessions / public environment config | `apps/ios/App/AccountSession.swift`, `apps/shared/Config/` |
 | Desktop local host / SSH lifecycle | `apps/desktop/src/main/host-controller.ts`, `ssh.ts` |
 | Desktop store, chat and controls | `apps/desktop/src/renderer/store/bot-store.ts`, `views/thread/`, `components/` |
-| Cloud routes / authentication / relay | `cloud/src/index.ts`, `api.ts`, `auth.ts`, `relay.ts` |
+| Cloud routes / authentication / relay | `cloud/src/index.ts`, `api.ts`, `routes/`, `auth.ts`, `relay.ts` |
 | Push encryption / APNs delivery / decryption | `host/src/remote/push.rs`, `relay/src/`, `apps/ios/NotificationService/` |
 | Widget and activity rendering | `apps/ios/Kit/Sources/CodyncKit/Design/`, `apps/ios/Widgets/` |
 
