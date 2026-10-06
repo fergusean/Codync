@@ -190,7 +190,8 @@ export function useClock(run: boolean) {
   return run ? t : 0;
 }
 
-export function CharacterAvatar({ shape, color, size, mood = "idle" }: { shape: string; color: string; size: number; mood?: Mood }) {
+/** `ink`: the grey dots' color (the app's text color by default; light on a dark page). */
+export function CharacterAvatar({ shape, color, size, mood = "idle", ink: inkColor = palette.text }: { shape: string; color: string; size: number; mood?: Mood; ink?: string }) {
   const reduce = useReducedMotion();
   const g = useMemo(() => dotGrid(shape, size), [shape, size]);
   const still = mood === "idle" || !!reduce;
@@ -207,7 +208,7 @@ export function CharacterAvatar({ shape, color, size, mood = "idle" }: { shape: 
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden className="block shrink-0">
       {inks(g, size, pose).map(({ d, r, ink, tint: k }) => (
         <g key={d.row * 100 + d.col}>
-          <circle cx={q(d.x)} cy={q(d.y)} r={q(r)} fill={palette.text} fillOpacity={q(ink)} />
+          <circle cx={q(d.x)} cy={q(d.y)} r={q(r)} fill={inkColor} fillOpacity={q(ink)} />
           {k > 0 && <circle cx={q(d.x)} cy={q(d.y)} r={q(r)} fill={tint} fillOpacity={q(k)} />}
         </g>
       ))}

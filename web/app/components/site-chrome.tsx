@@ -1,28 +1,33 @@
 import Image from "next/image";
 import Link from "next/link";
 import { GithubLogo } from "@phosphor-icons/react/ssr";
-import { DMG, GITHUB } from "../links";
+import DownloadButton from "./download-button";
+import { APP_STORE, DMG, GITHUB } from "../links";
+
+const nav: [href: string, label: string][] = [
+  ["/#product", "Product"],
+  ["/compare", "Compare"],
+  ["/#pricing", "Pricing"],
+  ["/#faq", "FAQ"],
+];
 
 // The header and footer every page shares.
 export function SiteHeader() {
   return (
-    <header className="sticky top-0 z-20 bg-black/80 backdrop-blur-md">
-      <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
+    <header className="sticky top-0 z-30 bg-black/80 backdrop-blur-md">
+      <nav className="mx-auto grid h-16 max-w-6xl grid-cols-[1fr_auto] items-center px-4 sm:px-6 md:grid-cols-[1fr_auto_1fr]">
         <Link href="/" className="flex items-center gap-2.5 font-semibold text-neutral-50">
           <Image src="/icon.png" alt="" width={28} height={28} className="rounded-[7px]" />
           Codync
         </Link>
-        <div className="flex items-center gap-2">
-          {[
-            ["/#cost", "Pricing"],
-            ["/compare", "Compare"],
-            ["/#questions", "FAQ"],
-            ["/#install", "Install"],
-          ].map(([href, label]) => (
-            <a key={href} href={href} className="hidden rounded-full px-4 py-2 text-sm text-neutral-400 transition hover:text-neutral-100 sm:block">
+        <div className="hidden items-center gap-1 md:flex">
+          {nav.map(([href, label]) => (
+            <Link key={href} href={href} className="rounded-full px-4 py-2 text-sm text-neutral-400 transition hover:text-neutral-100">
               {label}
-            </a>
+            </Link>
           ))}
+        </div>
+        <div className="flex items-center justify-end gap-2">
           <a
             href={GITHUB}
             aria-label="Codync on GitHub"
@@ -31,48 +36,47 @@ export function SiteHeader() {
           >
             <GithubLogo size={20} />
           </a>
-          <a
-            href={DMG}
-            className="rounded-full bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-950 transition hover:bg-white active:scale-[0.98]"
-          >
-            Download for Mac
-          </a>
+          <DownloadButton size="sm" />
         </div>
       </nav>
     </header>
   );
 }
 
+const columns: [title: string, links: [label: string, href: string][]][] = [
+  ["Product", [["Download for Mac", DMG], ["iPhone app", APP_STORE], ["Linux and servers", "/#download"], ["Pricing", "/#pricing"]]],
+  ["Use it with", [["Claude Code on iPhone", "/claude-code-iphone"], ["Codex on iPhone", "/codex-iphone"], ["Compare Codync", "/compare"]]],
+  ["Open source", [["Code on GitHub", GITHUB], ["Releases", `${GITHUB}/releases`], ["Contact", `${GITHUB}/issues`]]],
+  ["Legal", [["Terms", "/terms"], ["Privacy", "/privacy"]]],
+];
+
 export function SiteFooter() {
   return (
-    <footer className="px-4 py-12 sm:px-6">
-      <div className="mx-auto flex max-w-6xl flex-col gap-6 text-sm text-neutral-500 sm:flex-row sm:items-center sm:justify-between">
-        <p>
-          100% free and open source. No hidden fees.{" "}
-          <a href={GITHUB} className="text-neutral-300 underline underline-offset-4 hover:text-white">
-            Code on GitHub
-          </a>
-        </p>
-        <div className="flex flex-wrap gap-x-6 gap-y-2">
-          <Link href="/claude-code-iphone" className="transition hover:text-neutral-300">
-            Claude Code on iPhone
+    <footer className="border-t border-neutral-900 px-4 py-14 sm:px-6">
+      <div className="mx-auto grid max-w-6xl grid-cols-2 gap-10 md:grid-cols-[1.4fr_repeat(4,1fr)]">
+        <div className="col-span-2 md:col-span-1">
+          <Link href="/" className="flex items-center gap-2.5 font-semibold text-neutral-50">
+            <Image src="/icon.png" alt="" width={24} height={24} className="rounded-[6px]" />
+            Codync
           </Link>
-          <Link href="/codex-iphone" className="transition hover:text-neutral-300">
-            Codex on iPhone
-          </Link>
-          <Link href="/compare" className="transition hover:text-neutral-300">
-            Compare
-          </Link>
-          <Link href="/terms" className="transition hover:text-neutral-300">
-            Terms
-          </Link>
-          <Link href="/privacy" className="transition hover:text-neutral-300">
-            Privacy
-          </Link>
-          <a href={`${GITHUB}/issues`} className="transition hover:text-neutral-300">
-            Contact
-          </a>
+          <p className="mt-4 max-w-[16rem] text-sm leading-relaxed text-neutral-500">
+            100% free and open source. No hidden fees, no paid tier.
+          </p>
         </div>
+        {columns.map(([title, links]) => (
+          <div key={title}>
+            <p className="text-sm font-medium text-neutral-200">{title}</p>
+            <ul className="mt-4 space-y-3 text-sm">
+              {links.map(([label, href]) => (
+                <li key={label}>
+                  <Link href={href} className="text-neutral-500 transition hover:text-neutral-200">
+                    {label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
       </div>
     </footer>
   );
