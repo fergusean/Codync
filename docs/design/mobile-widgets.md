@@ -59,7 +59,7 @@ State 分頁的 Live Activity 頁顯示鎖定畫面形式，Dynamic Island 頁�
 | Minimal | 只有 orb（或結束符號），VoiceOver 包含 bot 名稱 |
 | Expanded | bot、上色的一行說明、orb；底部是經過時間，待回應時換成 Review；整塊點擊回到對話 |
 
-狀態色：待回應琥珀（`Palette.attention`）、失敗紅、完成綠；工作中的說明維持灰色，只有需要注意的狀態跳出來。經過時間用 `Text(startedAt, style: .timer)` 由系統自己往上數，不需要推播（`startedAt` 已在 remote content state 裡）。狀態切換時頭像和右側狀態記號（orb、勾號、警告）一起「爆出再彈入」：舊的放大到 1.6 倍淡出，新的從 0.2 倍長出並回彈（`Motion.activityPop`，0.7 s、bounce 0.5）；orb 換 orb（工作中 → 待回應）也會彈。文字用 `.contentTransition(.interpolate)`，Review／時間列由下往上進場（`Motion.activityPhase`，0.6 s）。全部在 iOS 給 activity 更新的 2 s 內，而且只用內建 transition，因為 Live Activity 不執行自訂 transition。展開島底部的時間是單一置中 Text（圖示內嵌），避免 timer Text 佔滿寬度後偏左。Review 只開啟對話，核准仍在 App 的 permission card。
+狀態色：待回應琥珀（`Palette.attention`）、失敗紅、完成綠；工作中的說明維持灰色，只有需要注意的狀態跳出來。經過時間用 `Text(startedAt, style: .timer)` 由系統自己往上數，不需要推播（`startedAt` 已在 remote content state 裡）。狀態切換時動的是 bot 本身：每個 mood 有固定的一幀姿勢（idle 光從左上、working 光掃到右側且眼睛往右看、needs you 正面光加漣漪），`still: true` 時每顆點是獨立的 view，系統會逐點插值大小與顏色，所以 halftone 的亮處會滑到新位置、眼睛移過去（`Motion.activityPhase`）。右側的 orb／勾號／警告只做淡入淡出。文字用 `.contentTransition(.interpolate)`，Review／時間列由下往上進場。全部在 iOS 給 activity 更新的 2 s 內，而且只用內建 transition，因為 Live Activity 不執行自訂 transition。展開島底部的時間是單一置中 Text（圖示內嵌），避免 timer Text 佔滿寬度後偏左。Review 只開啟對話，核准仍在 App 的 permission card。
 
 模擬器截圖看不到 Live Activity，所以 Live Activity、動態島（各狀態 × Lock Screen／Compact／Minimal／Expanded，淺色與深色）和 widget 卡片改用 render 測試輸出 PNG 檢查：
 
