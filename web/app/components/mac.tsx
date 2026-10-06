@@ -1,8 +1,9 @@
 import Image from "next/image";
 import Eyebrow from "./eyebrow";
+import MacWindow from "./mac-window";
 import Reveal from "./reveal";
 
-// Real window and menu captures from the Mac app; both PNGs keep their rounded, transparent corners.
+// The live Mac app (MacWindow) and a real menu bar capture with rounded, transparent corners.
 export default function Mac() {
   return (
     <section className="px-4 py-20 sm:px-6 md:py-28">
@@ -20,13 +21,7 @@ export default function Mac() {
 
         <div className="relative mt-12 md:pr-28">
           <Reveal>
-            <Image
-              src="/screens/mac-chat.webp"
-              alt="The Codync Mac window: Ship room, where Pacer, Reviewer and Scout discuss an isoWeek fix, with the member list on the right"
-              width={1600}
-              height={1096}
-              className="h-auto w-full drop-shadow-[0_40px_60px_rgba(0,0,0,0.8)]"
-            />
+            <MacWindow />
           </Reveal>
           <Reveal
             delay={0.1}
