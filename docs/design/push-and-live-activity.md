@@ -6,7 +6,9 @@ Updated: 2026-09-27. This describes the implemented notification contract and it
 
 | Event | Notification | Live Activity / Dynamic Island |
 | --- | --- | --- |
-| A task is sent from this iPhone | No alert | Start one activity for this bot |
+| A task is sent from this iPhone | No alert | Start one activity for this bot as the message leaves: Sending (orb), then Working once the computer accepts it |
+| The computer is offline (message waits in the relay mailbox) | No alert | Waiting for your computer (computer symbol), never marked delayed; Working when the computer picks it up |
+| The message couldn't be sent | No alert (the chat shows Failed to send) | Failed, “Couldn't send”, then dismiss after 60 seconds; a message taken back out of the mailbox ends the activity |
 | Working | No alert for each tool call | Bot identity and working orb |
 | Input or permission needed | Bot name, “Response needed”, request summary; “Review request” action | Needs you; keep the activity alive |
 | Completed (sent once the last queued message is answered) | Bot name, “Task complete”, final reply preview; “Open conversation” action | Done, then dismiss after 60 seconds |
@@ -45,7 +47,7 @@ Remote activity content contains only `status`, empty `activity`, and `startedAt
 1. iOS registers its APNs token with `POST /register` using `kind: alert` and its build environment.
 2. The Worker returns an AES-GCM ticket. The phone sends it with its X25519 push public key and account context to `registerDevice` on the host.
 3. Registration atomically replaces previous alert tickets for that device identity. Delivery also selects only the latest stored ticket per device, so existing duplicate rows cannot fan out before that phone reconnects. Randomized tickets must not accumulate, retain obsolete keys or generate duplicate notifications.
-4. A foreground task submission starts an ActivityKit activity with `pushType: .token`. The phone registers each activity token using `kind: liveactivity`, then calls `registerActivity` for the bot.
+4. Sending a task starts an ActivityKit activity with `pushType: .token` in the local Sending state (Waiting for your computer when it goes to the mailbox); bot updates that aren't work yet don't end it. The phone registers each activity token using `kind: liveactivity`, then calls `registerActivity` for the bot.
 5. Activity registration replaces the previous ticket for this device and bot. The app retries registration up to three times and reattaches token observers after reconnect/relaunch. Cancellation stops retries.
 6. The host sends current state after registration, including terminal state if the task already finished. An idle bot with an unanswered main-chat user message waits for its actor to start rather than reporting immediate completion.
 7. Status transitions send updates; idle/error sends an end event preserving that status and removes the activity tickets. The group view follows its member runtime using the existing group state logic.
