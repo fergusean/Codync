@@ -1,17 +1,19 @@
 #!/usr/bin/env python3
-"""Builds the Dynamic Island's animated bot faces as fonts.
+"""Builds the Dynamic Island's animations as fonts.
 
-Live Activities draw one frame and only a timer Text keeps updating, so the working bot is a
-timer whose seconds digit is drawn in a font where `0`–`9` are the ten frames of its loop.
-Two fonts per character shape, stacked in the widget: `Ink` (every dot, tinted grey) and
-`Tint` (the lit dots, tinted in the bot's color).
+Live Activities draw one frame and only a timer Text keeps updating, so each animation is a
+timer whose last digit is drawn in a font where `0`–`9` are the ten frames of a loop (every
+other character the timer prints shapes to nothing). One font per layer, stacked and tinted in
+the widget: the working bot (`CodyncBot-<shape>-Ink` / `-Tint`) and the thinking orb
+(`CodyncOrb-Ghost` / `-Dot`).
 
-The frames come from the app's own drawing code (CharacterAvatar.swift, `workingLoop`):
+The frames come from the app's own drawing code (`DottedBody.workingLoop`,
+`ThinkingOrbGeometry.workingLoop`):
 
     cd apps/ios/Kit && TEST_RUNNER_CODYNC_FRAMES_FILE=/tmp/frames.json xcodebuild test \
       -scheme CodyncKit-Package -derivedDataPath ../../../build/dd \
       -destination 'platform=iOS Simulator,id=<sim>' '-only-testing:CodyncKitTests/exportBotFrames()'
-    tools/bot-frame-fonts.py /tmp/frames.json apps/ios/Widgets/Resources/Fonts
+    tools/timer-fonts.py /tmp/frames.json apps/ios/Widgets/Resources/Fonts
 """
 
 import json
@@ -24,8 +26,6 @@ from fontTools.pens.ttGlyphPen import TTGlyphPen
 
 EM = 1000
 DIGITS = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"]
-# A lit dot joins the color layer above this much of the bot's color.
-TINT_THRESHOLD = 0.35
 
 
 def circle(pen, cx, cy, r):
@@ -88,14 +88,11 @@ def build(name, frames, size, out):
 def main():
     frames_file, out_dir = Path(sys.argv[1]), Path(sys.argv[2])
     data = json.loads(frames_file.read_text())
-    size = data["size"]
     out_dir.mkdir(parents=True, exist_ok=True)
-    for shape, frames in sorted(data["shapes"].items()):
-        assert len(frames) == 10, f"{shape}: a timer digit needs 10 frames"
-        build(f"CodyncBot-{shape}-Ink", frames, size, out_dir)
-        lit = [[d for d in f if d["tint"] > TINT_THRESHOLD] for f in frames]
-        build(f"CodyncBot-{shape}-Tint", lit, size, out_dir)
-    print(f"wrote {2 * len(data['shapes'])} fonts to {out_dir}")
+    for name, frames in sorted(data["fonts"].items()):
+        assert len(frames) == 10, f"{name}: a timer digit needs 10 frames"
+        build(name, frames, data["size"], out_dir)
+    print(f"wrote {len(data['fonts'])} fonts to {out_dir}")
 
 
 if __name__ == "__main__":
