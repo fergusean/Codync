@@ -17,7 +17,7 @@ Codync/
 │   │   ├── agent/             # ACP client, harness discovery, registry, sign-in, setup PTYs, bot actor
 │   │   ├── chat/              # Groups, bot-to-bot requests, prompt snapshots, memory
 │   │   ├── remote/            # Identity, wire crypto, E2E channel, cloud, relay socket, push
-│   │   ├── market/            # Marketplace, Composio, MCP OAuth
+│   │   ├── market/            # Marketplace (registry.rs, install.rs, skills.rs), Composio, MCP OAuth
 │   │   └── tui/               # Terminal client (app/: state and input; view/: drawing; manage/ + sheets.rs: settings; connections.rs: secure connection requests)
 │   └── tests/                 # Host integration tests and scripted ACP agents
 ├── apps/

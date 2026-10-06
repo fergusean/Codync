@@ -5,9 +5,9 @@ The Plugins screen configures capabilities installed on the selected computer. A
 | Capability | Implementation | Behavior |
 | --- | --- | --- |
 | Agents | `host/src/agent/backends.rs`, `host/src/agent/registry.rs` | Detect installed harnesses and resolve ACP registry adapters |
-| Connectors | `host/src/market/mod.rs` | Discover MCP servers or add one manually; install per computer; on for every bot unless a bot turns it off |
+| Connectors | `host/src/market/mod.rs`, `registry.rs`, `install.rs` | Discover MCP servers or add one manually; install per computer; on for every bot unless a bot turns it off |
 | Connected apps | `host/src/market/composio.rs` | Expose connected Composio apps as connectors |
-| Skills | `host/src/market/mod.rs` | Instruction folders containing `SKILL.md`, stored under `~/.codync/skills/<id>` |
+| Skills | `host/src/market/skills.rs` | Instruction folders containing `SKILL.md`, stored under `~/.codync/skills/<id>` |
 
 The Connectors shelf opens with a short featured list, then pages through the whole MCP Registry (`marketConnectors {search, cursor}` → `{items, nextCursor}`, 60 metadata records per API page; the UI initially shows 12 and reveals another 12 only when *Load more connectors* is pressed). Apps through Composio use the same 12-at-a-time display with *Load more apps*. Searching resets the visible batch; late responses from an older search are ignored. Scrolling never triggers another catalog fetch. Listed: stdio npm/PyPI/OCI/NuGet packages (the registry's runtime and package arguments become inputs) and streamable-HTTP or SSE remotes (URL `{variables}` become inputs). Not listed: MCPB bundles and packages that serve HTTP locally; add those as a custom connector.
 
