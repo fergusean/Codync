@@ -1,0 +1,186 @@
+// Comparison pages. Every claim about another product comes from the sources listed with it;
+// anything those pages don't say is "not documented", never a guess. Re-check when updating.
+
+type Row = [topic: string, codync: string, them: string];
+
+export type Rival = {
+  slug: string;
+  name: string;
+  /** One line on the card. */
+  card: string;
+  summary: string;
+  rows: Row[];
+  pickUs: string;
+  pickThem: string;
+  checked: string;
+  sources: [label: string, url: string][];
+};
+
+const us = {
+  price: "$0, every feature included. MIT licensed.",
+  runs: "On your own computer: a Mac, a Linux desktop or a headless server.",
+  agents:
+    "Claude Code, Codex, Cursor, Gemini, Copilot, OpenCode and about 40 more over ACP, on the plans and logins you already have.",
+  apps: "iPhone, Mac and Linux apps, plus a terminal UI over SSH.",
+  data: "Stays on your computer. The phone connects directly, or through an end-to-end encrypted relay.",
+  source: "Open source, MIT.",
+  account: "Not required: pair by scanning a code. Signing in is optional.",
+  approvals: "Edits and commands come to your phone: allow once, always allow or deny.",
+  rooms: "Group chats where every bot answers in its own session, and threads on any message.",
+  memory: "Memory per bot, and routines that run on a schedule.",
+  extras: "Voice calls with a bot, and remote screen to watch and control the computer from the phone.",
+};
+
+const CHECKED = "October 6, 2026";
+
+export const rivals: Rival[] = [
+  {
+    slug: "grok-bot",
+    name: "Grok Bot",
+    card: "Same bots, rooms and approvals, but on your computer and free.",
+    summary:
+      "Grok Bot gives you named AI teammates that work on one shared cloud computer, with a paid Cursor or Grok plan. Codync is the same way of working, free and open source, with the bots on your own computer and any coding agent you already use.",
+    rows: [
+      ["Price", us.price, "No free plan listed. Comes with Cursor Pro ($20/mo) and up or SuperGrok ($30/mo) and up; usage beyond the plan is billed by tokens."],
+      ["Where bots run", us.runs, "On one persistent cloud computer per user, run by SpaceXAI."],
+      ["Agents and models", us.agents, "Its own bots; coding work goes to Cursor Cloud Agents. Bringing your own model isn't documented."],
+      ["Apps", us.apps, "Desktop for macOS, Windows and Linux, an iPhone app, and team bots in Slack."],
+      ["Your data", us.data, "On the cloud computer, encrypted in transit and at rest, with a training opt-out."],
+      ["Source", us.source, "Not published as open source."],
+      ["Account", us.account, "Required, with an eligible Cursor or Grok plan."],
+      ["Approvals", us.approvals, "Yes, with Auto Review for sensitive actions."],
+      ["Group chats and threads", us.rooms, "Yes: group chats and bot-to-bot threads."],
+      ["Memory and routines", us.memory, "Yes: memory, scheduled routines and teaching a task."],
+      ["Voice and screen", us.extras, "Voice chat and voice memos. Bots use their own cloud computer with a browser."],
+    ],
+    pickUs:
+      "you want Grok Bot's way of working without a subscription, with the bots on your own machine next to your code, and the freedom to run Claude Code, Codex or any other agent you already pay for.",
+    pickThem:
+      "you'd rather have bots on a managed cloud computer that stays on when your machine is off, and you already pay for Cursor or SuperGrok.",
+    checked: CHECKED,
+    sources: [
+      ["Grok Bot page and FAQ", "https://x.ai/bot"],
+      ["Introducing Grok Bot", "https://x.ai/news/introducing-grok-bot"],
+      ["Grok Bot changelog", "https://x.ai/changelog/bot"],
+    ],
+  },
+  {
+    slug: "muse",
+    name: "Muse",
+    card: "Meta's cloud agent for errands, next to bots for your code.",
+    summary:
+      "Muse is Meta's personal AI agent for goals and errands such as email, travel and shopping, running on a cloud VM with Meta's own model. Codync is built for coding: bots that run Claude Code, Codex and other agents on your own computer, for free.",
+    rows: [
+      ["Price", us.price, "Free with a usage limit. Power is $20/mo and Maximum $100/mo."],
+      ["Where bots run", us.runs, "On Muse Secure VM, a cloud Linux VM run by Meta."],
+      ["Agents and models", us.agents, "Meta's Muse Spark model only."],
+      ["Apps", us.apps, "iPhone, Android, web, a Mac app and WhatsApp."],
+      ["Your data", us.data, "On the cloud VM, not shared with Meta's ad systems, with a training opt-out."],
+      ["Source", us.source, "Not published as open source."],
+      ["Account", us.account, "Required: a Meta, Facebook or Instagram account, 18 or older."],
+      ["Approvals", us.approvals, "Yes, before sensitive actions, with a full audit trail."],
+      ["Group chats and threads", us.rooms, "Not documented."],
+      ["Memory and routines", us.memory, "Memory you can tell to forget, and scheduled or event-driven background work."],
+      ["Voice and screen", us.extras, "Not documented. The agent has a browser and terminal on its own VM."],
+    ],
+    pickUs:
+      "the work is code: you want agents like Claude Code or Codex working in your own repositories, on your own computer, and a team of them you can message from your phone.",
+    pickThem: "you want a personal assistant for email, travel and shopping inside Meta's apps, and don't need it near your code.",
+    checked: CHECKED,
+    sources: [
+      ["Introducing Muse (Meta)", "https://about.fb.com/news/2026/09/introducing-muse-personal-ai-agent/"],
+      ["Muse", "https://muse.ai"],
+      ["How we designed Muse", "https://introducing.muse.ai/"],
+      ["Muse subscriptions", "https://www.meta.com/help/subscriptions/1021145227643680/"],
+    ],
+  },
+  {
+    slug: "openbot",
+    name: "OpenBot",
+    card: "Both free and local. Codync is MIT and lives on your phone.",
+    summary:
+      "OpenBot is a free desktop app for a team of AI agents on your computer, with source published under a noncommercial license. Codync is also free and local, MIT licensed, and built around your phone: approvals, notifications, voice and remote screen on iPhone.",
+    rows: [
+      ["Price", us.price, "$0; you pay only your AI provider."],
+      ["Where bots run", us.runs, "On your computer, or as a server on a VPS or in Docker."],
+      ["Agents and models", us.agents, "Codex, Claude Code, Grok, OpenCode, Gemini, Cursor and Cline, plus OpenAI-compatible endpoints, Ollama and LM Studio."],
+      ["Apps", us.apps, "Desktop for macOS, Windows and Linux, and a browser client. No phone app is listed."],
+      ["Your data", us.data, "Workspaces, conversations, files and browser data stay on your computer."],
+      ["Source", us.source, "Source available under PolyForm Noncommercial 1.0.0, which doesn't allow commercial use."],
+      ["Account", us.account, "Optional; needed to invite people or run a server."],
+      ["Approvals", us.approvals, "None: a development preview where agents run with full access after a one-time consent."],
+      ["Group chats and threads", us.rooms, "Channels and threads; agents message each other and hand off tasks."],
+      ["Memory and routines", us.memory, "Yes: channel and agent memories, and routines."],
+      ["Voice and screen", us.extras, "Voice prompts (not on Linux), remote desktop, and a built-in browser agents control."],
+    ],
+    pickUs:
+      "you want to run your agents from your iPhone, approve each edit and command before it happens, and use software you're free to use at work under MIT.",
+    pickThem:
+      "you're on Windows, want local models through Ollama or LM Studio, or want a built-in browser and plugin marketplace on the desktop.",
+    checked: CHECKED,
+    sources: [
+      ["openbot.run", "https://openbot.run"],
+      ["Download and requirements", "https://openbot.run/download"],
+      ["OpenBot 101", "https://openbot.run/guides/openbot-101"],
+      ["GitHub and license", "https://github.com/nightly-labs/openbot"],
+    ],
+  },
+  {
+    slug: "claude-remote-control",
+    name: "Claude Remote Control",
+    card: "Anthropic's phone remote is Claude only. Codync runs any agent.",
+    summary:
+      "Remote Control lets the Claude app on your phone drive a Claude Code session on your computer, with a paid Claude plan. Codync works with Claude Code and every other agent, as persistent bots you can put in a room, for free.",
+    rows: [
+      ["Price", us.price, "Needs a Claude Pro, Max, Team or Enterprise plan; API keys and other providers don't work."],
+      ["Where bots run", us.runs, "Claude Code on your machine, relayed through Anthropic; or cloud sessions on Anthropic's servers."],
+      ["Agents and models", us.agents, "Claude Code only."],
+      ["Apps", us.apps, "The Claude app on iPhone, Android and iPad, and claude.ai/code on the web."],
+      ["Your data", us.data, "Relayed through the Anthropic API over TLS; end-to-end encryption isn't documented."],
+      ["Source", us.source, "Not open source."],
+      ["Account", us.account, "Required: a claude.ai account."],
+      ["Approvals", us.approvals, "Yes, from the phone."],
+      ["Group chats and threads", us.rooms, "No: up to 32 parallel sessions, not named bots."],
+      ["Memory and routines", us.memory, "Not documented for Remote Control."],
+      ["Voice and screen", us.extras, "Not documented."],
+    ],
+    pickUs:
+      "you use more than Claude Code, want persistent named bots that remember and can work together, or want your phone's connection end-to-end encrypted.",
+    pickThem: "you only use Claude Code on a Claude plan and want Anthropic's official app, including cloud sessions.",
+    checked: CHECKED,
+    sources: [
+      ["Remote Control", "https://code.claude.com/docs/en/remote-control"],
+      ["Claude Code on mobile", "https://code.claude.com/docs/en/mobile"],
+    ],
+  },
+  {
+    slug: "happy",
+    name: "Happy",
+    card: "Both free and open source. Codync adds bots, rooms and memory.",
+    summary:
+      "Happy is a free, open-source phone and web client for Claude Code and Codex sessions on your computer. Codync turns those agents into persistent named bots with group chats, memory, routines, voice and remote screen.",
+    rows: [
+      ["Price", us.price, "Free."],
+      ["Where bots run", us.runs, "On your computer; you start sessions with happy claude instead of claude."],
+      ["Agents and models", us.agents, "Claude Code and Codex."],
+      ["Apps", us.apps, "iPhone, Android, web and a Mac app."],
+      ["Your data", us.data, "End-to-end encrypted through a relay you can host yourself."],
+      ["Source", us.source, "Open source, MIT."],
+      ["Account", us.account, "No sign-up: pair by key."],
+      ["Approvals", us.approvals, "Push notifications when a permission is needed."],
+      ["Group chats and threads", us.rooms, "No: parallel sessions, not named bots."],
+      ["Memory and routines", us.memory, "Not documented."],
+      ["Voice and screen", us.extras, "A voice agent. No remote screen."],
+    ],
+    pickUs:
+      "you want bots that keep going between sessions: named, with memory and routines, working together in group chats, and reachable by voice or remote screen.",
+    pickThem: "you want a thin remote for Claude Code or Codex sessions you start yourself, or you're on Android.",
+    checked: CHECKED,
+    sources: [
+      ["Happy", "https://happy.engineering/"],
+      ["Happy FAQ", "https://happy.engineering/docs/faq/"],
+      ["How it works", "https://happy.engineering/docs/how-it-works/"],
+      ["GitHub", "https://github.com/slopus/happy"],
+    ],
+  },
+];

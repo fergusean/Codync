@@ -1,6 +1,3 @@
-import Image from "next/image";
-import Link from "next/link";
-import { GithubLogo } from "@phosphor-icons/react/ssr";
 import Hero from "./components/hero";
 import Film from "./components/film";
 import { Answers, Features } from "./components/features";
@@ -11,44 +8,14 @@ import Mac from "./components/mac";
 import Surfaces from "./components/surfaces";
 import Cost from "./components/cost";
 import Questions from "./components/questions";
-import { DMG, GITHUB } from "./links";
+import CompareCards from "./components/compare-cards";
+import Reveal from "./components/reveal";
+import { SiteFooter, SiteHeader } from "./components/site-chrome";
 
 export default function Home() {
   return (
     <>
-      <header className="sticky top-0 z-20 bg-black/80 backdrop-blur-md">
-        <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
-          <Link href="/" className="flex items-center gap-2.5 font-semibold text-neutral-50">
-            <Image src="/icon.png" alt="" width={28} height={28} className="rounded-[7px]" />
-            Codync
-          </Link>
-          <div className="flex items-center gap-2">
-            {[
-              ["#cost", "Pricing"],
-              ["#questions", "FAQ"],
-              ["#install", "Install"],
-            ].map(([href, label]) => (
-              <a key={href} href={href} className="hidden rounded-full px-4 py-2 text-sm text-neutral-400 transition hover:text-neutral-100 sm:block">
-                {label}
-              </a>
-            ))}
-            <a
-              href={GITHUB}
-              aria-label="Codync on GitHub"
-              title="GitHub"
-              className="rounded-full p-2 text-neutral-400 transition hover:text-neutral-100"
-            >
-              <GithubLogo size={20} />
-            </a>
-            <a
-              href={DMG}
-              className="rounded-full bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-950 transition hover:bg-white active:scale-[0.98]"
-            >
-              Download for Mac
-            </a>
-          </div>
-        </nav>
-      </header>
+      <SiteHeader />
 
       <main className="flex-1">
         <Hero />
@@ -61,30 +28,16 @@ export default function Home() {
         <Compare />
         <Cost />
         <Questions />
+        <section className="px-4 pb-20 sm:px-6 md:pb-28">
+          <Reveal className="mx-auto max-w-6xl">
+            <h2 className="mb-6 text-xl font-semibold text-neutral-50">Compare Codync</h2>
+            <CompareCards />
+          </Reveal>
+        </section>
         <Install />
       </main>
 
-      <footer className="px-4 py-12 sm:px-6">
-        <div className="mx-auto flex max-w-6xl flex-col gap-6 text-sm text-neutral-500 sm:flex-row sm:items-center sm:justify-between">
-          <p>
-            100% free and open source. No hidden fees.{" "}
-            <a href={GITHUB} className="text-neutral-300 underline underline-offset-4 hover:text-white">
-              Code on GitHub
-            </a>
-          </p>
-          <div className="flex gap-6">
-            <Link href="/terms" className="transition hover:text-neutral-300">
-              Terms
-            </Link>
-            <Link href="/privacy" className="transition hover:text-neutral-300">
-              Privacy
-            </Link>
-            <a href={`${GITHUB}/issues`} className="transition hover:text-neutral-300">
-              Contact
-            </a>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter />
     </>
   );
 }

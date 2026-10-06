@@ -24,6 +24,10 @@ const questions: [string, string][] = [
     "Bots, chats and memory stay on your computer. Your phone reaches it directly on the same network, or through an end-to-end encrypted relay anywhere else, which can't read your messages. Your agent's provider receives the prompts the agent sends.",
   ],
   [
+    "Do I need an account?",
+    "No. Pair your phone by scanning a code. Signing in with Apple or Google is optional: it lists every computer on your account on your phone, and each computer still approves each device itself.",
+  ],
+  [
     "Which computers can run it?",
     "A Mac, or a Linux desktop or headless server. The iPhone app and the terminal UI over SSH talk to the same host.",
   ],
