@@ -32,7 +32,7 @@ its own context and compacts it itself.
   appended to the next message. After that turn reaches the agent, the change is recorded in
   `snapshot.announced`. The next compaction folds it into the snapshot.
 
-## Memory (`host/src/chat/memory.rs`)
+## Memory (`host/src/chat/memory/`)
 
 - Facts are plain markdown, one `- (YYYY-MM-DD) fact` per line:
   - `profile.md` holds who the user is. All of it goes into the prompt, up to 100 facts. When it grows past
