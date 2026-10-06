@@ -7,6 +7,12 @@
 **The open-source, 1:1 alternative to Grok Bot and Muse.**<br>
 Your coding agents, as teammates you can message.
 
+[![Download for macOS](https://img.shields.io/badge/Download-macOS-000000?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/leepokai/Codync/releases/latest/download/codync-macos.dmg)
+[![Download for Linux x86_64](https://img.shields.io/badge/Download-Linux_x86__64-FCC624?style=for-the-badge&logo=linux&logoColor=black)](https://github.com/leepokai/Codync/releases/latest/download/codync-linux-x86_64.AppImage)
+[![Download for Linux ARM64](https://img.shields.io/badge/Download-Linux_ARM64-FCC624?style=for-the-badge&logo=linux&logoColor=black)](https://github.com/leepokai/Codync/releases/latest/download/codync-linux-arm64.AppImage)
+
+macOS: Apple Silicon + Intel (DMG) · Linux: AppImage · [All downloads](https://github.com/leepokai/Codync/releases/latest)
+
 [![App Store](https://img.shields.io/badge/App_Store-iOS-0D96F6?logo=apple&logoColor=white)](https://apps.apple.com/app/codync/id6760984418)
 [![Homebrew](https://img.shields.io/badge/Homebrew-codync-FBB040?logo=homebrew&logoColor=white)](https://github.com/leepokai/homebrew-codync)
 [![Release](https://img.shields.io/github/v/release/leepokai/Codync?color=black)](https://github.com/leepokai/Codync/releases/latest)
@@ -53,6 +59,11 @@ Codync turns the coding agents on your computer — Claude Code, Codex, Cursor, 
 | ⌨️ | **Terminal** | `codync-host tui` | Message your bots from any terminal, over SSH too |
 
 The host (`codync-host`, Rust) runs on macOS and Linux; every client talks to it, so all your bots and chats are the same everywhere.
+
+**Looking for the former native Mac app (SwiftUI + AppKit)?** Version 2.7.0 moved Mac and
+Linux to one Electron desktop app. The native implementation is preserved in Git history;
+see the [changelog and source lookup commands](#changelog) and the
+[archived AppKit chat implementation notes](docs/archive/macos-chat-swiftui.md).
 
 ## How it works
 
@@ -176,14 +187,17 @@ transcripts, and keeping two desktop apps in step took more than one person can 
 The iPhone app stays native SwiftUI; its shared package moved into `apps/ios/Kit/`.
 Details: [desktop app](docs/architecture/desktop-app.md).
 
-**Looking for the SwiftUI Mac app?** It's still in the Git history. The last version is the
-parent of the commit that removed `apps/macos/`:
+**Native Mac source (SwiftUI + AppKit).** The last native revision is `1055636`, the parent
+of migration commit `41135ac`. It includes `apps/macos/` and the Mac code paths in `kit/`.
+The chat used `MacChatList`, an AppKit `NSScrollView` hosting SwiftUI message rows;
+see the [archived implementation notes](docs/archive/macos-chat-swiftui.md).
 
 ```bash
-git log --oneline -1 -- apps/macos            # the commit that removed it
-git show <commit>^:apps/macos/Views/ChatWindow.swift
-git worktree add ../codync-swiftui <commit>^  # a checkout of the whole SwiftUI-era repo
+git show 1055636:apps/macos/Views/ChatWindow.swift
+git worktree add ../codync-swiftui 1055636  # a checkout of the whole native-era repo
 ```
+
+For release-by-release changes, see [GitHub Releases](https://github.com/leepokai/Codync/releases).
 
 ## Versioning
 
