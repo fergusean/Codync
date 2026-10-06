@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { WindowCommand } from '@shared/ipc'
+import { isSSHConnecting, showsChat as shouldShowChat } from '@shared/ssh-startup'
 import { draftOf, isGroup, type Bot, type BotDraft } from '@shared/models'
 import { CharacterAvatar } from '../components/Avatar'
 import { Button, ChoicePicker, IconButton } from '../components/Controls'
@@ -42,7 +43,7 @@ export function ChatWindow() {
   useTraySummary(app)
   useSSHAttachments(app)
   const ssh = useSSH()
-  const showsChat = app.host.state.kind === 'running' || app.computers.length > 0 || ssh.state.profiles.length > 0
+  const showsChat = shouldShowChat(app.host.state.kind, app.computers.length, ssh.state)
 
   useEffect(
     () =>
@@ -151,7 +152,7 @@ interface EditTarget {
 function ChatSplitView() {
   const app = useApp()
   const ssh = useSSH()
-  const connecting = ssh.state.profiles.some((p) => { const status = ssh.status(p.id); return status.kind === 'connecting' || status.kind === 'retrying' }) || [...app.stores.values()].some((s) => s.shownConnection.kind === 'connecting')
+  const connecting = ssh.state.profiles.some((p) => isSSHConnecting(ssh.status(p.id))) || [...app.stores.values()].some((s) => s.shownConnection.kind === 'connecting')
   const [compact, setCompact] = usePref(prefs.sidebarCompact)
   const [sidebarWidth, setSidebarWidth] = usePref(prefs.sidebarWidth)
   const [hidden, setHidden] = usePref(prefs.hiddenComputers)

@@ -1,4 +1,5 @@
 import type { Computer } from '@shared/models'
+import { isSSHConnecting, sshStatusDetail } from '@shared/ssh-startup'
 import { DropdownMenu } from '../components/Controls'
 import { Icon } from '../components/Icon'
 import type { MenuItem } from '../components/Overlay'
@@ -45,7 +46,7 @@ export function ComputerFilterHeader({ hidden, setHidden, manage, compact = fals
   const app = useApp()
   const ssh = useSSH()
   const pending = ssh.state.profiles.filter((p) => !ssh.state.attachments.some((a) => a.profileId === p.id))
-  const connecting = pending.filter((p) => { const status = ssh.status(p.id); return status.kind === 'connecting' || status.kind === 'retrying' }).length
+  const connecting = pending.filter((p) => isSSHConnecting(ssh.status(p.id))).length
   const selection = computerSelection(app.computers.map((c) => c.id), hidden)
   const stores = selection.shown.map((id) => app.store(id)).filter((s) => !!s)
   const online = stores.filter((s) => s.shownConnection.kind === 'online').length
@@ -59,7 +60,7 @@ export function ComputerFilterHeader({ hidden, setHidden, manage, compact = fals
     for (const c of app.computers) list.push({ title: title(c), selected: selection.shown.includes(c.id), action: () => setHidden(selection.toggling(c.id)) })
     for (const p of pending) {
       const status = ssh.status(p.id)
-      const detail = status.kind === 'connecting' ? status.step : status.kind === 'retrying' || status.kind === 'failed' ? status.message : status.kind === 'confirmHostKey' ? 'Confirm host key…' : status.kind === 'notInstalled' ? 'Host not installed' : 'Offline'
+      const detail = sshStatusDetail(status)
       list.push({ title: `${p.name || p.host} · ${detail}`, action: manage })
     }
     if (app.computers.length > 1) app.computers.forEach((c, i) => list.push({ title: `Only ${c.name}`, divider: i === 0, action: () => setHidden(selection.only(c.id)) }))

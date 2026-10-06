@@ -38,6 +38,12 @@ same way; the shared desktop behavior covers macOS and Linux.
 
 ## Platform notes
 
+- **SSH startup** on macOS and Linux opens the workspace while a saved profile is
+  connecting or retrying. Failed, idle or uninstalled profiles leave local host
+  install/retry actions visible when no computer is available. The computer filter
+  shares the connecting check and distinguishes disconnected and connected profiles.
+  iOS uses direct/encrypted host connections, and the TUI connects to one host;
+  neither manages desktop SSH profiles. Windows does not support those profiles yet.
 - **Icons**: SF Symbols may only ship in apps for Apple platforms, so the masks are generated
   on macOS at build time and never committed; Linux draws the closest Lucide icons.
 - **On-device speech** is macOS only; Linux calls use OpenAI or Gemini on the user's key.
