@@ -41,10 +41,13 @@ A migration that changes what the database accepts goes out before the Worker co
 | --- | --- | --- | --- |
 | `0001_init.sql` | applied | applied | — |
 | `0002_windows_computers.sql` | 2026-10-07 | 2026-10-07 | dev `00000b79-00000000-000050fc-e6cb8fa431592b1c3d7824f3cf64afb9`, main `0000041d-0000085c-000050fc-fda9fcdf91e3498c08fa7c332a989e24` |
+| `0003_desktop_devices.sql` | 2026-10-07 | 2026-10-07 | dev `00000cb2-00000002-000050fd-8600044ac4775783e20c8ff9b4d5fa14`, main `00000420-000012d2-000050fd-12871b6db16548f336c1c9221d28c556` |
 
 `0002` lets `computers.platform` be `windows` (Windows hosts register with `std::env::consts::OS`). SQLite can't change a CHECK, so it rebuilds `computers` together with `access_requests` and `grants`, the tables that reference it: dropping a referenced table while foreign keys are enforced would count every referencing row as a violation. Live schemas matched `0001` beforehand; row counts were unchanged afterwards (dev 24 computers, 8 grants, 14 access requests; main 101, 38, 48) with no orphaned rows. A signed `POST /v1/host/register` with `platform: "windows"` returned 200 on both (the probe rows were deleted). Main's Worker answered with the previous version for about 20 seconds after `deploy`.
 
 The Worker accepting `windows` was deployed to both environments from the `windows` branch on 2026-10-07, ahead of its merge; its cloud code differed from `main` only in that platform list. Until the branch reaches `main`, deploying cloud from `main` turns Windows registration off again (the database keeps accepting it).
+
+`0003` lets `devices.platform` be `linux` or `windows`. Accounts were built when only the iPhone and the SwiftUI Mac app signed in; the Electron app brought sign-in to Linux (and later Windows), whose device registration the cloud rejected (`400 Invalid platform`), so main held no Linux devices at all. It rebuilds `devices` with `access_requests` and `grants` the same way as `0002`. Row counts were unchanged (dev 14 devices, 8 grants, 14 access requests; main 128, 41, 53) with no orphaned rows; a `windows` device row inserted on dev was accepted and removed. The Worker accepting both platforms was deployed to dev and main the same day from the `device-platforms` branch, which differed from `main` only there. Windows apps up to 2.9.0 register as `linux`; later ones send `windows`.
 
 Rolling back a migration restores the whole database to that point, losing every write since: `wrangler d1 time-travel restore <db> --bookmark=<restore point>`.
 
