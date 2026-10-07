@@ -35,6 +35,15 @@ Production also needs completed Apple native application registrations in Clerk 
 
 A migration that changes what the database accepts goes out before the Worker code that relies on it, in each environment: dev first, then main. `wrangler d1 migrations list <db> --remote` shows what an environment still lacks. Before applying one to main, note the restore point (`wrangler d1 time-travel info codync`) and compare the live schema with `cloud/migrations/`.
 
+## Secrets audit
+
+The repository is public, so its whole history counts as published. Last scan: 2026-10-07 (`gitleaks git .` plus pattern grep over `git log -p --all`).
+
+- **Rotated:** the `codync-push` Worker (`codync-push.kevin2005ha.workers.dev`) bearer secret, hard-coded in `Codync-macOS/Services/APNsPushService.swift` from 2026-03-19 (`96f7118`) until 2026-03-25 (`72837e2`). The value in history is dead; rotated by the owner before 2026-10-07.
+- **Public by design:** the PostHog project key (`phc_…`, ingest only) and Clerk publishable keys (`pk_test_…`, `pk_live_…`).
+- **Not secrets:** test vectors in `docs/remote-relay-vectors.json` and keys in test fixtures.
+- No PostHog personal keys (`phx_…`), Clerk secret keys, cloud provider keys or private key files were ever committed.
+
 ## Migration log
 
 | Migration | dev (`codync-dev`) | main (`codync`) | Restore point taken just before |
