@@ -1,5 +1,5 @@
 -- Desktop apps on Linux and Windows sign in too: devices.platform also takes 'linux' and
--- 'windows'. As in 0002, the table is rebuilt together with the tables that reference it
+-- 'windows'. Retain Android devices from the fork's existing migration. As in 0002, the table is rebuilt together with the tables that reference it
 -- (access_requests, grants), children first, so no referencing row is ever orphaned.
 
 CREATE TABLE devices_new (
@@ -7,7 +7,7 @@ CREATE TABLE devices_new (
   owner_user_id TEXT NOT NULL REFERENCES accounts(user_id),
   sign_pub      TEXT NOT NULL,
   name          TEXT NOT NULL,
-  platform      TEXT NOT NULL CHECK (platform IN ('ios','macos','linux','windows')),
+  platform      TEXT NOT NULL CHECK (platform IN ('ios','macos','linux','windows','android')),
   created_at    INTEGER NOT NULL,
   last_used_at  INTEGER,
   revoked_at    INTEGER,
