@@ -4,6 +4,11 @@ on:
   pull_request:
     paths: ["cloud/**", "relay/**", "docs/reference/fixtures/remote-relay-vectors.json", ".github/workflows/cloud.yml"]
 
+# A newer push to the same PR supersedes the run in progress; tag runs always finish.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   cloud:
     runs-on: ubuntu-latest
