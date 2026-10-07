@@ -1,10 +1,12 @@
-import { AppleLogo, BellRinging, ChartBar, ChatsCircle, DeviceMobile, ShieldCheck } from "@phosphor-icons/react/ssr";
+import { BellRinging, ChartBar, ChatsCircle, ShieldCheck } from "@phosphor-icons/react/ssr";
+import { AppleLogo } from "./apple-logo";
 import Link from "next/link";
 import Halftone from "./halftone";
 import Phone from "./phone";
 import { SiteFooter, SiteHeader } from "./site-chrome";
 import type { AgentPage } from "../agents/agents";
-import { APP_STORE, DMG } from "../links";
+import AppStoreButton from "./app-store-button";
+import { DMG } from "../links";
 
 // One page per agent people want on their phone ("Claude Code app for iPhone").
 export default function AgentLanding({ page }: { page: AgentPage }) {
@@ -44,10 +46,7 @@ export default function AgentLanding({ page }: { page: AgentPage }) {
                 <AppleLogo size={18} weight="fill" />
                 Download for Mac
               </a>
-              <a href={APP_STORE} target="_blank" rel="noopener noreferrer" className="inline-flex h-12 items-center gap-2 rounded-full bg-neutral-900 px-6 font-medium text-neutral-100 transition hover:bg-neutral-800 active:scale-[0.98]">
-                <DeviceMobile size={18} weight="fill" />
-                iPhone app
-              </a>
+              <AppStoreButton />
             </div>
           </div>
         </section>

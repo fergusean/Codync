@@ -1,11 +1,13 @@
-import { AppleLogo, CalendarCheck, ChatsCircle, Code, DeviceMobile, Plugs, WindowsLogo } from "@phosphor-icons/react/ssr";
+import { CalendarCheck, ChatsCircle, Code, Plugs, WindowsLogo } from "@phosphor-icons/react/ssr";
+import { AppleLogo } from "../components/apple-logo";
 import type { Metadata } from "next";
 import Cost from "../components/cost";
 import Halftone from "../components/halftone";
 import Install from "../components/install";
 import { SiteFooter, SiteHeader } from "../components/site-chrome";
 import Surfaces from "../components/surfaces";
-import { APP_STORE, DMG, WINDOWS } from "../links";
+import AppStoreButton from "../components/app-store-button";
+import { DMG, WINDOWS } from "../links";
 
 // For people searching "free AI agent" / "AI agent app": what free means here, and what the bots do.
 export const metadata: Metadata = {
@@ -73,10 +75,7 @@ export default function Page() {
                 <WindowsLogo size={18} weight="fill" />
                 Windows
               </a>
-              <a href={APP_STORE} target="_blank" rel="noopener noreferrer" className="inline-flex h-12 items-center gap-2 rounded-full bg-neutral-900 px-6 font-medium text-neutral-100 transition hover:bg-neutral-800 active:scale-[0.98]">
-                <DeviceMobile size={18} weight="fill" />
-                iPhone app
-              </a>
+              <AppStoreButton />
             </div>
           </div>
         </section>

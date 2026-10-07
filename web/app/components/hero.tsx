@@ -1,14 +1,16 @@
 "use client";
 
 import { motion, MotionConfig } from "framer-motion";
-import { AppleLogo, DeviceMobile, GithubLogo, LinuxLogo, OpenAiLogo, Terminal, WindowsLogo } from "@phosphor-icons/react";
+import { DeviceMobile, GithubLogo, LinuxLogo, OpenAiLogo, Terminal, WindowsLogo } from "@phosphor-icons/react";
+import { AppleLogo } from "./apple-logo";
 import DownloadButton from "./download-button";
 import Halftone from "./halftone";
 import MacWindow from "./mac-window";
 import MediaLabel from "./media-label";
 import LivePhones from "./live-phone/live-phones";
 import { CharacterAvatar } from "./live-phone/avatar";
-import { APP_STORE, GITHUB, PRODUCT_HUNT } from "../links";
+import AppStoreButton from "./app-store-button";
+import { GITHUB, PRODUCT_HUNT } from "../links";
 
 const ease = [0.16, 1, 0.3, 1] as const;
 
@@ -56,7 +58,8 @@ export default function Hero() {
             <motion.div {...rise(0)} className="flex flex-col items-start gap-4">
               <span className="inline-flex items-center gap-2 rounded-full bg-neutral-900 py-1.5 pr-4 pl-1.5 text-sm">
                 <span className="rounded-full bg-neutral-50 px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap text-neutral-950">100% free</span>
-                <span className="text-neutral-300">No hidden fees, no paid tier</span>
+                <span className="rounded-full bg-neutral-50 px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap text-neutral-950">Private</span>
+                <span className="text-neutral-300">End-to-end encrypted, no paid tier</span>
               </span>
             </motion.div>
 
@@ -94,15 +97,7 @@ export default function Hero() {
 
             <motion.div {...rise(0.16)} className="mt-10 flex flex-wrap items-center gap-3">
               <DownloadButton />
-              <a
-                href={APP_STORE}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex h-12 items-center gap-2 rounded-full bg-neutral-900 px-6 font-medium text-neutral-100 transition hover:bg-neutral-800 active:scale-[0.98]"
-              >
-                <DeviceMobile size={18} weight="fill" />
-                iPhone app
-              </a>
+              <AppStoreButton />
               <a
                 href={GITHUB}
                 target="_blank"

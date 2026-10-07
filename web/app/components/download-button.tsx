@@ -1,7 +1,8 @@
-import { AppleLogo, CaretDown, DeviceMobile, LinuxLogo, Terminal } from "@phosphor-icons/react/ssr";
+import { CaretDown, DeviceMobile, LinuxLogo, Terminal } from "@phosphor-icons/react/ssr";
+import { AppleLogo } from "./apple-logo";
 import { APP_STORE, DMG } from "../links";
 
-const others: [label: string, detail: string, href: string, Icon: typeof AppleLogo][] = [
+const others: [label: string, detail: string, href: string, Icon: typeof DeviceMobile | typeof AppleLogo][] = [
   ["macOS", "Apple silicon and Intel", DMG, AppleLogo],
   ["iPhone", "App Store", APP_STORE, DeviceMobile],
   ["Linux", "AppImage, deb and servers", "/#install", LinuxLogo],

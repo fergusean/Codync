@@ -1,5 +1,6 @@
 import Image from "next/image";
-import { AppleLogo, DeviceMobile, LinuxLogo, WindowsLogo } from "@phosphor-icons/react/ssr";
+import { DeviceMobile, LinuxLogo, WindowsLogo } from "@phosphor-icons/react/ssr";
+import { AppleLogo } from "./apple-logo";
 import CopyCommand from "./copy-command";
 import Eyebrow from "./eyebrow";
 import Halftone from "./halftone";

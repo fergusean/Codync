@@ -1,4 +1,5 @@
-import { AppleLogo, BellRinging, LinuxLogo, LockKey, Terminal, WindowsLogo } from "@phosphor-icons/react/ssr";
+import { BellRinging, LinuxLogo, LockKey, Terminal, WindowsLogo } from "@phosphor-icons/react/ssr";
+import { AppleLogo } from "./apple-logo";
 import Eyebrow from "./eyebrow";
 import Halftone from "./halftone";
 import Phone from "./phone";

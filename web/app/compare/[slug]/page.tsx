@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AppleLogo } from "@phosphor-icons/react/ssr";
+import { AppleLogo } from "../../components/apple-logo";
 import { SiteFooter, SiteHeader } from "../../components/site-chrome";
 import CompareCards from "../../components/compare-cards";
 import Halftone from "../../components/halftone";
