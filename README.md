@@ -33,6 +33,10 @@ macOS: Apple Silicon + Intel (DMG) · Windows: x64 installer · Linux: AppImage 
 
 <a href="https://apps.apple.com/app/codync/id6760984418"><img src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg" height="54" alt="Download on the App Store"></a>
 
+If Codync saves you a trip to your desk, a ⭐ helps others find it.
+
+[![GitHub stars](https://img.shields.io/github/stars/leepokai/Codync?style=social)](https://github.com/leepokai/Codync/stargazers)
+
 </div>
 
 Codync turns the coding agents on your computer — Claude Code, Codex, Cursor, Pi, OpenCode, Grok Build, Gemini, Copilot and ~40 more — into persistent *bots* you delegate to from your iPhone, Mac, Windows PC, Linux desktop or any terminal, the way you'd message a colleague. Pick who, say what, put the phone away. You get a notification when a bot finishes or needs your approval.
