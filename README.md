@@ -235,4 +235,4 @@ Clients and the host each name the oldest version of the other they still work w
 
 ## License
 
-MIT
+MIT for the code. The Codync name, logo and the Codync Cloud relay are not covered: see [TRADEMARK.md](TRADEMARK.md).
