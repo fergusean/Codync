@@ -1,5 +1,8 @@
-export const DMG = "https://github.com/leepokai/Codync/releases/latest/download/codync-macos.dmg";
-export const WINDOWS = "https://github.com/leepokai/Codync/releases/latest/download/codync-windows-x64.exe";
+export const DMG_FILE = "https://github.com/leepokai/Codync/releases/latest/download/codync-macos.dmg";
+export const WINDOWS_FILE = "https://github.com/leepokai/Codync/releases/latest/download/codync-windows-x64.exe";
+// Download buttons open a thank-you page that starts the file and asks for a star.
+export const DMG = "/download/mac";
+export const WINDOWS = "/download/windows";
 export const APP_STORE = "https://apps.apple.com/app/codync/id6760984418";
 export const GITHUB = "https://github.com/leepokai/Codync";
 // YouTube id of the launch film.

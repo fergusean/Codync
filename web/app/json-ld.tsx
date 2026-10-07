@@ -1,4 +1,4 @@
-import { APP_STORE, DMG, GITHUB, PRODUCT_HUNT } from "./links";
+import { APP_STORE, DMG_FILE, GITHUB, PRODUCT_HUNT } from "./links";
 import { DESCRIPTION, SITE } from "./site";
 
 // Structured data so search and AI answer engines read Codync as a free, open-source app.
@@ -29,7 +29,7 @@ const graph = {
       applicationCategory: "DeveloperApplication",
       operatingSystem: "macOS, Windows, Linux, iOS",
       image: `${SITE}/icon.png`,
-      downloadUrl: [DMG, APP_STORE],
+      downloadUrl: [DMG_FILE, APP_STORE],
       installUrl: APP_STORE,
       license: "https://opensource.org/licenses/MIT",
       isAccessibleForFree: true,
