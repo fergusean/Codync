@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, MotionConfig } from "framer-motion";
-import { DeviceMobile, GithubLogo, LinuxLogo, OpenAiLogo, Terminal, WindowsLogo } from "@phosphor-icons/react";
+import { DeviceMobile, LinuxLogo, OpenAiLogo, Terminal, WindowsLogo } from "@phosphor-icons/react";
 import { AppleLogo } from "./apple-logo";
 import DownloadButton from "./download-button";
 import Halftone from "./halftone";
@@ -10,6 +10,7 @@ import MediaLabel from "./media-label";
 import LivePhones from "./live-phone/live-phones";
 import { CharacterAvatar } from "./live-phone/avatar";
 import AppStoreButton from "./app-store-button";
+import GitHubStarButton from "./github-star-button";
 import { GITHUB, PRODUCT_HUNT } from "../links";
 
 const ease = [0.16, 1, 0.3, 1] as const;
@@ -98,15 +99,7 @@ export default function Hero() {
             <motion.div {...rise(0.16)} className="mt-10 flex flex-wrap items-center gap-3">
               <DownloadButton />
               <AppStoreButton />
-              <a
-                href={GITHUB}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex h-12 items-center gap-2 rounded-full bg-neutral-900 px-6 font-medium text-neutral-100 transition hover:bg-neutral-800 active:scale-[0.98]"
-              >
-                <GithubLogo size={18} weight="fill" />
-                Star on GitHub
-              </a>
+              <GitHubStarButton />
             </motion.div>
 
             <motion.p {...rise(0.2)} className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-neutral-500">
