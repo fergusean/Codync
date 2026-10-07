@@ -9,6 +9,9 @@ Your coding agents, as teammates you can message.
 
 [Website](https://www.codync.dev) · [Compare](https://www.codync.dev/compare) · [Launch film](https://youtu.be/QAhyZWpV70U)
 
+[![Star Codync on GitHub](https://img.shields.io/github/stars/leepokai/Codync?style=social&label=Star)](https://github.com/leepokai/Codync/stargazers)<br>
+<sub>Free, open source, no paid tier. A ⭐ is how others find it.</sub>
+
 [![Download for macOS](https://img.shields.io/badge/Download-macOS-000000?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/leepokai/Codync/releases/latest/download/codync-macos.dmg)
 [![Download for Windows](https://img.shields.io/badge/Download-Windows_x64-0078D4?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/leepokai/Codync/releases/latest/download/codync-windows-x64.exe)
 [![Download for Linux x86_64](https://img.shields.io/badge/Download-Linux_x86__64-FCC624?style=for-the-badge&logo=linux&logoColor=black)](https://github.com/leepokai/Codync/releases/latest/download/codync-linux-x86_64.AppImage)
@@ -32,10 +35,6 @@ macOS: Apple Silicon + Intel (DMG) · Windows: x64 installer · Linux: AppImage 
 <a href="https://youtu.be/QAhyZWpV70U"><img src="docs/screenshots/launch-film.jpg" width="760" alt="Watch the Codync launch film on YouTube (1:45)"></a>
 
 <a href="https://apps.apple.com/app/codync/id6760984418"><img src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg" height="54" alt="Download on the App Store"></a>
-
-If Codync saves you a trip to your desk, a ⭐ helps others find it.
-
-[![GitHub stars](https://img.shields.io/github/stars/leepokai/Codync?style=social)](https://github.com/leepokai/Codync/stargazers)
 
 </div>
 
