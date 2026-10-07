@@ -6,8 +6,15 @@ on:
   pull_request:
     paths: ["host/**", "packaging/updates/**", "docs/reference/fixtures/remote-relay-vectors.json", ".github/workflows/host.yml"]
 
+# A newer push to the same PR supersedes the run in progress; tag runs always finish.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
+  # Tags ship a commit its PR already tested.
   test:
+    if: github.event_name == 'pull_request'
     strategy:
       matrix:
         # Windows hosts ship inside the desktop app (release-desktop.yml), so no release archive below.
@@ -29,7 +36,6 @@ jobs:
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: test
     strategy:
       matrix:
         include:

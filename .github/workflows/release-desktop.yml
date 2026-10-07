@@ -1,7 +1,8 @@
 name: Release desktop
 
 # The Electron app (apps/desktop) for macOS, Linux and Windows. A v* tag publishes it; anything else is a
-# dry run that builds, signs and notarizes but publishes nothing.
+# dry run that builds and signs but publishes nothing. Notarizing (minutes of waiting on Apple) runs on
+# tags and on release PRs into main, so a notarization problem still shows before the tag.
 on:
   push:
     tags: ["v*"]
@@ -11,6 +12,11 @@ on:
 
 permissions:
   contents: write
+
+# A newer push to the same PR supersedes the run in progress; tag runs always finish.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   check:
@@ -49,6 +55,9 @@ jobs:
       - name: Install Rust (rust-toolchain.toml)
         run: rustup toolchain install
       - run: rustup target add aarch64-apple-darwin x86_64-apple-darwin
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: host
 
       - name: Install Apple certificate
         env:
@@ -86,9 +95,10 @@ jobs:
           # Same-repo PRs get the secrets; sign them too so the dry run checks the real app.
           CSC_FOR_PULL_REQUEST: "true"
           # Notarized with the App Store Connect API key: unlike an app-specific password, it
-          # survives Apple ID password changes.
+          # survives Apple ID password changes. Without the key ID electron-builder skips notarizing.
+          NOTARIZE: ${{ github.event_name != 'pull_request' || github.base_ref == 'main' }}
           APPLE_API_KEY: ${{ runner.temp }}/AuthKey.p8
-          APPLE_API_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          APPLE_API_KEY_ID: ${{ (github.event_name != 'pull_request' || github.base_ref == 'main') && secrets.ASC_KEY_ID || '' }}
           APPLE_API_ISSUER: ${{ secrets.ASC_ISSUER_ID }}
           ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
         run: |
@@ -98,7 +108,7 @@ jobs:
           npm run dist:mac:main -- --publish never
           codesign -d --entitlements - dist/mac-universal/Codync.app | grep -q com.apple.security.device.audio-input ||
             { echo "audio-input entitlement missing"; exit 1; }
-          spctl --assess --type execute -v dist/mac-universal/Codync.app
+          if [ "$NOTARIZE" = true ]; then spctl --assess --type execute -v dist/mac-universal/Codync.app; fi
 
       - name: Update feeds
         env:
