@@ -469,7 +469,7 @@ The route table below summarizes the contract. Executable schema and validation 
 
 **Clerk（使用者）**
 - `GET /v1/me` → `{"userId","email","createdAt"}`
-- `POST /v1/devices`（Clerk + Sig(dev)）`{"name","platform":"ios"|"macos"}` → `{"device":{"deviceId","deviceKey","name","platform","createdAt"}}`。以 `(owner, sign_pub)` upsert；已撤銷的同一把 key → `403 forbidden`（需換 key）。
+- `POST /v1/devices`（Clerk + Sig(dev)）`{"name","platform":"ios"|"macos"|"linux"|"windows"}` → `{"device":{"deviceId","deviceKey","name","platform","createdAt"}}`。以 `(owner, sign_pub)` upsert；已撤銷的同一把 key → `403 forbidden`（需換 key）。
 - `GET /v1/devices` → `{"devices":[{"deviceId","deviceKey","name","platform","createdAt","lastUsedAt","revoked":bool}]}`
 - `DELETE /v1/devices/{deviceId}` → `{}`；撤銷裝置與其所有 grants（`deviceRevoked`），對相關 computers 呼叫 DO `/internal/block` + `cloud.changed`。
 - `POST /v1/claims` → `{"claimId","nonce","expiresAt"}`（nonce = 16 random bytes b64url）
@@ -486,7 +486,7 @@ The route table below summarizes the contract. Executable schema and validation 
 - `DELETE /v1/computers/{id}/grants/{grantId}` → `{}`（`owner`）+ DO block + changed
 
 **Sig(host)（不需要帳號）**
-- `POST /v1/host/register` `{"boxKey","name","platform","device","version"}` → `{"computerId","owned":bool}`。以 kid 推導 id；upsert（`name`/`device`/`version`/`box_pub`/`updated_at`）。同 IP 每分鐘最多 10 次新建（Workers Rate Limiting binding；平台不支援時先略過並在 README 註記）。
+- `POST /v1/host/register` `{"boxKey","name","platform":"macos"|"linux"|"windows","device","version"}` → `{"computerId","owned":bool}`。以 kid 推導 id；upsert（`name`/`device`/`version`/`box_pub`/`updated_at`）。同 IP 每分鐘最多 10 次新建（Workers Rate Limiting binding；平台不支援時先略過並在 README 註記）。
 - `GET /v1/host/state` →
   ```json
   {"owner":{"userId":"user_…","email":"a@b.c"} | null,
