@@ -34,23 +34,27 @@ export default function Terms() {
           </ul>
         </Section>
 
-        <Section title="5. Intellectual property">
+        <Section title="5. Third-party services">
+          Anyone may run Codync for others under the MIT license. Services operated by third parties, including hosted hosts, relays, accounts or bundled AI access built on Codync, are not operated, endorsed or supported by us. Their operators are solely responsible for their service, security, billing, support and the data they handle; your agreement with them is between you and them. We are not liable for any third-party service.
+        </Section>
+
+        <Section title="6. Intellectual property">
           The source code is available at github.com/leepokai/Codync under the MIT license. The MIT license covers the code, not the Codync name or logo: services built on Codync may say they are built on it, but may not call themselves Codync. Names and logos of third-party agents belong to their owners.
         </Section>
 
-        <Section title="6. Disclaimer of warranties">
+        <Section title="7. Disclaimer of warranties">
           Codync is provided &quot;as is&quot;, without warranties of any kind. We don&apos;t guarantee that agents will behave as intended or that the service will be uninterrupted.
         </Section>
 
-        <Section title="7. Limitation of liability">
+        <Section title="8. Limitation of liability">
           To the maximum extent permitted by law, we are not liable for any damages arising from your use of Codync or of the agents it runs, including changes they make to your files.
         </Section>
 
-        <Section title="8. Changes">
+        <Section title="9. Changes">
           We may update these terms. Continued use after changes means you accept them.
         </Section>
 
-        <Section title="9. Contact">
+        <Section title="10. Contact">
           Questions? Open an issue at{" "}
           <a href="https://github.com/leepokai/Codync/issues" className="text-white underline">github.com/leepokai/Codync/issues</a>.
         </Section>

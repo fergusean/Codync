@@ -8,7 +8,7 @@ export default function Privacy() {
     <main className="flex-1 flex flex-col items-center px-6 py-16">
       <article className="max-w-2xl w-full space-y-6">
         <h1 className="text-3xl font-bold text-white">Privacy Policy</h1>
-        <p className="text-neutral-400 text-sm">Last updated: October 7, 2026</p>
+        <p className="text-neutral-400 text-sm">Last updated: October 8, 2026</p>
 
         <Section title="Overview">
           Codync lets you message the AI agents that run on your own computer. It is built so that your files, conversations and credentials stay on your devices.
@@ -48,6 +48,7 @@ export default function Privacy() {
             <li><strong>The AI agents you choose</strong>: they run on your computer under their own terms and privacy policies.</li>
             <li><strong>OpenAI or Google (optional, voice calls)</strong>: only if you add your own OpenAI or Gemini API key in a call&apos;s settings. Your voice then goes from your iPhone or Mac directly to that provider, under your account and its privacy policy, together with the bot&apos;s name and description and the chat messages it asks for during the call. The key is stored encrypted on your computer, which uses it only to start calls and list models. Without a key, voice calls use Apple speech recognition on your device.</li>
           </ul>
+          <p className="mt-2">This policy covers Codync as we publish it. Codync services run by third parties (for example a hosted host or relay) handle your data under their own privacy policies; we don&apos;t operate them and receive none of that data.</p>
         </Section>
 
         <Section title="Data retention">
