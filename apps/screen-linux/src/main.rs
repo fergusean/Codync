@@ -7,6 +7,7 @@
 
 mod a11y;
 mod input;
+mod negotiation;
 mod portal;
 mod stream;
 
