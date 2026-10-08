@@ -34,7 +34,7 @@ macOS: Apple Silicon + Intel (DMG) · Windows: x64 installer · Linux: AppImage 
 
 <a href="https://youtu.be/QAhyZWpV70U"><img src="docs/screenshots/launch-film.jpg" width="760" alt="Watch the Codync launch film on YouTube (1:45)"></a>
 
-<img src="docs/screenshots/desktop-macos.png" width="760" alt="Codync desktop app on macOS: bot list, chat and details panel">
+<img src="docs/screenshots/desktop-macos.png" width="760" alt="Codync desktop app on macOS: four bots in the sidebar and the welcome screen with no bot selected">
 
 <a href="https://apps.apple.com/app/codync/id6760984418"><img src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg" height="54" alt="Download on the App Store"></a>
 
