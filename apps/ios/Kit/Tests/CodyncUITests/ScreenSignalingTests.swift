@@ -172,11 +172,20 @@ private actor FailingSignalingTransport: HostTransport {
 private actor LateSignalingFailureTransport: HostTransport {
     private(set) var preparations = 0
     private var streams: [String: AsyncThrowingStream<Data, Error>.Continuation] = [:]
+    private let gateRecovery: Bool
+    private var preparing: CheckedContinuation<Void, Never>?
+
+    init(gateRecovery: Bool = false) { self.gateRecovery = gateRecovery }
+
+    func resumePreparation() { preparing?.resume(); preparing = nil }
 
     func call(_ method: String, body: Data, timeout: TimeInterval) async throws -> Data {
         switch method {
         case "screenPrepare":
             preparations += 1
+            if gateRecovery && preparations == 2 {
+                await withCheckedContinuation { preparing = $0 }
+            }
             return Data(#"{"session":"late-\#(preparations)","iceServers":[],"expiresAt":4102444800000,"trickle":true}"#.utf8)
         case "screenOffer":
             struct Offer: Decodable { let session: String; let sdp: String }
@@ -240,4 +249,16 @@ private actor LateSignalingFailureTransport: HostTransport {
     let preparations = await transport.preparations
     #expect(preparations == 4, "one initial attempt and three retries, even when answers succeed")
     session.close()
+}
+
+@Test(.timeLimit(.minutes(1))) @MainActor func fatalSignalingLossRetiresTheOldPeerBeforePreparingItsReplacement() async throws {
+    let transport = LateSignalingFailureTransport(gateRecovery: true)
+    let session = ScreenSession(client: HostClient(transport: transport), display: nil)
+    await session.start()
+    #expect(session.track != nil)
+    try await waitUntil { let count = await transport.preparations; return count == 2 }
+    #expect(session.phase == .reconnecting)
+    #expect(session.track == nil, "the failed peer must close even while replacement preparation waits")
+    session.close()
+    await transport.resumePreparation()
 }

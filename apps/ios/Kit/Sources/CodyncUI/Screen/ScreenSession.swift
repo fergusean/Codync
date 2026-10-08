@@ -64,7 +64,7 @@ public final class ScreenSession {
         do {
             try await connect()
         } catch {
-            guard phase != .closed, phase != .reconnecting else { return }
+            guard phase == .connecting else { return }
             close()
             phase = .failed(error.localizedDescription)
         }
@@ -105,6 +105,9 @@ public final class ScreenSession {
                 guard let self, self.generation == current, self.phase != .closed else { return }
                 log.info("screen signaling failed: \(error.localizedDescription)")
                 self.lastError = error.localizedDescription
+                // Retire this peer now, before fetching a replacement. Its queued callbacks
+                // must not restore .live or keep sending input after signaling has failed.
+                self.teardown()
                 self.phase = .reconnecting
                 // An ongoing retry observes the failure when negotiation resumes.
                 // Keep its attempt counter instead of replacing it with a new retry loop.
@@ -112,6 +115,9 @@ public final class ScreenSession {
             }
             self.signaling = signaling
             try await signaling.subscribe()
+            // Subscription failure can retire this peer before the ready waiter resumes.
+            guard self.pc === pc, generation == current, phase != .closed else { throw CancellationError() }
+            try signaling.check()
         }
 
         let initVideo = RTCRtpTransceiverInit()
@@ -154,8 +160,11 @@ public final class ScreenSession {
 
     /// Offer → host → answer with the reserved session’s ICE configuration.
     private func negotiate(_ pc: RTCPeerConnection) async throws {
+        let signaling = signaling
         let offer = try await pc.offer(for: Self.noConstraints)
+        guard self.pc === pc, phase != .closed else { throw CancellationError() }
         try await pc.setLocalDescription(offer)
+        guard self.pc === pc, phase != .closed else { throw CancellationError() }
         if signaling == nil { await waitForCandidates(pc) }
         try Task.checkCancellation()
         guard self.pc === pc, phase != .closed else { throw CancellationError() }
@@ -303,7 +312,8 @@ public final class ScreenSession {
         return remoteClipboard
     }
 
-    fileprivate func received(_ data: Data) {
+    fileprivate func received(_ data: Data, generation: Int) {
+        guard generation == self.generation, phase != .closed else { return }
         guard let msg = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else { return }
         switch msg["type"] as? String {
         case "clipboard": remoteClipboard = msg["text"] as? String
@@ -368,7 +378,8 @@ private final class PeerEvents: NSObject, RTCPeerConnectionDelegate, RTCDataChan
     func dataChannel(_ dataChannel: RTCDataChannel, didReceiveMessageWith buffer: RTCDataBuffer) {
         let data = buffer.data
         let owner = owner
-        Task { @MainActor in owner.value?.received(data) }
+        let generation = generation
+        Task { @MainActor in owner.value?.received(data, generation: generation) }
     }
 }
 
