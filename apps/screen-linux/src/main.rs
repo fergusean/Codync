@@ -6,6 +6,7 @@
 //! GStreamer `webrtcbin`, and the accessibility tree over AT-SPI.
 
 mod a11y;
+mod candidates;
 mod input;
 mod negotiation;
 mod portal;
@@ -132,11 +133,16 @@ async fn handle(h: &Arc<Helper>, method: &str, p: &Value) -> Result<Value> {
             h.sessions.lock().await.insert(id, session);
             json!({"sdp": answer})
         }
+        "candidate" => {
+            let id = p["session"].as_str().context("missing session")?;
+            let sessions = h.sessions.lock().await;
+            let session = sessions.get(id).context("unknown screen session")?;
+            session.candidate(&p["candidate"])?;
+            json!({})
+        }
         "close" => {
-            if let Some(s) = p["session"]
-                .as_str()
-                .and_then(|id| h.sessions.try_lock().ok()?.remove(id))
-            {
+            let mut sessions = h.sessions.lock().await;
+            if let Some(s) = p["session"].as_str().and_then(|id| sessions.remove(id)) {
                 s.close();
             }
             json!({})

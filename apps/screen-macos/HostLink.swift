@@ -19,6 +19,7 @@ final class HostLink {
     private(set) var isConnected = false
     /// Runs on every (re)connect: the host forgets us when we drop.
     var onConnect: (@MainActor () -> Void)?
+    var onDisconnect: (@MainActor () -> Void)?
 
     static var socketPath: String {
         let base = ProcessInfo.processInfo.environment["CODYNC_HOME"] ?? NSHomeDirectory() + "/.codync"
@@ -53,6 +54,7 @@ final class HostLink {
     private func drop(_ c: NWConnection) {
         guard c === connection else { return }
         isConnected = false
+        onDisconnect?()
         connection = nil
         c.stateUpdateHandler = nil
         c.cancel()

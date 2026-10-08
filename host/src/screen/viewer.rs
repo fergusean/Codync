@@ -34,8 +34,9 @@ impl Default for IceConfig {
 
 impl Screen {
     /// Reserve one session before the phone gathers ICE; the host keeps the exact configuration.
-    pub fn prepare(&self, owner: &str, ice: IceConfig) -> Result<Value> {
-        self.link()?;
+    pub fn prepare(&self, owner: &str, ice: IceConfig, trickle: bool) -> Result<Value> {
+        let link = self.link()?;
+        let trickle = trickle && self.status.locked().trickle;
         let mut sessions = self.sessions.locked();
         let now = crate::store::now_ms();
         sessions.retain(|_, v| v.started || v.pending_until > now);
@@ -43,8 +44,19 @@ impl Screen {
             bail!("too many screen sessions; close another screen and try again");
         }
         let session = uuid::Uuid::new_v4().to_string();
-        let result = json!({"session": session, "iceServers": ice.ice_servers, "expiresAt": ice.expires_at});
-        sessions.insert(session, Viewer { owner: owner.to_owned(), ice, started: false, pending_until: now + 60_000 });
+        let result =
+            json!({"session": session, "iceServers": ice.ice_servers, "expiresAt": ice.expires_at, "trickle": trickle});
+        sessions.insert(
+            session,
+            Viewer {
+                owner: owner.to_owned(),
+                ice,
+                started: false,
+                pending_until: now + 60_000,
+                link_id: link.id,
+                signaling: trickle.then(super::signaling::Signaling::new),
+            },
+        );
         Ok(result)
     }
 
@@ -60,26 +72,33 @@ impl Screen {
         }
         let session = match session {
             Some(id) => id.to_owned(),
-            None => self.prepare(owner, IceConfig::default())?["session"]
+            None => self.prepare(owner, IceConfig::default(), false)?["session"]
                 .as_str()
                 .context("missing screen session")?
                 .to_owned(),
         };
-        let ice = {
-            let sessions = self.sessions.locked();
-            let viewer = sessions.get(&session).filter(|v| v.owner == owner).context("unknown screen session")?;
+        let (ice, trickle) = {
+            let mut sessions = self.sessions.locked();
+            let viewer = sessions.get_mut(&session).filter(|v| v.owner == owner).context("unknown screen session")?;
             let now = crate::store::now_ms();
             if viewer.ice.expires_at <= now || (!viewer.started && viewer.pending_until <= now) {
                 bail!("screen connection expired; reconnect to continue");
             }
-            viewer.ice.clone()
+            if viewer.link_id != link.id {
+                bail!("screen helper changed; reconnect");
+            }
+            let trickle = viewer.signaling.is_some();
+            if let Some(signaling) = &mut viewer.signaling {
+                signaling.begin_offer()?;
+            }
+            (viewer.ice.clone(), trickle)
         };
         let remote = !ice.ice_servers.is_empty();
         let res = link
             .request(
                 "answer",
                 json!({
-                    "session": session, "sdp": sdp, "display": display, "iceServers": ice.ice_servers,
+                    "session": session, "sdp": sdp, "trickle": trickle, "display": display, "iceServers": ice.ice_servers,
                     "maxBitrateBps": if remote { 4_000_000 } else { 16_000_000 },
                     "maxFramerate": if remote { 30 } else { 60 },
                 }),
@@ -102,6 +121,9 @@ impl Screen {
         let accepted = {
             let mut sessions = self.sessions.locked();
             if let Some(viewer) = sessions.get_mut(&session) {
+                if let Some(signaling) = &mut viewer.signaling {
+                    signaling.answered()?;
+                }
                 viewer.started = true;
                 true
             } else {
@@ -117,6 +139,7 @@ impl Screen {
     }
 
     pub async fn close(&self, session: &str) -> Result<()> {
+        self.fail_signaling(session, "screen session closed");
         let link = self.link.locked().clone();
         if let Some(link) = link {
             link.request("close", json!({"session": session})).await?;
@@ -213,7 +236,7 @@ mod tests {
             }],
             ..IceConfig::default()
         };
-        let prepared = screen.prepare("phone", config).unwrap();
+        let prepared = screen.prepare("phone", config, false).unwrap();
         let id = prepared["session"].as_str().unwrap();
         assert!(screen.owns_session(id, "phone"));
         assert!(!screen.owns_session(id, "other"));
@@ -221,14 +244,14 @@ mod tests {
         assert_eq!(screen.state()["viewers"], 0);
         assert!(!screen.state().to_string().contains("secret"));
         for _ in 0..3 {
-            screen.prepare("phone", IceConfig::default()).unwrap();
+            screen.prepare("phone", IceConfig::default(), false).unwrap();
         }
-        assert!(screen.prepare("phone", IceConfig::default()).is_err());
+        assert!(screen.prepare("phone", IceConfig::default(), false).is_err());
         for viewer in screen.sessions.locked().values_mut() {
             viewer.pending_until = 0;
         }
-        assert!(screen.prepare("phone", IceConfig::default()).is_ok());
+        assert!(screen.prepare("phone", IceConfig::default(), false).is_ok());
         *screen.enabled.locked() = Some(false);
-        assert!(screen.prepare("phone", IceConfig::default()).is_err());
+        assert!(screen.prepare("phone", IceConfig::default(), false).is_err());
     }
 }

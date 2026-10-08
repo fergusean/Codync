@@ -1,5 +1,5 @@
 //! Video: a PipeWire monitor stream encoded as H.264 and sent over GStreamer
-//! `webrtcbin` (non-trickle, like the macOS helper), plus one-off JPEG stills.
+//! `webrtcbin` with negotiated trickle ICE, plus one-off JPEG stills.
 
 use crate::negotiation::{h264_payload, ice_uri};
 use crate::portal::Display;
@@ -26,6 +26,8 @@ const BITRATE_KBPS: u32 = 8000;
 pub struct Session {
     pub(super) pipeline: gst::Pipeline,
     pub(super) webrtc: gst::Element,
+    pub(super) trickle: bool,
+    pub(super) incoming: Mutex<crate::candidates::Candidates>,
 }
 
 impl Session {
@@ -167,6 +169,10 @@ impl Session {
                 None
             }
         });
+        let trickle = config["trickle"] == true;
+        if trickle {
+            crate::candidates::observe(&webrtc, &id, &helper);
+        }
         let runtime = tokio::runtime::Handle::current();
         webrtc.connect_notify(Some("ice-connection-state"), move |w, _| {
             let state = w.property::<gst_webrtc::WebRTCICEConnectionState>("ice-connection-state");
@@ -183,7 +189,12 @@ impl Session {
         pipeline
             .set_state(gst::State::Ready)
             .context("preparing the video pipeline")?;
-        Ok(Self { pipeline, webrtc })
+        Ok(Self {
+            pipeline,
+            webrtc,
+            trickle,
+            incoming: Mutex::default(),
+        })
     }
 
     pub fn close(self) {
@@ -391,7 +402,12 @@ mod tests {
         .unwrap();
         let webrtc = pipeline.by_name("peer").unwrap();
         pipeline.set_state(gst::State::Ready).unwrap();
-        let session = Session { pipeline, webrtc };
+        let session = Session {
+            pipeline,
+            webrtc,
+            trickle: true,
+            incoming: Mutex::default(),
+        };
         let offer = "v=0\r\no=- 0 0 IN IP4 127.0.0.1\r\ns=-\r\nt=0 0\r\n\
             m=video 9 UDP/TLS/RTP/SAVPF 102\r\nc=IN IP4 0.0.0.0\r\n\
             a=mid:0\r\na=recvonly\r\na=rtcp-mux\r\na=setup:actpass\r\n\
@@ -399,7 +415,15 @@ mod tests {
             a=fingerprint:sha-256 00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00\r\n\
             a=rtpmap:102 H264/90000\r\n\
             a=fmtp:102 packetization-mode=1;profile-level-id=42e01f\r\n";
-        let answer_result = session.answer(offer).await;
+        // A silent local STUN endpoint keeps gathering active deterministically.
+        let silent_stun = std::net::UdpSocket::bind("127.0.0.1:0").unwrap();
+        let port = silent_stun.local_addr().unwrap().port();
+        session
+            .webrtc
+            .set_property("stun-server", format!("stun://127.0.0.1:{port}"));
+        let answer_result =
+            tokio::time::timeout(std::time::Duration::from_secs(2), session.answer(offer)).await;
+        let answer_result = answer_result.expect("the answer must not wait for STUN gathering");
         let answer = answer_result.unwrap();
         let sdp = gst_sdp::SDPMessage::parse_buffer(answer.as_bytes()).unwrap();
         let video = sdp.media(0).unwrap();
@@ -407,6 +431,19 @@ mod tests {
         assert_eq!(video.formats().collect::<Vec<_>>(), ["102"]);
         assert!(video.attributes().any(|a| a.key() == "sendonly"));
         assert_eq!(session.pipeline.current_state(), gst::State::Playing);
+        assert_ne!(
+            session
+                .webrtc
+                .property::<gst_webrtc::WebRTCICEGatheringState>("ice-gathering-state"),
+            gst_webrtc::WebRTCICEGatheringState::Complete
+        );
+        assert!(
+            !answer.contains("a=candidate:"),
+            "trickle returns the original SDP, not a gathered snapshot"
+        );
+        session.candidate(&json!({"type": "candidate", "candidate": "candidate:1 1 UDP 1 192.0.2.1 5000 typ host", "sdpMLineIndex": 0})).unwrap();
+        session.candidate(&json!({"type": "complete"})).unwrap();
+        assert!(session.candidate(&json!({"type": "complete"})).is_err());
     }
 
     #[test]

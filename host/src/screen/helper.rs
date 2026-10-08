@@ -139,6 +139,7 @@ pub async fn supervise_linux_helper(screen: Arc<Screen>) {
 
 #[cfg(unix)]
 async fn run_link(screen: Arc<Screen>, stream: UnixStream) {
+    let mut generation = screen.helper_generation.subscribe();
     let (rd, mut wr) = stream.into_split();
     let (tx, mut rx) = mpsc::unbounded_channel::<String>();
     let link = Arc::new(Link {
@@ -147,7 +148,14 @@ async fn run_link(screen: Arc<Screen>, stream: UnixStream) {
         pending: Mutex::default(),
         next_id: AtomicI64::new(1),
     });
-    *screen.link.locked() = Some(link.clone());
+    {
+        let mut slot = screen.link.locked();
+        *slot = Some(link.clone());
+        screen.sessions.locked().clear();
+        *screen.status.locked() = HelperStatus::default();
+        screen.control.locked().user = false;
+        screen.helper_generation.send_replace(link.id);
+    }
     tracing::info!("screen helper connected");
     let writer = tokio::spawn(async move {
         while let Some(mut line) = rx.recv().await {
@@ -158,11 +166,21 @@ async fn run_link(screen: Arc<Screen>, stream: UnixStream) {
         }
     });
     let mut lines = BufReader::new(rd).lines();
-    while let Ok(Some(line)) = lines.next_line().await {
-        let Ok(msg) = serde_json::from_str::<Value>(&line) else {
-            tracing::debug!(line, "ignoring non-JSON from the screen helper");
+    loop {
+        let packet = tokio::select! {
+            packet = lines.next_line() => { let Ok(Some(packet)) = packet else { break }; packet }
+            changed = generation.changed() => {
+                if changed.is_err() || *generation.borrow() != link.id { break; }
+                continue;
+            }
+        };
+        let Ok(msg) = serde_json::from_str::<Value>(&packet) else {
+            tracing::debug!(packet, "ignoring non-JSON from the screen helper");
             continue;
         };
+        if screen.link.locked().as_ref().is_none_or(|current| current.id != link.id) {
+            break;
+        }
         match (msg["method"].as_str(), msg["id"].as_i64()) {
             (None, Some(id)) => {
                 if let Some(waiter) = link.pending.locked().remove(&id) {
@@ -180,6 +198,11 @@ async fn run_link(screen: Arc<Screen>, stream: UnixStream) {
                 }
                 Err(error) => tracing::warn!(%error, "bad status from the screen helper"),
             },
+            (Some("candidate"), _) => {
+                if let Some(session) = msg["params"]["session"].as_str() {
+                    screen.helper_candidate(session, msg["params"]["candidate"].clone());
+                }
+            }
             (Some("session"), _) => {
                 if msg["params"]["state"] == "closed"
                     && let Some(s) = msg["params"]["session"].as_str()
@@ -259,7 +282,7 @@ mod tests {
             ..IceConfig::default()
         };
         screen.takeover(true);
-        let prepared = screen.prepare("phone", config).unwrap();
+        let prepared = screen.prepare("phone", config, false).unwrap();
         screen.session_closed(res["session"].as_str().unwrap());
         assert_eq!(screen.state()["userControl"], true, "renewal keeps takeover while the replacement is pending");
         let id = prepared["session"].as_str().unwrap();
@@ -271,5 +294,41 @@ mod tests {
         assert_eq!(remote["params"]["maxFramerate"], 30);
         screen.sessions.locked().get_mut(id).unwrap().ice.expires_at = 0;
         assert!(screen.offer("phone", "offer", Some(id), None).await.is_err());
+    }
+
+    #[tokio::test]
+    async fn replacing_a_helper_ends_its_socket_and_private_signaling() {
+        use futures::StreamExt as _;
+        use tokio::io::AsyncReadExt as _;
+        let (events, _) = broadcast::channel(8);
+        let screen = Arc::new(Screen::new(Some(true), events));
+        let (first, mut first_peer) = UnixStream::pair().unwrap();
+        tokio::spawn(run_link(screen.clone(), first));
+        let status = json!({"jsonrpc": "2.0", "method": "status", "params": {"capture": true, "trickle": true}});
+        let sent = first_peer.write_all(format!("{status}\n").as_bytes()).await;
+        sent.unwrap();
+        for _ in 0..50 {
+            if screen.status.locked().capture {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+        let prepared = screen.prepare("phone", IceConfig::default(), true).unwrap();
+        let session = prepared["session"].as_str().unwrap();
+        let mut candidates = screen.candidates(session, "phone").unwrap().boxed();
+        let ready = candidates.next().await;
+        assert_eq!(ready.unwrap()["type"], "ready");
+        let old_id = screen.link().unwrap().id;
+        let (second, mut second_peer) = UnixStream::pair().unwrap();
+        tokio::spawn(run_link(screen.clone(), second));
+        let sent = second_peer.write_all(format!("{status}\n").as_bytes()).await;
+        sent.unwrap();
+        let mut buffer = [0; 1];
+        let closed = tokio::time::timeout(Duration::from_secs(1), first_peer.read(&mut buffer)).await;
+        assert_eq!(closed.unwrap().unwrap(), 0, "the old helper must stop media when its socket ends");
+        let ended = tokio::time::timeout(Duration::from_secs(1), candidates.next()).await;
+        assert!(ended.unwrap().is_none());
+        assert!(!screen.owns_session(session, "phone"));
+        assert_ne!(screen.link().unwrap().id, old_id);
     }
 }

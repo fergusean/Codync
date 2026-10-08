@@ -7,7 +7,7 @@ use std::time::Duration;
 use tokio::sync::oneshot;
 
 impl Session {
-    /// Answers once a relay route is available or gathering has completed.
+    /// Trickle sends the original answer immediately; complete-SDP peers wait for gathering.
     pub async fn answer(&self, offer: &str) -> Result<String> {
         let sdp = gst_sdp::SDPMessage::parse_buffer(offer.as_bytes())
             .map_err(|_| anyhow!("bad offer"))?;
@@ -20,7 +20,8 @@ impl Session {
         let (p, done) = promise();
         self.webrtc
             .emit_by_name::<()>("create-answer", &[&None::<gst::Structure>, &p]);
-        let reply = done.await?.ok_or_else(|| anyhow!("no answer"))?;
+        let reply = done.await?;
+        let reply = reply.ok_or_else(|| anyhow!("no answer"))?;
         let answer = reply
             .get::<gst_webrtc::WebRTCSessionDescription>("answer")
             .map_err(|_| anyhow!("no answer"))?;
@@ -33,15 +34,18 @@ impl Session {
         self.pipeline
             .set_state(gst::State::Playing)
             .context("starting the video pipeline")?;
+        if self.trickle {
+            return answer
+                .sdp()
+                .as_text()
+                .map_err(|_| anyhow!("couldn't write the answer"));
+        }
+        // Complete-SDP clients need all transports, including late TURN TLS/443 candidates.
         for _ in 0..200 {
-            let local = self
+            if self
                 .webrtc
-                .property::<Option<gst_webrtc::WebRTCSessionDescription>>("local-description");
-            if local.as_ref().is_some_and(|s| has_relay_candidate(s.sdp()))
-                || self
-                    .webrtc
-                    .property::<gst_webrtc::WebRTCICEGatheringState>("ice-gathering-state")
-                    == gst_webrtc::WebRTCICEGatheringState::Complete
+                .property::<gst_webrtc::WebRTCICEGatheringState>("ice-gathering-state")
+                == gst_webrtc::WebRTCICEGatheringState::Complete
             {
                 break;
             }
@@ -56,23 +60,33 @@ impl Session {
             .as_text()
             .map_err(|_| anyhow!("couldn't write the answer"))
     }
-}
-
-/// One relay candidate is enough for a non-trickle answer; later duplicate
-/// TURN transports must not delay a route that can already carry the session.
-fn has_relay_candidate(sdp: &gst_sdp::SDPMessageRef) -> bool {
-    sdp.medias().any(|media| {
-        media.attributes().any(|attribute| {
-            attribute.key() == "candidate"
-                && attribute.value().is_some_and(|candidate| {
-                    candidate
-                        .split_ascii_whitespace()
-                        .collect::<Vec<_>>()
-                        .windows(2)
-                        .any(|pair| pair == ["typ", "relay"])
-                })
-        })
-    })
+    pub fn candidate(&self, candidate: &serde_json::Value) -> Result<()> {
+        if !self.trickle {
+            bail!("screen session does not support trickle ICE");
+        }
+        let mut incoming = self
+            .incoming
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        incoming.accept(candidate)?;
+        if candidate["type"] == "complete" {
+            // 1.22 supports end-of-candidates without add-ice-candidate-full.
+            self.webrtc
+                .emit_by_name::<()>("add-ice-candidate", &[&0u32, &None::<String>]);
+        } else {
+            let index = u32::try_from(
+                candidate["sdpMLineIndex"]
+                    .as_u64()
+                    .context("missing media index")?,
+            )?;
+            let sdp = candidate["candidate"]
+                .as_str()
+                .context("missing candidate")?;
+            self.webrtc
+                .emit_by_name::<()>("add-ice-candidate", &[&index, &sdp]);
+        }
+        Ok(())
+    }
 }
 
 /// The answer must use the phone's payload number, which is not necessarily 96.
@@ -146,21 +160,6 @@ fn promise() -> (gst::Promise, oneshot::Receiver<Option<gst::Structure>>) {
 mod tests {
     #![allow(clippy::unwrap_used)]
     use super::*;
-
-    #[test]
-    fn relay_answer_does_not_wait_for_duplicate_turn_transports() {
-        gst::init().unwrap();
-        let offer = "v=0\r\no=- 0 0 IN IP4 127.0.0.1\r\ns=-\r\nt=0 0\r\n\
-            m=video 9 UDP/TLS/RTP/SAVPF 102\r\n\
-            a=candidate:1 1 UDP 2130706431 192.0.2.1 5000 typ host\r\n";
-        let host_only = gst_sdp::SDPMessage::parse_buffer(offer.as_bytes()).unwrap();
-        assert!(!has_relay_candidate(&host_only));
-        let relay = format!(
-            "{offer}a=candidate:2 1 UDP 16777215 198.51.100.1 6000 typ relay raddr 192.0.2.1 rport 5000\r\n"
-        );
-        let relay = gst_sdp::SDPMessage::parse_buffer(relay.as_bytes()).unwrap();
-        assert!(has_relay_candidate(&relay));
-    }
 
     #[test]
     fn video_uses_the_offered_h264_payload_instead_of_a_fixed_number() {
