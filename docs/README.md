@@ -10,6 +10,7 @@ Source review, a passing build, local integration tests and production acceptanc
 | Find a module or decide where a file belongs | [File structure](architecture/file-structure.md) |
 | Understand clients, host, cloud and data ownership | [Architecture](architecture/overview.md) |
 | Work on the macOS, Linux and Windows desktop app (Electron) | [Desktop app](architecture/desktop-app.md) |
+| Understand bot-generated file downloads | [File attachments](features/file-attachments.md), [implementation plan](plans/file-downloads.md) |
 | Build, install, restart and run checks | [Development](guides/development.md) |
 | Upgrade Sean's local app and private infrastructure | [Local upgrade guide](guides/local-upgrades.md) |
 | Plan and build Android | [Android plan](plans/android-app.md), [Android status](../apps/android/README.md) |
