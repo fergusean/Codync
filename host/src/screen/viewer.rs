@@ -149,18 +149,19 @@ impl Screen {
     }
 
     pub(super) fn session_closed(&self, session: &str) {
-        let removed = {
-            let mut sessions = self.sessions.locked();
-            let removed = sessions.remove(session).is_some();
-            if sessions.is_empty() {
-                // Nobody is watching: hand control back to the bots.
-                self.control.locked().user = false;
-            }
-            removed
-        };
-        if removed {
+        if self.remove_session(session) {
             self.emit();
         }
+    }
+
+    pub(super) fn remove_session(&self, session: &str) -> bool {
+        let mut sessions = self.sessions.locked();
+        let removed = sessions.remove(session).is_some();
+        if sessions.is_empty() {
+            // Nobody is watching: hand control back to the bots.
+            self.control.locked().user = false;
+        }
+        removed
     }
 
     pub fn takeover(&self, on: bool) {

@@ -22,7 +22,6 @@ pub(super) type Pending = Mutex<HashMap<i64, oneshot::Sender<Result<Value, Strin
 
 /// One connected screen helper.
 pub(super) struct Link {
-    #[cfg_attr(windows, expect(dead_code, reason = "Windows has no screen helper yet"))]
     pub(super) id: u64,
     pub(super) tx: mpsc::UnboundedSender<String>,
     pub(super) pending: Pending,
@@ -178,9 +177,12 @@ async fn run_link(screen: Arc<Screen>, stream: UnixStream) {
             tracing::debug!(packet, "ignoring non-JSON from the screen helper");
             continue;
         };
-        if screen.link.locked().as_ref().is_none_or(|current| current.id != link.id) {
+        // Keep replacement atomic with every notification's state changes.
+        let current = screen.link.locked();
+        if current.as_ref().is_none_or(|current| current.id != link.id) {
             break;
         }
+        let mut announce = false;
         match (msg["method"].as_str(), msg["id"].as_i64()) {
             (None, Some(id)) => {
                 if let Some(waiter) = link.pending.locked().remove(&id) {
@@ -194,7 +196,7 @@ async fn run_link(screen: Arc<Screen>, stream: UnixStream) {
             (Some("status"), _) => match serde_json::from_value::<HelperStatus>(msg["params"].clone()) {
                 Ok(st) => {
                     *screen.status.locked() = st;
-                    screen.emit();
+                    announce = true;
                 }
                 Err(error) => tracing::warn!(%error, "bad status from the screen helper"),
             },
@@ -207,11 +209,15 @@ async fn run_link(screen: Arc<Screen>, stream: UnixStream) {
                 if msg["params"]["state"] == "closed"
                     && let Some(s) = msg["params"]["session"].as_str()
                 {
-                    screen.session_closed(s);
+                    announce = screen.remove_session(s);
                 }
             }
             (Some(method), _) => tracing::debug!(method, "unknown screen helper notification"),
             _ => {}
+        }
+        drop(current);
+        if announce {
+            screen.emit();
         }
     }
     writer.abort();
@@ -221,13 +227,13 @@ async fn run_link(screen: Arc<Screen>, stream: UnixStream) {
         let current = slot.as_ref().is_some_and(|l| l.id == link.id);
         if current {
             *slot = None;
+            *screen.status.locked() = HelperStatus::default();
+            screen.sessions.locked().clear();
+            screen.control.locked().user = false;
         }
         current
     };
     if current {
-        *screen.status.locked() = HelperStatus::default();
-        screen.sessions.locked().clear();
-        screen.control.locked().user = false;
         screen.emit();
     }
     tracing::info!("screen helper disconnected");
@@ -330,5 +336,66 @@ mod tests {
         assert!(ended.unwrap().is_none());
         assert!(!screen.owns_session(session, "phone"));
         assert_ne!(screen.link().unwrap().id, old_id);
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    async fn helper_replacement_cannot_overtake_an_in_progress_status_update() {
+        use std::io::Write as _;
+        let (events, _) = broadcast::channel(8);
+        let screen = Arc::new(Screen::new(Some(true), events));
+        let (first, mut first_peer) = UnixStream::pair().unwrap();
+        tokio::spawn(run_link(screen.clone(), first));
+        let status = json!({"jsonrpc": "2.0", "method": "status", "params": {"capture": true, "trickle": true}});
+        let sent = first_peer.write_all(format!("{status}\n").as_bytes()).await;
+        sent.unwrap();
+        for _ in 0..50 {
+            if screen.status.locked().capture {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+        let old_id = screen.link().unwrap().id;
+        let (second, mut second_peer) = UnixStream::pair().unwrap();
+        let sent = second_peer.write_all(format!("{status}\n").as_bytes()).await;
+        sent.unwrap();
+        let mut first_peer = first_peer.into_std().unwrap();
+        first_peer.set_nonblocking(false).unwrap();
+        let (held, holding) = std::sync::mpsc::channel();
+        let (checked, checking) = std::sync::mpsc::channel();
+        let (release, releasing) = std::sync::mpsc::channel();
+        let blocker = std::thread::spawn({
+            let screen = screen.clone();
+            move || {
+                let _status = screen.status.locked();
+                held.send(()).unwrap();
+                let mut protected = false;
+                for _ in 0..100 {
+                    if screen.link.try_lock().is_err() {
+                        protected = true;
+                        break;
+                    }
+                    std::thread::sleep(Duration::from_millis(5));
+                }
+                checked.send(protected).unwrap();
+                // A timeout also releases the lock if an assertion fails.
+                let _ = releasing.recv_timeout(Duration::from_secs(3));
+            }
+        });
+        holding.recv_timeout(Duration::from_secs(1)).unwrap();
+        let stale = json!({"jsonrpc": "2.0", "method": "status", "params": {"capture": false, "trickle": false}});
+        first_peer.write_all(format!("{stale}\n").as_bytes()).unwrap();
+        let protected = checking.recv_timeout(Duration::from_secs(1)).unwrap();
+        tokio::spawn(run_link(screen.clone(), second));
+        release.send(()).unwrap();
+        blocker.join().unwrap();
+        assert!(protected, "the previous helper must hold its generation until the update completes");
+        for _ in 0..50 {
+            if screen.link().unwrap().id != old_id && screen.status.locked().capture {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+        assert_ne!(screen.link().unwrap().id, old_id);
+        assert!(screen.status.locked().trickle, "the replacement's capability must win");
     }
 }
