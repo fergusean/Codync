@@ -17,13 +17,13 @@ export type Rival = {
 };
 
 const us = {
-  price: "$0, every feature included. MIT licensed.",
+  price: "$0, every feature included. Apache 2.0 licensed.",
   runs: "On your own computer: a Mac, a Windows PC, a Linux desktop or a headless server.",
   agents:
     "Claude Code, Codex, Cursor, Gemini, Copilot, OpenCode and about 40 more over ACP, on the plans and logins you already have.",
   apps: "iPhone, Mac, Windows and Linux apps, plus a terminal UI over SSH.",
   data: "Stays on your computer. The phone connects directly, or through an end-to-end encrypted relay.",
-  source: "Open source, MIT.",
+  source: "Open source, Apache 2.0.",
   account: "Not required: pair by scanning a code. Signing in is optional.",
   approvals: "Edits and commands come to your phone: allow once, always allow or deny.",
   rooms: "Group chats where every bot answers in its own session, and threads on any message.",

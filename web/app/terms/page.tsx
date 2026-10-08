@@ -15,7 +15,7 @@ export default function Terms() {
         </Section>
 
         <Section title="2. The service">
-          Codync is free, open-source software (MIT license) that lets you message AI agents running on your own computer from your iPhone, Mac, Windows PC or Linux desktop.
+          Codync is free, open-source software (Apache License 2.0) that lets you message AI agents running on your own computer from your iPhone, Mac, Windows PC or Linux desktop.
         </Section>
 
         <Section title="3. Your responsibility">
@@ -35,11 +35,11 @@ export default function Terms() {
         </Section>
 
         <Section title="5. Third-party services">
-          Anyone may run Codync for others under the MIT license. Services operated by third parties, including hosted hosts, relays, accounts or bundled AI access built on Codync, are not operated, endorsed or supported by us. Their operators are solely responsible for their service, security, billing, support and the data they handle; your agreement with them is between you and them. We are not liable for any third-party service.
+          Anyone may run Codync for others under the Apache License 2.0. Services operated by third parties, including hosted hosts, relays, accounts or bundled AI access built on Codync, are not operated, endorsed or supported by us. Their operators are solely responsible for their service, security, billing, support and the data they handle; your agreement with them is between you and them. We are not liable for any third-party service.
         </Section>
 
         <Section title="6. Intellectual property">
-          The source code is available at github.com/leepokai/Codync under the MIT license. The MIT license covers the code, not the Codync name or logo: services built on Codync may say they are built on it, but may not call themselves Codync. Names and logos of third-party agents belong to their owners.
+          The source code is available at github.com/leepokai/Codync under the Apache License 2.0. The license covers the code, not the Codync name or logo (Apache 2.0 section 6): services built on Codync may say they are built on it, but may not call themselves Codync. Names and logos of third-party agents belong to their owners.
         </Section>
 
         <Section title="7. Disclaimer of warranties">
