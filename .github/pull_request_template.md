@@ -2,6 +2,13 @@
 
 <!-- What changes for the user, and why. -->
 
+## Validation
+
+<!--
+Required: run the change end to end locally (a real host plus every client it touches)
+and describe what you tried. Builds and unit tests alone aren't enough.
+-->
+
 ## What's New
 
 <!--
