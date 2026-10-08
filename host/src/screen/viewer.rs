@@ -35,29 +35,29 @@ impl Default for IceConfig {
 impl Screen {
     /// Reserve one session before the phone gathers ICE; the host keeps the exact configuration.
     pub fn prepare(&self, owner: &str, ice: IceConfig, trickle: bool) -> Result<Value> {
-        let link = self.link()?;
-        let trickle = trickle && self.status.locked().trickle;
-        let mut sessions = self.sessions.locked();
-        let now = crate::store::now_ms();
-        sessions.retain(|_, v| v.started || v.pending_until > now);
-        if sessions.len() >= 32 || sessions.values().filter(|v| v.owner == owner).count() >= 4 {
-            bail!("too many screen sessions; close another screen and try again");
-        }
-        let session = uuid::Uuid::new_v4().to_string();
-        let result =
-            json!({"session": session, "iceServers": ice.ice_servers, "expiresAt": ice.expires_at, "trickle": trickle});
-        sessions.insert(
-            session,
-            Viewer {
-                owner: owner.to_owned(),
-                ice,
-                started: false,
-                pending_until: now + 60_000,
-                link_id: link.id,
-                signaling: trickle.then(super::signaling::Signaling::new),
-            },
-        );
-        Ok(result)
+        self.with_link(|link| {
+            let trickle = trickle && self.status.locked().trickle;
+            let mut sessions = self.sessions.locked();
+            let now = crate::store::now_ms();
+            sessions.retain(|_, v| v.started || v.pending_until > now);
+            if sessions.len() >= 32 || sessions.values().filter(|v| v.owner == owner).count() >= 4 {
+                bail!("too many screen sessions; close another screen and try again");
+            }
+            let session = uuid::Uuid::new_v4().to_string();
+            let result = json!({"session": session, "iceServers": ice.ice_servers, "expiresAt": ice.expires_at, "trickle": trickle});
+            sessions.insert(
+                session,
+                Viewer {
+                    owner: owner.to_owned(),
+                    ice,
+                    started: false,
+                    pending_until: now + 60_000,
+                    link_id: link.id,
+                    signaling: trickle.then(super::signaling::Signaling::new),
+                },
+            );
+            Ok(result)
+        })
     }
 
     pub fn owns_session(&self, session: &str, owner: &str) -> bool {

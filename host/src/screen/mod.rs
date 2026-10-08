@@ -161,10 +161,16 @@ impl Screen {
     }
 
     fn link(&self) -> Result<Arc<Link>> {
+        self.with_link(|link| Ok(link.clone()))
+    }
+
+    fn with_link<T>(&self, action: impl FnOnce(&Arc<Link>) -> Result<T>) -> Result<T> {
         if !self.enabled() {
             bail!("Remote screen is turned off on this computer. Turn it on in Codync's menu there.");
         }
-        self.link.locked().clone().ok_or_else(|| anyhow!("The screen helper isn't running on this computer."))
+        let slot = self.link.locked();
+        let link = slot.as_ref().ok_or_else(|| anyhow!("The screen helper isn't running on this computer."))?;
+        action(link)
     }
 
     #[cfg(target_os = "linux")]

@@ -398,4 +398,67 @@ mod tests {
         assert_ne!(screen.link().unwrap().id, old_id);
         assert!(screen.status.locked().trickle, "the replacement's capability must win");
     }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    async fn preparing_a_viewer_uses_one_helper_generation_and_its_capabilities() {
+        let (events, _) = broadcast::channel(8);
+        let screen = Arc::new(Screen::new(Some(true), events));
+        let (first, mut first_peer) = UnixStream::pair().unwrap();
+        tokio::spawn(run_link(screen.clone(), first));
+        let status = json!({"jsonrpc": "2.0", "method": "status", "params": {"capture": true, "trickle": true}});
+        let sent = first_peer.write_all(format!("{status}\n").as_bytes()).await;
+        sent.unwrap();
+        for _ in 0..50 {
+            if screen.status.locked().capture {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+        let old_id = screen.link().unwrap().id;
+        let (second, mut second_peer) = UnixStream::pair().unwrap();
+        let replacement = json!({"jsonrpc": "2.0", "method": "status", "params": {"capture": true, "trickle": false}});
+        let sent = second_peer.write_all(format!("{replacement}\n").as_bytes()).await;
+        sent.unwrap();
+        let (held, holding) = std::sync::mpsc::channel();
+        let (checked, checking) = std::sync::mpsc::channel();
+        let (release, releasing) = std::sync::mpsc::channel();
+        let blocker = std::thread::spawn({
+            let screen = screen.clone();
+            move || {
+                let _status = screen.status.locked();
+                held.send(()).unwrap();
+                let mut protected = false;
+                for _ in 0..100 {
+                    if screen.link.try_lock().is_err() {
+                        protected = true;
+                        break;
+                    }
+                    std::thread::sleep(Duration::from_millis(5));
+                }
+                checked.send(protected).unwrap();
+                let _ = releasing.recv_timeout(Duration::from_secs(3));
+            }
+        });
+        holding.recv_timeout(Duration::from_secs(1)).unwrap();
+        let preparing = std::thread::spawn({
+            let screen = screen.clone();
+            move || screen.prepare("phone", IceConfig::default(), true)
+        });
+        let protected = checking.recv_timeout(Duration::from_secs(1)).unwrap();
+        tokio::spawn(run_link(screen.clone(), second));
+        release.send(()).unwrap();
+        blocker.join().unwrap();
+        let prepared = preparing.join().unwrap().unwrap();
+        assert!(protected, "replacement must wait until preparation stores the helper generation");
+        assert_eq!(prepared["trickle"], true);
+        for _ in 0..50 {
+            if screen.link().unwrap().id != old_id && screen.status.locked().capture {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+        assert!(!screen.owns_session(prepared["session"].as_str().unwrap(), "phone"));
+        let fresh = screen.prepare("phone", IceConfig::default(), true).unwrap();
+        assert_eq!(fresh["trickle"], false);
+    }
 }
