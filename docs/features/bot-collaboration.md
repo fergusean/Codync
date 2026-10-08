@@ -12,6 +12,9 @@ The host records the request and its outcome in both chats using existing notice
 
 - Each bot still owns an ACP process with main/reply-thread sessions and runs one turn at a time. A busy recipient queues the request. Different bots can work concurrently.
 - Requests have their own reply channel and never merge with user messages or another request. Contiguous user messages keep the existing batching behavior.
+- An ask's final reply is addressed to the requesting bot. It appears in the request notice
+  and the recipient's trace, without a second bubble in the recipient's main chat. The recipient
+  returns the answer directly rather than sending another `message_bot` request back.
 - The recipient uses its own folder, tools, memory and permission policy. Permission cards appear in its chat. The requesting bot's entire transcript is not copied; only the request is passed. Requests are not treated as user facts by the memory keeper.
 - The host rejects self-delegation, duplicate outstanding requests to the same recipient, and direct or indirect wait cycles, including queued requests. Up to 64 requests can be outstanding host-wide.
 - Native Claude Code/Codex subagents remain managed by the harness. Codync does not turn them into permanent bots or override their delegation settings.
@@ -29,6 +32,10 @@ The host records the request and its outcome in both chats using existing notice
 ## Independent messages
 
 `message_bot(botId, message)` queues a bot request and returns immediately, without waiting for a reply. The recipient reports to you in its own chat. Messages use the same queue as asks, run one turn at a time, and never merge with user messages or other requests. Both chats show bot-attributed notices rather than user messages. Up to 64 messages can be outstanding host-wide, with at most 16 from any one sender, separately from asks. Queued and running messages both count. A slot is freed when the recipient finishes, fails or cancels the request, or admission fails. Stopping, restarting or deleting the sender does not free slots for its already accepted messages.
+
+The recipient can use `send_message` for user-facing updates and its report. If it sends none,
+its final text becomes the main-chat report. The request notice shows completion
+status; it does not copy this user-facing report into a bot reply.
 
 Accepted messages survive sender completion, Stop, disconnection and deletion. Recipient Stop or deletion cancels queued messages and stops running work; started work may have left partial changes. Outcomes update both notices; failures mark them as failed. The recipient uses its normal completion notifications. Messages have no ask timeout or automatic retry and are not replayed after host restart.
 

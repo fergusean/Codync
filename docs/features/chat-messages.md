@@ -13,6 +13,10 @@ How a bot's work turns into what the user reads, copied from Grok Bot.
   the old rule: its last text becomes the turn's final message.
 - Group room turns, `ask_bot` requests and routines reject `send_message`: their reply is the
   turn's last text, as before (`chat/group.rs`, `chat/team.rs`, `routines`).
+- An `ask_bot` reply stays in the recipient's trace and the request notice; it does
+  not also become a message to the user. The requesting bot uses it to answer the user.
+  Independent `message_bot` turns report to the user in the recipient's main chat, through
+  `send_message` or the final-text fallback, and do not add that report to the request notice.
 - The rules reach the agent twice: the MCP server's instructions, and the frozen instruction
   snapshot (`chat/context.rs`).
 - Clients never stream text into a bubble: the chat shows user messages, `final` agent entries,
