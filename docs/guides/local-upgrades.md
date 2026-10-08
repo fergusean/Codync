@@ -40,7 +40,7 @@ Since 2.7.0 the Mac app is Electron under `apps/desktop/`; the native `macOS` Xc
 
 The installed source build is `~/Applications/Codync Local.app`, signed by Signal24 LLC. Preserve its display name, bundle identity and signing team. Translate its existing `AccountConfig.plist` into the desktop build's `resources/account-config.json`; preserve the cloud URL and Clerk public key. Do not use upstream's default developer signing identity. Keep credential-bearing backup and build records in the private upgrade directory.
 
-Build with `npm ci`, `npm run typecheck`, `npm test` and `npm run build` in `apps/desktop/`. Packaging also needs its speech helper, Screen helper and bundled host; use the packaging scripts with an explicit environment and Signal24 signing override. A host compiled for Sean's infrastructure must keep `CODYNC_CLOUD_URL` and `CODYNC_RELAY_URL` overrides.
+Build with `npm ci`, `npm run typecheck`, `npm test` and `npm run build` in `apps/desktop/`. Packaging also needs its speech helper, Screen helper and bundled host; use the packaging scripts with an explicit environment and Signal24 signing override. Preserve the host's runtime `CODYNC_CLOUD_URL` and `CODYNC_RELAY_URL` overrides. The current source embeds `CODYNC_ENV` during compilation but reads those URL overrides only when running.
 
 The Electron renderer currently reaches remote computers through SSH. Before replacing the installed native app, migrate and verify its saved SSH profiles, connect to rdev, and confirm chat, pairing and account behavior with the preserved configuration. Encrypted account-computer transport from the old Mac app was not ported upstream. Do not assume installing the new bundle migrates native preferences or account sessions.
 
