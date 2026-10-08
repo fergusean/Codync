@@ -174,3 +174,29 @@ from Google's gstatic branding assets as examples of available integrations,
 never as a connected-status indicator. The iOS native controls and terminal
 layout remain platform-specific; this desktop styling applies to the common
 Electron implementation on macOS, Linux and Windows.
+
+### Apps and credential settings
+
+Desktop Apps keeps Credentials in the same modal navigation stack, with a back
+button and a persistent top-level entry. Settings content is constrained to 620px,
+with flat sections and compact, explicitly labeled credential fields. Input edges
+follow the desktop control-outline exception; there are no nested filled cards.
+The existing credential APIs, secret masking, and actions are unchanged.
+
+iOS keeps its native sheet presentation and touch-sized rows, while sharing field
+labels and the saved-credentials empty state. Terminal connection forms already
+show persistent labels; the TUI has no credential-manager page or modal-card layout,
+so this desktop presentation change does not affect its keyboard workflow.
+Desktop styling is shared across macOS, Linux and Windows.
+
+Desktop modal sheets and confirmation dialogs use one subtle 1px outer outline,
+including Apps, Credentials, and Settings. The outline follows the existing corner
+radius and overlays the content without changing layout or intercepting input.
+This is an explicit exception to the filled-surface border rule. iOS keeps the
+system sheet's own edge treatment; terminal dialogs retain their existing character
+borders. Neither receives an extra desktop-style outline.
+
+The desktop sidebar computer filter shares the toolbar's subtle outline and 32px
+height, with a capsule enclosing both the computer glyph and its chevron. This
+applies in expanded and compact sidebars. iOS retains native toolbar treatment;
+terminal computer selection has no corresponding icon button.
