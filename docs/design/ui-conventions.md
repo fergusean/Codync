@@ -75,6 +75,10 @@ Model discovery keeps loading and refresh in one fixed-size slot beside the Mode
 
 ## Desktop conversation details
 
+Desktop conversations start with the details inspector closed; the title menu opens it on demand. Keep the transcript and composer aligned within a 1120-point maximum width. The roster selection, composer and outgoing messages have separate surface tokens so selection and input do not compete with the conversation. Roster names use body text and previews use callout text; previews show the first nonempty line without common Markdown heading, quote, bold or code delimiters, matching the terminal roster.
+
+Preserve the original character avatar design: dotted shading, highlight-only color, silhouettes and animation. Desktop roster avatars remain 30 points and iPhone roster avatars remain 46 points. iPhone shares readable secondary text and message previews; its native navigation remains platform-specific. Terminal avatars already use solid color and the terminal has no persistent details inspector; its secondary text uses the same readable palette.
+
 The details inspector (`apps/desktop/src/renderer/views/thread/DetailsPanel.tsx`) uses a compact device summary instead of an empty screen preview. Keep the computer name, remote-screen state, and iPhone hint together; show the hint only when screen capture is ready. Use 16-point horizontal insets and 28-point section gaps. Its sections (computer, Routines, Agent) and the Settings tab (`BotSettingsForm`: Profile, Agent, Activity, Connectors, Skills, Memory) use the `CardSection` look: filled 16-point groups without borders, hairline-split rows, a note under each option.
 
 Routines are a compact grouped list: name, a one-line schedule (or the live run state), and an on/off switch per row; tapping a row opens the same form as +, filled in, with delete and test run beside Save. On the desktop the form card fits its content. The header's chat button asks the bot (puts "I want a routine that " in the composer); + opens the form, where When to run is a type choice and cron is typed directly. The empty state is one line of text. A saved webhook routine's form shows the public URL and key as filled monospaced rows with copy, show/hide and replace-key (confirmed) icon buttons, and one caption on how to send and that deliveries pass through the Codync cloud. Agent metadata uses Runtime and Workspace labels for personal bots, or Project folder for explicitly configured projects; project paths remain selectable and wrap. Personal workspace paths stay out of the default details UI. Keep status and section headings readable in both appearances through `Palette`.
@@ -122,3 +126,51 @@ from `apps/ios/Kit/`. Desktop UI checks use the `CODYNC_DEBUG_OPEN` and
 [desktop app doc](../architecture/desktop-app.md#development). Host tests cover TUI
 draft recovery, lane-specific streaming, computer settings and complete
 connection-request API flows. These checks do not authenticate real third-party accounts.
+
+### Desktop app connections footer
+
+The expanded desktop roster ends in one floating row: the account avatar and a
+“Connect apps” capsule with example service logos. A masked, layered blur softens
+roster content behind it; bottom scroll padding keeps the last bot reachable. The
+compact rail exposes the same action by tooltip and accessible name. This entry
+opens the existing marketplace with Apps first, retaining agents, MCP connectors,
+skills and computer switching. Logos represent examples, not connected status.
+
+This is a desktop sidebar treatment across macOS, Linux and Windows. iOS keeps its
+native navigation and existing per-computer Marketplace entry in Settings; the TUI
+keeps its keyboard Marketplace action and connector tabs. Neither has this persistent
+desktop footer or supports the same layered backdrop material; no capabilities or
+connection permissions change.
+
+### iOS jump to latest
+
+A single display-linked motion owns the collection view offset during a requested
+jump. Reserve that ownership before updating following, snapshots or keyboard
+insets; those updates must not pin the list while the animation runs. Retarget
+the current motion as self-sizing rows change the end, without offscreen sizing
+jumps or starting overlapping insertion animations. Dragging and scroll-to-top
+cancel the jump. Reduce Motion pins directly, and passive following still holds
+the newest message at the bottom. Original scroll-edge blur remains unchanged.
+
+This repair targets UIKit's estimated row sizing and collection layout. Desktop
+uses DOM scroll geometry and the browser's smooth scrolling rather than the iOS
+pre-sizing loop; the terminal jumps by line index without animation. Their current
+follow/jump actions remain unchanged.
+
+### Desktop Grok Bot visual reference
+
+Per the requested desktop reference, use the system sans font with 13-point,
+medium-weight roster names (semibold for unread), 12-point previews and chat text
+at the selected text size, without the former extra two-point offset. The default
+sidebar is 266 points; existing custom widths and font preferences are respected.
+Reference surfaces: dark canvas #070707, sidebar #111111, capsule #181818, composer
+#2f2f2f. Search/new buttons, the title pill, Connect apps and composer use subtle
+one-point outlines. **These reference-matched desktop controls are an explicit
+exception to the filled-controls-without-borders rule.** Retain visible keyboard
+focus, computer filters, connection/error states, and original Bot artwork.
+
+The footer uses bundled Gmail, Google Calendar and Google Drive product icons
+from Google's gstatic branding assets as examples of available integrations,
+never as a connected-status indicator. The iOS native controls and terminal
+layout remain platform-specific; this desktop styling applies to the common
+Electron implementation on macOS, Linux and Windows.
