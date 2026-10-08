@@ -8,7 +8,7 @@ export default function Terms() {
     <main className="flex-1 flex flex-col items-center px-6 py-16">
       <article className="max-w-2xl w-full space-y-6">
         <h1 className="text-3xl font-bold text-white">Terms of Use</h1>
-        <p className="text-neutral-400 text-sm">Last updated: September 25, 2026</p>
+        <p className="text-neutral-400 text-sm">Last updated: October 8, 2026</p>
 
         <Section title="1. Acceptance of Terms">
           By using Codync you agree to these terms. If you don&apos;t agree, don&apos;t use the app.
@@ -26,23 +26,31 @@ export default function Terms() {
           </ul>
         </Section>
 
-        <Section title="4. Intellectual property">
-          The source code is available at github.com/leepokai/Codync under the MIT license. Names and logos of third-party agents belong to their owners.
+        <Section title="4. Codync Cloud">
+          <ul className="list-disc pl-5 space-y-2">
+            <li>Codync Cloud (accounts, the relay at api.codync.dev, push notifications and remote-screen relay) is offered free for personal use: your own computers and devices.</li>
+            <li>Hosted, resold or multi-tenant services built on Codync must run their own relay and accounts (the source is in <code>cloud/</code>; point hosts at it with <code>CODYNC_CLOUD_URL</code>). They may not use Codync Cloud.</li>
+            <li>We may rate-limit, suspend or block any computer or account that breaks these terms or puts unusual load on the service.</li>
+          </ul>
         </Section>
 
-        <Section title="5. Disclaimer of warranties">
+        <Section title="5. Intellectual property">
+          The source code is available at github.com/leepokai/Codync under the MIT license. The MIT license covers the code, not the Codync name or logo: services built on Codync may say they are built on it, but may not call themselves Codync. Names and logos of third-party agents belong to their owners.
+        </Section>
+
+        <Section title="6. Disclaimer of warranties">
           Codync is provided &quot;as is&quot;, without warranties of any kind. We don&apos;t guarantee that agents will behave as intended or that the service will be uninterrupted.
         </Section>
 
-        <Section title="6. Limitation of liability">
+        <Section title="7. Limitation of liability">
           To the maximum extent permitted by law, we are not liable for any damages arising from your use of Codync or of the agents it runs, including changes they make to your files.
         </Section>
 
-        <Section title="7. Changes">
+        <Section title="8. Changes">
           We may update these terms. Continued use after changes means you accept them.
         </Section>
 
-        <Section title="8. Contact">
+        <Section title="9. Contact">
           Questions? Open an issue at{" "}
           <a href="https://github.com/leepokai/Codync/issues" className="text-white underline">github.com/leepokai/Codync/issues</a>.
         </Section>
