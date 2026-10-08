@@ -56,6 +56,7 @@ final class Session: NSObject {
     func answer(offer: String) async throws -> String {
         guard let pc else { throw HelperError("session closed") }
         try await pc.setRemoteDescription(RTCSessionDescription(type: .offer, sdp: offer))
+        guard self.pc === pc else { throw HelperError("session closed") }
         if !capturing, let video = pc.transceivers.first(where: { $0.mediaType == .video }) {
             video.sender.track = track
             video.sender.streamIds = ["screen"]
@@ -64,7 +65,9 @@ final class Session: NSObject {
             if let error { throw error }
         }
         let answer = try await pc.answer(for: RTCMediaConstraints(mandatoryConstraints: nil, optionalConstraints: nil))
+        guard self.pc === pc else { throw HelperError("session closed") }
         try await pc.setLocalDescription(answer)
+        guard self.pc === pc else { throw HelperError("session closed") }
         if candidates == nil { await waitForCandidates() }
         guard self.pc === pc else { throw HelperError("session closed") }
         if !capturing {
@@ -175,6 +178,7 @@ final class Session: NSObject {
     // MARK: messages from the phone
 
     private func received(_ data: Data) {
+        guard pc != nil else { return }
         guard let msg = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else { return }
         switch msg["type"] as? String {
         case "clipboard":
@@ -190,6 +194,7 @@ final class Session: NSObject {
             }
             let capture = capture
             Task {
+                guard self.pc != nil else { return }
                 do {
                     let applied = try await capture.view(display: display, crop: crop, long: InputInjector.number(msg["long"]), short: InputInjector.number(msg["short"]))
                     // Frames from here on show this region: the phone re-aligns its view on this.
@@ -203,6 +208,7 @@ final class Session: NSObject {
             guard let helper else { return }
             let display = self.display
             Task {
+                guard self.pc != nil else { return }
                 do {
                     try await helper.input.perform(msg, display: display)
                 } catch {
@@ -223,6 +229,7 @@ final class Session: NSObject {
     }
 
     private func opened(_ channel: RTCDataChannel) {
+        guard pc != nil else { channel.close(); return }
         channel.delegate = self
         channels.append(channel)
     }

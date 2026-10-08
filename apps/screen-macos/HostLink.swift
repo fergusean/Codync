@@ -15,6 +15,8 @@ final class HostLink {
     /// Answers the host's requests.
     var handler: Handler?
     private var connection: NWConnection?
+    private let endpoint: NWEndpoint
+    private var reconnectTask: Task<Void, Never>?
     private var buffer = Data()
     private(set) var isConnected = false
     /// Runs on every (re)connect: the host forgets us when we drop.
@@ -26,13 +28,32 @@ final class HostLink {
         return base + "/screen.sock"
     }
 
+    init(endpoint: NWEndpoint? = nil) {
+        self.endpoint = endpoint ?? .unix(path: Self.socketPath)
+    }
+
     func start() {
-        let c = NWConnection(to: .unix(path: Self.socketPath), using: .tcp)
+        reconnectTask?.cancel()
+        reconnectTask = nil
+        guard connection == nil else { return }
+        let c = NWConnection(to: endpoint, using: .tcp)
         connection = c
         c.stateUpdateHandler = { [weak self] state in
             MainActor.assumeIsolated { self?.changed(state, of: c) }
         }
         c.start(queue: .main)
+    }
+
+    func stop() {
+        reconnectTask?.cancel()
+        reconnectTask = nil
+        if let c = connection {
+            connection = nil
+            c.stateUpdateHandler = nil
+            c.cancel()
+        }
+        isConnected = false
+        onDisconnect?()
     }
 
     private func changed(_ state: NWConnection.State, of c: NWConnection) {
@@ -58,8 +79,8 @@ final class HostLink {
         connection = nil
         c.stateUpdateHandler = nil
         c.cancel()
-        Task { [weak self] in
-            try? await Task.sleep(for: .seconds(2))
+        reconnectTask = Task { [weak self] in
+            do { try await Task.sleep(for: .seconds(2)) } catch { return }
             self?.start()
         }
     }
@@ -70,7 +91,7 @@ final class HostLink {
                 guard let self, c === self.connection else { return }
                 if let data {
                     self.buffer.append(data)
-                    self.drain()
+                    self.drain(on: c)
                 }
                 if done || error != nil {
                     self.drop(c)
@@ -81,7 +102,7 @@ final class HostLink {
         }
     }
 
-    private func drain() {
+    private func drain(on c: NWConnection) {
         while let nl = buffer.firstIndex(of: 0x0A) {
             let line = buffer[buffer.startIndex..<nl]
             buffer.removeSubrange(buffer.startIndex...nl)
@@ -90,16 +111,19 @@ final class HostLink {
             else { continue }
             let id = msg["id"].map { "\($0)" }
             let params = msg["params"] as? [String: Any] ?? [:]
-            Task { await self.run(method, params, id: id) }
+            Task { await self.run(method, params, id: id, on: c) }
         }
     }
 
-    private func run(_ method: String, _ params: [String: Any], id: String?) async {
+    private func run(_ method: String, _ params: [String: Any], id: String?, on c: NWConnection) async {
+        guard c === connection, isConnected else { return }
         do {
             guard let handler else { throw HelperError("not ready") }
             let result = try await handler(method, params)
+            guard c === connection, isConnected else { return }
             if let id { send(["jsonrpc": "2.0", "id": Int(id) ?? 0, "result": result]) }
         } catch {
+            guard c === connection, isConnected else { return }
             if let id {
                 send(["jsonrpc": "2.0", "id": Int(id) ?? 0, "error": ["code": -32000, "message": error.localizedDescription]])
             }
@@ -113,6 +137,10 @@ final class HostLink {
     private func send(_ msg: [String: Any]) {
         guard let connection, isConnected, var data = try? JSONSerialization.data(withJSONObject: msg) else { return }
         data.append(0x0A)
-        connection.send(content: data, completion: .contentProcessed { _ in })
+        connection.send(content: data, completion: .contentProcessed { [weak self] error in
+            if error != nil {
+                MainActor.assumeIsolated { self?.drop(connection) }
+            }
+        })
     }
 }
