@@ -6,6 +6,8 @@ The bot list and conversation use the system `NavigationStack` toolbar. `Toolbar
 
 The conversation keeps the native glass buttons over the chat with a soft top scroll-edge effect, so messages blur out under the header instead of running sharp behind it. Root error dialogs use an in-place, full-screen scrim so presenting them does not change the underlying glass controls' appearance.
 
+iPhone conversation scrolling leaves dragging, deceleration, and bottom rubber-band return to UIKit. Passive bottom-following must not move the offset during those gestures, and returning from bottom overscroll does not count as reading history or show Jump to latest. Desktop keeps browser scrolling; the terminal uses line-based scrolling, so neither shares this UIKit-specific behavior.
+
 Do not wrap those toolbar controls in `IconButtonStyle`, hand-sized rounded backgrounds or another glass effect. The account avatar is toolbar content, with the system supplying the enclosing surface. This is the explicit exception to the custom-chrome rule below.
 
 Connecting and reconnecting are background work. `BotStore` gives initial offline reports 1 second to recover and holds drops from online (including relay "computer offline" reports) for 5 seconds. "No access" shows immediately. Automatic read acknowledgements never open an error dialog and visible conversations are acknowledged again after reconnecting. An action taken during a reconnect (back in the foreground, a new network, a drop still inside its grace) waits for the link, up to 20 seconds, instead of failing; while one waits, headers read `Connecting…` and the conversation's connection label shows a spinner. Calls that are safe to repeat (send, stop, approvals, pin, hide, mark as read, delete) are tried again when the link drops under them. Tapping while the header says Offline because the computer can't be reached starts a fresh connection attempt and waits for it, instead of failing until the backoff gets there; a computer the relay reports as off fails at once, since the relay says when it is back. A permission card shows a spinner on the chosen option, dims the others and takes no second answer until the computer has it. The desktop app's `BotStore` (link handling in `apps/desktop/src/renderer/store/bot-sync.ts`) applies the same graces and 20-second wait. The TUI follows the same rule over loopback: a command the host can't be reached for is retried for up to 20 seconds behind its "Reconnecting…" indicator (the `hello` probe that explains an unreachable host still answers at once), and its permission cards spin on the chosen option. The "Something went wrong" dialog is left for a computer that is off, a refused device, the computer's own answers, and reconnects that outlast the wait. Background work (cloud refresh, device registration, automatic access requests) logs connection, busy-cloud and stale-token failures instead of showing them. The iOS app disconnects only in `.background`, not `.inactive`. Connection status lives only in headers and their menus. The roster header shows a small summary (`1 connected`, `1/2 connected`, `2 offline`, or `Connecting…`). Its computer menu supports multiple selections, Show only, All computers, reconnect, and management. At least one available computer stays selected; if saved exclusions would hide every computer, the list falls back to all. Filters persist on the device. Bots sort pinned first, then by recency. On iPhone, when more than one computer is shown, each computer gets a light heading (badge, name, connection, and "No bots yet" when empty) above its own bots; with one computer the list stays flat. Tapping a heading folds that computer's bots away (chevron; saved on the device). Long-press a heading to lift the whole section and drag it up or down; the other sections slide out of its way and the order is saved on the device on release (`AccountStore.move`; VoiceOver: Move up / Move down). The desktop app shows a flat roster. There are no connection banners. The compact desktop rail uses a computer icon for the same menu. Conversation headers show a small connection label, with the computer name available in the header menu or help text. Pull-to-refresh remains available on iPhone. Computer setup and access requests live under Manage computers.
@@ -73,6 +75,10 @@ Model discovery keeps loading and refresh in one fixed-size slot beside the Mode
 
 ## Desktop conversation details
 
+Desktop conversations start with the details inspector closed; the title menu opens it on demand. Keep the transcript and composer aligned within a 1120-point maximum width. The roster selection, composer and outgoing messages have separate surface tokens so selection and input do not compete with the conversation. Roster names use body text and previews use callout text; previews show the first nonempty line without common Markdown heading, quote, bold or code delimiters, matching the terminal roster.
+
+Preserve the original character avatar design: dotted shading, highlight-only color, silhouettes and animation. Desktop roster avatars remain 30 points and iPhone roster avatars remain 46 points. iPhone shares readable secondary text and message previews; its native navigation remains platform-specific. Terminal avatars already use solid color and the terminal has no persistent details inspector; its secondary text uses the same readable palette.
+
 The details inspector (`apps/desktop/src/renderer/views/thread/DetailsPanel.tsx`) uses a compact device summary instead of an empty screen preview. Keep the computer name, remote-screen state, and iPhone hint together; show the hint only when screen capture is ready. Use 16-point horizontal insets and 28-point section gaps. Its sections (computer, Routines, Agent) and the Settings tab (`BotSettingsForm`: Profile, Agent, Activity, Connectors, Skills, Memory) use the `CardSection` look: filled 16-point groups without borders, hairline-split rows, a note under each option.
 
 Routines are a compact grouped list: name, a one-line schedule (or the live run state), and an on/off switch per row; tapping a row opens the same form as +, filled in, with delete and test run beside Save. On the desktop the form card fits its content. The header's chat button asks the bot (puts "I want a routine that " in the composer); + opens the form, where When to run is a type choice and cron is typed directly. The empty state is one line of text. A saved webhook routine's form shows the public URL and key as filled monospaced rows with copy, show/hide and replace-key (confirmed) icon buttons, and one caption on how to send and that deliveries pass through the Codync cloud. Agent metadata uses Runtime and Workspace labels for personal bots, or Project folder for explicitly configured projects; project paths remain selectable and wrap. Personal workspace paths stay out of the default details UI. Keep status and section headings readable in both appearances through `Palette`.
@@ -120,3 +126,77 @@ from `apps/ios/Kit/`. Desktop UI checks use the `CODYNC_DEBUG_OPEN` and
 [desktop app doc](../architecture/desktop-app.md#development). Host tests cover TUI
 draft recovery, lane-specific streaming, computer settings and complete
 connection-request API flows. These checks do not authenticate real third-party accounts.
+
+### Desktop app connections footer
+
+The expanded desktop roster ends in one floating row: the account avatar and a
+“Connect apps” capsule with example service logos. A masked, layered blur softens
+roster content behind it; bottom scroll padding keeps the last bot reachable. The
+compact rail exposes the same action by tooltip and accessible name. This entry
+opens the existing marketplace with Apps first, retaining agents, MCP connectors,
+skills and computer switching. Logos represent examples, not connected status.
+
+This is a desktop sidebar treatment across macOS, Linux and Windows. iOS keeps its
+native navigation and existing per-computer Marketplace entry in Settings; the TUI
+keeps its keyboard Marketplace action and connector tabs. Neither has this persistent
+desktop footer or supports the same layered backdrop material; no capabilities or
+connection permissions change.
+
+### iOS jump to latest
+
+A single display-linked motion owns the collection view offset during a requested
+jump. Reserve that ownership before updating following, snapshots or keyboard
+insets; those updates must not pin the list while the animation runs. Retarget
+the current motion as self-sizing rows change the end, without offscreen sizing
+jumps or starting overlapping insertion animations. Dragging and scroll-to-top
+cancel the jump. Reduce Motion pins directly, and passive following still holds
+the newest message at the bottom. Original scroll-edge blur remains unchanged.
+
+This repair targets UIKit's estimated row sizing and collection layout. Desktop
+uses DOM scroll geometry and the browser's smooth scrolling rather than the iOS
+pre-sizing loop; the terminal jumps by line index without animation. Their current
+follow/jump actions remain unchanged.
+
+### Desktop Grok Bot visual reference
+
+Per the requested desktop reference, use the system sans font with 13-point,
+medium-weight roster names (semibold for unread), 12-point previews and chat text
+at the selected text size, without the former extra two-point offset. The default
+sidebar is 266 points; existing custom widths and font preferences are respected.
+Reference surfaces: dark canvas #070707, sidebar #111111, capsule #181818, composer
+#2f2f2f. Search/new buttons, the title pill, Connect apps and composer use subtle
+one-point outlines. **These reference-matched desktop controls are an explicit
+exception to the filled-controls-without-borders rule.** Retain visible keyboard
+focus, computer filters, connection/error states, and original Bot artwork.
+
+The footer uses bundled Gmail, Google Calendar and Google Drive product icons
+from Google's gstatic branding assets as examples of available integrations,
+never as a connected-status indicator. The iOS native controls and terminal
+layout remain platform-specific; this desktop styling applies to the common
+Electron implementation on macOS, Linux and Windows.
+
+### Apps and credential settings
+
+Desktop Apps keeps Credentials in the same modal navigation stack, with a back
+button and a persistent top-level entry. Settings content is constrained to 620px,
+with flat sections and compact, explicitly labeled credential fields. Input edges
+follow the desktop control-outline exception; there are no nested filled cards.
+The existing credential APIs, secret masking, and actions are unchanged.
+
+iOS keeps its native sheet presentation and touch-sized rows, while sharing field
+labels and the saved-credentials empty state. Terminal connection forms already
+show persistent labels; the TUI has no credential-manager page or modal-card layout,
+so this desktop presentation change does not affect its keyboard workflow.
+Desktop styling is shared across macOS, Linux and Windows.
+
+Desktop modal sheets and confirmation dialogs use one subtle 1px outer outline,
+including Apps, Credentials, and Settings. The outline follows the existing corner
+radius and overlays the content without changing layout or intercepting input.
+This is an explicit exception to the filled-surface border rule. iOS keeps the
+system sheet's own edge treatment; terminal dialogs retain their existing character
+borders. Neither receives an extra desktop-style outline.
+
+The desktop sidebar computer filter shares the toolbar's subtle outline and 32px
+height, with a capsule enclosing both the computer glyph and its chevron. This
+applies in expanded and compact sidebars. iOS retains native toolbar treatment;
+terminal computer selection has no corresponding icon button.
