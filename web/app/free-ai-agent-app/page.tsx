@@ -27,7 +27,7 @@ const uses = [
 const faq: [string, string][] = [
   [
     "Is there a free AI agent app?",
-    "Codync is one: the app and every feature cost $0 and it's open source (MIT). Your bots use the agent plans or API keys you already have, such as a Claude or ChatGPT plan.",
+    "Codync is one: the app and every feature cost $0 and it's open source (Apache 2.0). Your bots use the agent plans or API keys you already have, such as a Claude or ChatGPT plan.",
   ],
   [
     "What's the catch?",

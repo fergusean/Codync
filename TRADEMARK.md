@@ -1,6 +1,6 @@
 # Codync name, logo and cloud
 
-The code is MIT licensed ([LICENSE](LICENSE)). The license covers the code only: it does not
+The code is licensed under Apache 2.0 ([LICENSE](LICENSE), [NOTICE](NOTICE)). The license covers the code only: it does not
 grant rights to the Codync name or logo, or access to the Codync Cloud service.
 
 ## Name and logo

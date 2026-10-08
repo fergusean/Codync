@@ -108,7 +108,7 @@ export default function Hero() {
               <span className="inline-flex items-center gap-1.5"><LinuxLogo size={15} weight="fill" /> Linux</span>
               <span className="inline-flex items-center gap-1.5"><DeviceMobile size={15} weight="fill" /> iPhone</span>
               <span className="inline-flex items-center gap-1.5"><Terminal size={15} weight="bold" /> Terminal</span>
-              <a href={GITHUB} className="underline underline-offset-4 hover:text-neutral-300">MIT licensed</a>
+              <a href={GITHUB} className="underline underline-offset-4 hover:text-neutral-300">Apache 2.0 licensed</a>
             </motion.p>
           </div>
 

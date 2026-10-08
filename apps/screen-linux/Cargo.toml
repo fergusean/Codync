@@ -3,7 +3,7 @@ name = "codync-screen"
 version = "2.1.0"
 edition = "2024"
 description = "Codync Remote screen helper for Linux: xdg portals + PipeWire + GStreamer WebRTC"
-license = "MIT"
+license = "Apache-2.0"
 
 [dependencies]
 anyhow = "1"

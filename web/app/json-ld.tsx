@@ -31,7 +31,7 @@ const graph = {
       image: `${SITE}/icon.png`,
       downloadUrl: [DMG_FILE, APP_STORE],
       installUrl: APP_STORE,
-      license: "https://opensource.org/licenses/MIT",
+      license: "https://www.apache.org/licenses/LICENSE-2.0",
       isAccessibleForFree: true,
       offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
       publisher: { "@id": `${SITE}/#org` },

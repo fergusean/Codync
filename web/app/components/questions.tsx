@@ -5,7 +5,7 @@ import { GITHUB } from "../links";
 const questions: [string, string][] = [
   [
     "Is Codync free?",
-    "Yes. Codync costs $0 with every feature included, and it's MIT licensed. You pay only your agent's provider, through the plan or key you already have.",
+    "Yes. Codync costs $0 with every feature included, and it's Apache 2.0 licensed. You pay only your agent's provider, through the plan or key you already have.",
   ],
   [
     "Can I use my Claude or ChatGPT plan?",
