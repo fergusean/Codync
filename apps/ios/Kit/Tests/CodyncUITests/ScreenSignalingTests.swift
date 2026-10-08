@@ -2,6 +2,7 @@ import Foundation
 import Testing
 @testable import CodyncKit
 @testable import CodyncUI
+@preconcurrency import WebRTC
 
 private actor ScreenTransport: HostTransport {
     nonisolated let events: AsyncThrowingStream<Data, Error>
@@ -165,5 +166,78 @@ private actor FailingSignalingTransport: HostTransport {
     }
     let preparations = await transport.preparations
     #expect(preparations == 4, "one initial attempt and the existing three recovery attempts")
+    session.close()
+}
+
+private actor LateSignalingFailureTransport: HostTransport {
+    private(set) var preparations = 0
+    private var streams: [String: AsyncThrowingStream<Data, Error>.Continuation] = [:]
+
+    func call(_ method: String, body: Data, timeout: TimeInterval) async throws -> Data {
+        switch method {
+        case "screenPrepare":
+            preparations += 1
+            return Data(#"{"session":"late-\#(preparations)","iceServers":[],"expiresAt":4102444800000,"trickle":true}"#.utf8)
+        case "screenOffer":
+            struct Offer: Decodable { let session: String; let sdp: String }
+            let offer = try JSONDecoder().decode(Offer.self, from: body)
+            let answer = try await Self.answer(offer.sdp)
+            let sink = streams[offer.session]
+            Task {
+                try? await Task.sleep(for: .milliseconds(100))
+                sink?.finish(throwing: HostError.unreachable)
+            }
+            struct Answer: Encodable { let session: String; let sdp: String }
+            return try JSONEncoder().encode(Answer(session: offer.session, sdp: answer))
+        case "screenClose":
+            struct Close: Decodable { let session: String }
+            let close = try JSONDecoder().decode(Close.self, from: body)
+            streams.removeValue(forKey: close.session)?.finish()
+            return Data("{}".utf8)
+        default: return Data("{}".utf8)
+        }
+    }
+
+    @MainActor private static func answer(_ offer: String) async throws -> String {
+        let config = RTCConfiguration()
+        config.sdpSemantics = .unifiedPlan
+        config.bundlePolicy = .maxBundle
+        let constraints = RTCMediaConstraints(mandatoryConstraints: nil, optionalConstraints: nil)
+        guard let pc = ScreenSession.factory.peerConnection(with: config, constraints: constraints, delegate: nil) else {
+            throw HostError.unreachable
+        }
+        defer { pc.close() }
+        try await pc.setRemoteDescription(RTCSessionDescription(type: .offer, sdp: offer))
+        let answer = try await pc.answer(for: constraints)
+        try await pc.setLocalDescription(answer)
+        return answer.sdp
+    }
+
+    nonisolated func stream(_ request: HostStreamRequest) -> AsyncThrowingStream<Data, Error> {
+        AsyncThrowingStream { c in
+            guard case let .screenCandidates(session) = request else { c.finish(); return }
+            Task { await self.open(session, sink: c) }
+        }
+    }
+
+    private func open(_ session: String, sink: AsyncThrowingStream<Data, Error>.Continuation) {
+        streams[session] = sink
+        sink.yield(Data(#"{"type":"ready"}"#.utf8))
+    }
+
+    nonisolated func states() -> AsyncStream<LinkState> { AsyncStream { $0.finish() } }
+}
+
+@Test(.timeLimit(.minutes(1))) @MainActor func signalingLossAfterAnswerDoesNotResetRecoveryUntilMediaIsLive() async throws {
+    let transport = LateSignalingFailureTransport()
+    let session = ScreenSession(client: HostClient(transport: transport), display: nil)
+    await session.start()
+    #expect(session.phase == .connecting, "the initial answer was installed successfully")
+    try await waitUntil(attempts: 2000) {
+        if case .failed = session.phase { return true }
+        return false
+    }
+    let preparations = await transport.preparations
+    #expect(preparations == 4, "one initial attempt and three retries, even when answers succeed")
     session.close()
 }

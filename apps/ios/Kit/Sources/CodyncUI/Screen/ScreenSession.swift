@@ -43,6 +43,8 @@ public final class ScreenSession {
     private var renewTask: Task<Void, Never>?
     private var connectionTimer: Task<Void, Never>?
     private var generation = 0
+    private var recoveryAttempts = 0
+    private static let maxRecoveryAttempts = 3
 
     static let factory: RTCPeerConnectionFactory = {
         RTCInitializeSSL()
@@ -57,6 +59,7 @@ public final class ScreenSession {
     // MARK: connection
 
     public func start() async {
+        recoveryAttempts = 0
         phase = .connecting
         do {
             try await connect()
@@ -101,6 +104,7 @@ public final class ScreenSession {
             let signaling = ScreenSignaling(client: client, session: connection.session, pc: pc, localPair: candidatePair) { [weak self] error in
                 guard let self, self.generation == current, self.phase != .closed else { return }
                 log.info("screen signaling failed: \(error.localizedDescription)")
+                self.lastError = error.localizedDescription
                 self.phase = .reconnecting
                 // An ongoing retry observes the failure when negotiation resumes.
                 // Keep its attempt counter instead of replacing it with a new retry loop.
@@ -189,6 +193,7 @@ public final class ScreenSession {
         guard generation == self.generation, phase != .closed else { return }
         switch state {
         case .connected, .completed:
+            recoveryAttempts = 0
             connectionTimer?.cancel()
             phase = .live
             lastError = nil
@@ -207,9 +212,15 @@ public final class ScreenSession {
     private func scheduleRecovery(after delay: Duration) {
         recoverTask?.cancel()
         recoverTask = Task { [weak self] in
-            var attempt = 0
             try? await Task.sleep(for: delay)
             while let self, !Task.isCancelled, self.phase == .reconnecting {
+                guard self.recoveryAttempts < Self.maxRecoveryAttempts else {
+                    let error = self.lastError ?? HostError.unreachable.localizedDescription
+                    self.close()
+                    self.phase = .failed(error)
+                    return
+                }
+                self.recoveryAttempts += 1
                 do {
                     // Re-evaluate the signaling route after Wi-Fi/cellular changes and fetch fresh ICE credentials.
                     try await self.connect()
@@ -218,13 +229,13 @@ public final class ScreenSession {
                 } catch {
                     guard !Task.isCancelled, self.phase != .closed else { return }
                     log.info("screen reconnect failed: \(error.localizedDescription)")
-                    attempt += 1
-                    if attempt >= 3 {
+                    self.lastError = error.localizedDescription
+                    if self.recoveryAttempts >= Self.maxRecoveryAttempts {
                         self.close()
                         self.phase = .failed(error.localizedDescription)
                         return
                     }
-                    try? await Task.sleep(for: .seconds(min(Double(attempt) * 2, 10)))
+                    try? await Task.sleep(for: .seconds(min(Double(self.recoveryAttempts) * 2, 10)))
                 }
             }
             if !Task.isCancelled { self?.recoverTask = nil }
