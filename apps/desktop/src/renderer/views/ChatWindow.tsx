@@ -4,7 +4,6 @@ import { isSSHConnecting, showsChat as shouldShowChat } from '@shared/ssh-startu
 import { draftOf, isGroup, type Bot, type BotDraft } from '@shared/models'
 import { CharacterAvatar } from '../components/Avatar'
 import { Button, ChoicePicker, IconButton } from '../components/Controls'
-import { Icon } from '../components/Icon'
 import { AnchoredMenu, Dialog, Sheet, type MenuItem } from '../components/Overlay'
 import { font } from '../lib/fonts'
 import { useModels } from '../lib/observable'
