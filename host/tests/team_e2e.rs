@@ -123,6 +123,9 @@ async fn agent_uses_team_mcp_and_returns_the_reviewers_answer() {
             .any(|e| { e["kind"] == "agent" && e["data"]["text"] == "reply: PERMISSION review the changes" }),
         "the reply remains available in the trace"
     );
+    assert!(requests.iter().all(|e| e["data"]["botMessage"]["reply"] == "reply: PERMISSION review the changes"));
+    let conversation = host.call("botConversation", json!({"botId": lead, "peerId": reviewer})).await;
+    assert_eq!(conversation["entries"].as_array().unwrap().len(), 1);
     assert!(sync["bots"].as_array().unwrap().iter().all(|b| b["status"] == "idle"));
 }
 

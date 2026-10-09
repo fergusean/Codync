@@ -22,6 +22,10 @@ How a bot's work turns into what the user reads, copied from Grok Bot.
   `send_message` or the final-text fallback, and do not add that report to the request notice.
 - The rules reach the agent twice: the MCP server's instructions, and the frozen instruction
   snapshot (`chat/context.rs`).
+- A bot-to-bot exchange (`ask_bot`, `message_bot`) is one compact notice row, "Messaged Owen" /
+  "Message from Egan". Its text lives only in the bot conversation sheet it opens; follow-ups
+  are normal bubbles. Consecutive exchanges with the same peer in the main chat (either
+  direction, trace entries ignored) collapse into one "3 messages with Owen" row ([bot collaboration](bot-collaboration.md#notice-data)).
 - Clients never stream text into a bubble: the chat shows user messages, `final` agent entries,
   permission cards and notices (`isChat`). Nothing pops in and out while a turn runs.
 
