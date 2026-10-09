@@ -1,6 +1,6 @@
 //! Commands from clients and the queue of turns waiting for the bot.
 
-use super::{Actor, Cmd, Done, NoticeStyle, Queued, RESUME_PROMPT, RoutineCompletion, inflight_key};
+use super::{Actor, Cmd, Done, NoticeStyle, Queued, RESUME_PROMPT, Retirement, RoutineCompletion, inflight_key};
 use crate::chat::memory;
 use crate::hub::BotStatus;
 use crate::store::{Lane, now_ms};
@@ -53,9 +53,7 @@ impl Actor {
                     self.stop_requested = true;
                     // The request has expired. Kill only its process so a harness
                     // ignoring cooperative cancellation cannot block the queue.
-                    if let Some(c) = self.conn.take() {
-                        c.acp.kill().await;
-                    }
+                    self.retire_agent(Retirement::Timeout).await;
                 }
             }
             Cmd::SendToUser { text, reply } => {
@@ -67,6 +65,10 @@ impl Actor {
             Cmd::NewSession => {
                 if self.turn.is_some() {
                     self.stop().await;
+                }
+                if let Err(error) = self.release_main_session().await {
+                    self.notice(&format!("{error:#}"), NoticeStyle::Error);
+                    return true;
                 }
                 self.forget_session();
                 // Like Grok Bot's clearConversation: the half-written episode goes too; memory stays.
@@ -87,9 +89,7 @@ impl Actor {
                 self.cfg = cfg;
                 if restart {
                     self.files.cancel();
-                    if let Some(c) = self.conn.take() {
-                        c.acp.kill().await;
-                    }
+                    self.retire_agent(Retirement::Reconfigure).await;
                     for root in self.thread_roots() {
                         self.set_session(Some(&root), None);
                     }
@@ -329,6 +329,11 @@ impl Actor {
             RESUME_PROMPT.to_owned()
         };
         if let Err(e) = self.start_turn(lane, &[], &prompt, true, done_tx).await {
+            self.finish_routine(
+                crate::routines::Status::Interrupted,
+                Some(format!("Could not resume this run's saved conversation: {e:#}; inspect before retrying")),
+                None,
+            );
             self.start_failed(&e);
         }
     }

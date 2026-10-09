@@ -33,6 +33,10 @@ impl Default for FileShares {
     }
 }
 impl FileShares {
+    pub(super) fn is_pending(&self) -> bool {
+        self.pending.iter().any(|flag| !flag.load(Ordering::Acquire))
+    }
+
     pub fn cancel(&mut self) {
         self.epoch = self.epoch.wrapping_add(1);
         for flag in self.pending.drain(..) {
