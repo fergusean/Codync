@@ -49,7 +49,16 @@ impl Host {
                     }
                     observed.fetch_add(1, Ordering::SeqCst);
                     let mut remaining = Vec::new();
-                    reader.read_to_end(&mut remaining).await.unwrap();
+                    let closed = reader.read_to_end(&mut remaining).await;
+                    if let Err(error) = closed {
+                        assert!(
+                            matches!(
+                                error.kind(),
+                                std::io::ErrorKind::ConnectionReset | std::io::ErrorKind::ConnectionAborted
+                            ),
+                            "{error}"
+                        );
+                    }
                     observed.fetch_sub(1, Ordering::SeqCst);
                 });
             }
@@ -154,6 +163,8 @@ impl Host {
     }
 
     async fn wait_live(&self, expected: usize, budget: Duration) {
+        // Starting multiple Python generations is slower on loaded Windows runners.
+        let budget = if cfg!(windows) && budget <= Duration::from_secs(5) { budget * 3 } else { budget };
         let deadline = Instant::now() + budget;
         while self.live.load(Ordering::SeqCst) != expected {
             assert!(

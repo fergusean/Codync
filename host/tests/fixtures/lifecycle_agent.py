@@ -18,7 +18,8 @@ if len(sys.argv) > 1:
     witness.sendall((json.dumps({"pid": os.getpid()}) + "\n").encode())
     leaf = None
     if sys.argv[1] == "worker":
-        leaf = subprocess.Popen([sys.executable, __file__, "leaf"])
+        leaf = subprocess.Popen([sys.executable, "-u", __file__, "leaf"], stdin=subprocess.DEVNULL,
+                                stdout=sys.stdout, stderr=sys.stderr)
 
     def stop(*_):
         if leaf is not None:

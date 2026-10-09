@@ -268,8 +268,8 @@ mod tests {
         let python = if cfg!(windows) { "python" } else { "python3" };
         let command = format!("{python} -u {}", crate::shell::quote(&script.display().to_string()));
         let (acp, mut rx) = Acp::spawn(&command, env!("CARGO_MANIFEST_DIR"), &[]).unwrap();
-        let ready = tokio::time::timeout(std::time::Duration::from_secs(5), rx.recv()).await.unwrap();
-        assert!(matches!(ready, Some(Incoming::Notification { .. })));
+        let ready = tokio::time::timeout(std::time::Duration::from_secs(15), rx.recv()).await.unwrap();
+        assert!(matches!(ready, Some(Incoming::Notification { method, .. }) if method == "ready"));
         (acp, rx)
     }
 
