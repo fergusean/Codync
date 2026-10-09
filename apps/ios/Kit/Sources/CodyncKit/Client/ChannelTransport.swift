@@ -5,6 +5,7 @@ import Network
 /// The end-to-end encrypted channel to one computer (§6, §7): direct WebSocket on the LAN when it
 /// answers within 1.5 s, otherwise the cloud relay. Inner RPC multiplexes calls and streams over
 /// one channel; the relay adds presence and the offline mailbox. Reconnects by itself until `shutdown()`.
+@available(watchOS, unavailable, message: "The watch reaches the host through the iPhone")
 public actor ChannelTransport: RemoteTransport {
     static let identityChanged = "This computer's identity changed. Pair it again to keep using it."
 
@@ -105,12 +106,14 @@ public actor ChannelTransport: RemoteTransport {
         self.monitor = monitor
     }
 
-    public func shutdown() {
+    /// Returns once the close has gone out (bounded), so a caller about to be suspended can wait for it.
+    public func shutdown() async {
         guard !closed else { return }
         closed = true
         supervisor?.cancel()
         monitor?.cancel()
-        link?.socket.close(code: 1000)
+        let socket = link?.socket
+        socket?.close(code: 1000)
         dropChannel(HostError.unreachable)
         dropMailbox()
         for (_, c) in waiters { c.resume() }
@@ -121,6 +124,7 @@ public actor ChannelTransport: RemoteTransport {
         stateObservers = [:]
         computerObservers = [:]
         mailboxObservers = [:]
+        await socket?.drain()
     }
 
     /// Reconnects from scratch (the app came back to the foreground, say).

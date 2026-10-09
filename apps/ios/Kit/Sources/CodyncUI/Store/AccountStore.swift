@@ -51,19 +51,21 @@ public final class AccountStore {
     /// Persisted in the context (channel route).
     private var saved: [Computer]
     private var accessPolls: [ComputerID: Task<Void, Never>] = [:]
-    private var isActive = true
+    private var isActive: Bool
     private var retired = false
     /// Asked once per launch: a denied or cancelled request isn't repeated behind the user's back.
     private var asked: Set<ComputerID> = []
 
-    public convenience init(storage: SharedStore.Context, clientKind: String, cloud: CloudClient?) {
-        self.init(storage: storage, clientKind: clientKind, cloud: cloud) { computer in
+    public convenience init(storage: SharedStore.Context, clientKind: String, cloud: CloudClient?, active: Bool = true) {
+        self.init(storage: storage, clientKind: clientKind, cloud: cloud, active: active) { computer in
             BotStore(computer: computer, clientKind: clientKind, storage: storage)
         }
     }
 
-    init(storage: SharedStore.Context, clientKind: String, cloud: CloudClient?,
+    /// `active: false` starts every store disconnected, for a launch without a foreground scene.
+    init(storage: SharedStore.Context, clientKind: String, cloud: CloudClient?, active: Bool = true,
          makeStore: @escaping @MainActor (Computer) -> BotStore) {
+        isActive = active
         self.storage = storage
         self.clientKind = clientKind
         self.cloud = cloud
@@ -74,6 +76,11 @@ public final class AccountStore {
     }
 
     // MARK: derived
+
+    /// The computer the Usage tab, widgets and "open screen" links act on: the last active one.
+    public var currentStore: BotStore? {
+        storage.lastComputerId.flatMap(store(for:)) ?? computers.first.flatMap { store(for: $0.id) }
+    }
 
     /// Every computer's visible bots, pinned first, then most recent activity.
     public var roster: [RosterItem] {
@@ -323,7 +330,7 @@ public final class AccountStore {
         store.onComputerChanged = { [weak self] computer in self?.computerChanged(computer) }
         store.onRosterChanged = { [weak self] in self?.rosterChanged() }
         stores[id] = store
-        if isActive { store.setActive(true) }
+        store.setActive(isActive)
     }
 
     private func close(_ id: ComputerID) {

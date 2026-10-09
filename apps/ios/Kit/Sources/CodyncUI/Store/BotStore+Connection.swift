@@ -5,12 +5,12 @@ extension BotStore {
     /// Permanently detach a store (account switch, computer removed). Late async
     /// callbacks still hold it, but it writes nothing and calls no hooks anymore.
     public func retire() {
-        let calls = Array(voiceCalls.values)
-        voiceCalls.removeAll()
+        let ending = Array(holds.values)
+        holds.removeAll()
         setActive(false)
         retired = true
         fileDownloads.retire()
-        for call in calls { call.end() }
+        for hold in ending { hold.end() }
         saveTask?.cancel()
         dropTimer?.cancel()
         onConnected = nil
@@ -30,50 +30,99 @@ extension BotStore {
         guard !retired else { return }
         isActive = active
         if active {
-            // Returning to the foreground must not interrupt a live call's sends.
-            if voiceCalls.isEmpty || streamTask == nil { restartStream() }
-        } else if voiceCalls.isEmpty {
+            // Returning to the foreground must not interrupt a hold's sends.
+            if holds.isEmpty || streamTask == nil { restartStream() } else { syncEventsClient() }
+        } else if holds.isEmpty {
             // Disconnect so the host knows we're gone and sends pushes instead.
             stopTransport()
             saveCache()
+        } else {
+            syncEventsClient()
         }
     }
 
     public func restartStream() {
-        guard isActive || !voiceCalls.isEmpty, !retired else { return }
+        guard isActive || !holds.isEmpty, !retired else { return }
         stopTransport()
         if connection != .online { setConnection(.connecting) }
         streamTask = Task { [weak self] in await self?.runStream() }
     }
 
-    /// Audio owns this subscription, so background calls don't depend on SwiftUI updates.
-    func beginVoiceCall(_ id: UUID, botId: String, speak: @escaping @MainActor (String) -> Void,
-                        announce: (@MainActor (String) -> Void)? = nil, end: @escaping @MainActor () -> Void) {
-        guard !retired, voiceCalls[id] == nil else { return }
-        voiceCalls[id] = VoiceCall(botId: botId, startRev: rev, speak: speak, announce: announce ?? speak, end: end)
-        if streamTask == nil { restartStream() }
+    /// A hold keeps the link (and, in the background, its events) alive on behalf of its owner,
+    /// which gets the held bot's replies, approval requests and idle moments straight from the
+    /// store's incoming events instead of waiting for a SwiftUI update. Holds stack: the link is
+    /// released in the background only after the last one ends.
+    /// `mutesPushes`: while inactive, the events stream still counts as a phone for the host, which
+    /// holds its pushes back (a voice call speaks the replies itself). Other holds keep the link
+    /// without that, so the host keeps pushing.
+    func beginHold(_ id: UUID, botId: String?, mutesPushes: Bool = false,
+                   reply: @escaping @MainActor (Entry) -> Void = { _ in },
+                   needsInput: @escaping @MainActor (Bot) -> Void = { _ in },
+                   announce: @escaping @MainActor (String) -> Void = { _ in },
+                   settled: @escaping @MainActor (String) -> Void = { _ in },
+                   end: @escaping @MainActor () -> Void = {}) {
+        guard !retired, holds[id] == nil else { return }
+        holds[id] = Hold(botId: botId, startRev: rev, reply: reply, needsInput: needsInput, announce: announce, settled: settled, end: end, mutesPushes: mutesPushes)
+        if streamTask == nil { restartStream() } else { syncEventsClient() }
     }
 
-    func endVoiceCall(_ id: UUID) {
-        guard voiceCalls.removeValue(forKey: id) != nil else { return }
-        if !isActive && voiceCalls.isEmpty {
-            stopTransport()
-            saveCache()
+    /// Returns once the released link's transport has closed (`shutdown` waits, about a second at
+    /// most, for the close frame to leave), so a caller about to be suspended can finish its
+    /// background task after it.
+    func endHold(_ id: UUID) async {
+        await releaseHold(id)?.value
+    }
+
+    /// `endHold` without the wait, for a caller that can't suspend (an expiring background task):
+    /// the hold is gone and the shutdown started; the returned task finishes with it.
+    @discardableResult
+    func releaseHold(_ id: UUID) -> Task<Void, Never>? {
+        guard holds.removeValue(forKey: id) != nil, !isActive else { return nil }
+        guard holds.isEmpty else {
+            syncEventsClient()
+            return nil
         }
+        let closing = stopTransport()
+        saveCache()
+        return closing
     }
 
-    private func stopTransport() {
+    /// What the events subscription tells the host it is: a phone while the app is active or a
+    /// muting hold needs it, otherwise nothing the host counts.
+    var eventsClient: String? {
+        isActive || holds.values.contains(where: \.mutesPushes) ? clientKind : nil
+    }
+
+    /// Resubscribes (same link) when the host should see a different client.
+    func syncEventsClient() {
+        guard eventsTask != nil, eventsClient != subscribedClient else { return }
+        restartEvents()
+    }
+
+    /// The link is up and the first catch-up has arrived: what the store shows is current.
+    var isLive: Bool { live != nil && linkCaughtUp }
+
+    /// Returns the task that closes a remote transport, for callers that must await it.
+    @discardableResult
+    func stopTransport() -> Task<Void, Never>? {
         streamTask?.cancel()
         streamTask = nil
         eventsTask?.cancel()
         eventsTask = nil
+        linkCaughtUp = false
+        stateFromThisTransport = false
+        catchUpIdleTask?.cancel()
+        catchUpIdleTask = nil
+        catchUpRev = .max
+        reconnecting = true
         dropTimer?.cancel()
         dropTimer = nil
         heldDrop = nil
-        if let remote = transport as? any RemoteTransport {
-            Task { await remote.shutdown() }
-        }
-        transport = nil
+        defer { transport = nil }
+        guard let remote = transport as? any RemoteTransport else { return nil }
+        let task = Task { await remote.shutdown() }
+        closing = task
+        return task
     }
 
     private func runStream() async {
@@ -144,7 +193,7 @@ extension BotStore {
         case .connecting, .offline, .computerOffline: true
         default: false
         }
-        let recovering = new == .online && (connection != .online || heldDrop != nil)
+        let recovering = new == .online && (connection != .online || heldDrop != nil || reconnecting)
         let initialFailure = connection == .connecting && transient && new != .connecting
         if transient && (connection == .online || initialFailure) {
             let grace = connection == .online ? Self.dropGrace : Self.initialConnectionGrace
@@ -164,6 +213,7 @@ extension BotStore {
         dropTimer = nil
         heldDrop = nil
         if new != connection { Motion.animate { connection = new } }
+        if new == .online { reconnecting = false }
         if recovering {
             for scope in Set(readingViews.values) { markRead(scope.botId, thread: scope.thread) }
         }
@@ -177,6 +227,10 @@ extension BotStore {
     private func stopEvents() {
         eventsTask?.cancel()
         eventsTask = nil
+        linkCaughtUp = false
+        catchUpIdleTask?.cancel()
+        catchUpIdleTask = nil
+        catchUpRev = .max
         setHostRoute(nil)
     }
 

@@ -43,6 +43,7 @@ Codync/
 │   │       │       ├── Usage/
 │   │       │       └── Resources/
 │   │       └── Tests/         # CodyncKitTests and CodyncUITests
+│   ├── watch/                 # Apple Watch app (Xcode Watch target); links CodyncKit
 │   ├── desktop/               # Electron app for macOS, Linux and Windows (see desktop-app.md)
 │   │   ├── src/main/          # Host service, tray, account, updates, SSH, screen, speech
 │   │   ├── src/preload/       # window.codync bridge
@@ -71,8 +72,9 @@ Codync/
 - `iOS` (`apps/ios/`) — iOS app
 - `Screen` (`apps/screen-macos/`) — Codync Screen: capture, input and WebRTC for Remote screen, embedded in the macOS desktop app (`Contents/Library/LoginItems`); starts the computer-use driver it carries in `Contents/Helpers`
 - `apps/screen-linux/` — `codync-screen` (Rust, GStreamer + xdg portals), the Linux Remote screen helper
+- `Watch` (`apps/watch/`) — Apple Watch companion, embedded in the iOS app at `Codync.app/Watch/` (bundle id `com.pokai.Codync.ios.watchkitapp`)
 - `Widgets` (`apps/ios/Widgets/`) — usage widget + bot Live Activity (bundle id `com.pokai.Codync.ios.LiveActivity`)
-- `CodyncKit` (`apps/ios/Kit/`) — the iPhone app's Swift package: `CodyncKit` + `CodyncUI` libraries (tests: `xcodebuild test -scheme CodyncKit-Package` on an iOS simulator)
+- `CodyncKit` (`apps/ios/Kit/`) — the iPhone app's Swift package: `CodyncKit` (also built for watchOS) + `CodyncUI` (iOS only) libraries (tests: `xcodebuild test -scheme CodyncKit-Package` on an iOS simulator)
 
 ## Where to make a change
 
@@ -104,6 +106,7 @@ Codync/
 ## Dependency rules
 
 - `CodyncKit` owns serializable models, clients and rendering primitives shared with widgets. It must not import `CodyncUI` or ClerkKit.
+- `CodyncKit` builds for watchOS; the watch never constructs a transport (`HostConnector`, `CloudClient` and `ChannelTransport` are unavailable there) and reaches the host through the iPhone.
 - `CodyncUI` owns the iPhone app's observable stores and screens. App-specific lifecycle, OAuth configuration and device hooks belong in `apps/`.
 - Each `BotStore` (Swift, and its TypeScript port in the desktop app) talks to one computer. `AccountStore` aggregates stores and routes by `BotReference`; bare bot IDs are not globally unique.
 - The host owns routing, reply counts, permissions and group turn scheduling. Clients render these results; they do not reimplement host policy.

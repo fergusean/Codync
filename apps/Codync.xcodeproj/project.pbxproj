@@ -14,17 +14,22 @@
 		0D6E2869DC5A1BC7D6385444 /* CodyncOrb-Dot.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 0C44BCF971511A5E94D073D5 /* CodyncOrb-Dot.ttf */; };
 		17DD96A91B1EC2AE699F4A2F /* ViewingBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C0E04490F5C56FD070539E6 /* ViewingBadge.swift */; };
 		1855DC364C2F8E5B62878BD8 /* CodyncBot-teardrop-Ink.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 203A43D8DF8D3832F95FA837 /* CodyncBot-teardrop-Ink.ttf */; };
+		197DA49EA29251FDB347C25E /* CodyncWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34036C86FD8566159177CB02 /* CodyncWatchApp.swift */; };
 		198096547EAA6C5FBB68558F /* CodyncBot-hex-Ink.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 89A0D530BEF30AF36F9DBEA8 /* CodyncBot-hex-Ink.ttf */; };
+		1CB02422A94B4909CF76666C /* Watch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = A19D87F72C5638F3BB0B5FBC /* Watch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		2002C16E427B4E4E7279E1C4 /* ComputerStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BC00039A6C2C0D3F39A5F67 /* ComputerStatus.swift */; };
 		25667EBFCCC64B96FDCE95A9 /* CodyncKit in Frameworks */ = {isa = PBXBuildFile; productRef = 59F5D19A417A7A50596902FA /* CodyncKit */; };
 		2CC074683AE086D6C77CC1E8 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B274A0195CB3B2409EA4C194 /* WidgetKit.framework */; };
 		2CDF3DF16A13DAF83CA42168 /* CodyncWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAB9BDB52C3A9F7B2568A750 /* CodyncWidgets.swift */; };
+		31A89FA9D6C76F39B1BF653E /* WatchStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58DA9C219EFDB3211A4534DC /* WatchStore.swift */; };
 		35CFB641A4F10C0EBD21CB14 /* LaunchSplash.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FC76D28AB02DF1427D530ED /* LaunchSplash.swift */; };
+		3978FEB8DF1CF75F0E98B139 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = CA8EB23DC1269FF2AAC56EE7 /* PrivacyInfo.xcprivacy */; };
 		3BCC04815E5CA8953E0DDCAD /* WidgetPreviews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 305DDCC18BB8AA6CD9D19CEF /* WidgetPreviews.swift */; };
 		48DAAA1384E5B8D0BA27C895 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E47C60032C326157E0386B8 /* SwiftUI.framework */; };
 		4C9ADD8046382132129B1302 /* CodyncBot-squircle-Ink.ttf in Resources */ = {isa = PBXBuildFile; fileRef = CEF1A5792B9675FDA7E07740 /* CodyncBot-squircle-Ink.ttf */; };
 		4DDC38E58D673047B332FDD5 /* AccessRequestView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B97102DEC6029268332DF901 /* AccessRequestView.swift */; };
 		501377099B6CF42761B230CB /* WelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D57A7C09154869DD84BACE19 /* WelcomeView.swift */; };
+		5057818FDC0B5E7F9F94F424 /* WatchCompanion.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9CA372209D228279D12E86 /* WatchCompanion.swift */; };
 		52CF04B855C6AAEC47B75B8F /* CodyncKit in Frameworks */ = {isa = PBXBuildFile; productRef = 1285DDFA0390A76ECDAAD6C0 /* CodyncKit */; };
 		54CEEA0734C2940E2D9FAC7D /* AXTree.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4D13418ABB5FD7CFC087677 /* AXTree.swift */; };
 		5C9AE497DA83EB32AEC9057C /* OpenBotIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C4EB0DBA2F08CD7C0E25E30 /* OpenBotIntent.swift */; };
@@ -41,6 +46,7 @@
 		7E5F670CFFA0E4373F44DB41 /* AccountSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31BFDAD6DCCE1CC98642ACDD /* AccountSession.swift */; };
 		8157F3E9CFB390CBCB1A9F9A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4815867922559696EDCA47FD /* Assets.xcassets */; };
 		8517F8FC5AFAFF1527369829 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6932F782C1B87C9608359A6 /* NotificationService.swift */; };
+		865595EF4531643488B4A924 /* WatchSessionLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD534A9A1AF299CDE2F0D82A /* WatchSessionLink.swift */; };
 		89CA3972915769DBA315876F /* Push.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3BF4D3B82FE8274F610C703 /* Push.swift */; };
 		8B5CCF45DEE9149BB11333C4 /* CodyncBot-pebble-Ink.ttf in Resources */ = {isa = PBXBuildFile; fileRef = F4375A206703EC65F0D15BD6 /* CodyncBot-pebble-Ink.ttf */; };
 		8B78A34695AD94109AE82C0F /* CodyncBot-blob-Tint.ttf in Resources */ = {isa = PBXBuildFile; fileRef = D0E552136D473567E0C25ED4 /* CodyncBot-blob-Tint.ttf */; };
@@ -50,20 +56,28 @@
 		974A5D8D89758A61E7D8D1B6 /* Input.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BA06CEE98A7CDED62678522 /* Input.swift */; };
 		980C29719BDE2E874C9AD53A /* CodyncBot-wedge-Tint.ttf in Resources */ = {isa = PBXBuildFile; fileRef = C3BB9F034194450254CE14EC /* CodyncBot-wedge-Tint.ttf */; };
 		9BBB2FAEDBD35A83EAB02981 /* AccountSwitcherView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EB282B31FBC94EE70D07638 /* AccountSwitcherView.swift */; };
+		9C907FBC9E058C60211CFDA1 /* RosterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48CF5740717C6915FDBE056D /* RosterView.swift */; };
 		AA601649E43A5AF73DCF5B5E /* WebRTC in Frameworks */ = {isa = PBXBuildFile; productRef = 2D9748E611692583AFC5A152 /* WebRTC */; };
 		ABE57DA1C72A08A22262AAB1 /* CodyncOrb-Ghost.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 8E783FFF5EC2697C16FA2E1B /* CodyncOrb-Ghost.ttf */; };
 		B09F6D6EDC6C6B0B9919D6BF /* CodyncBot-blob-Ink.ttf in Resources */ = {isa = PBXBuildFile; fileRef = C484135603CEF437C27BE67B /* CodyncBot-blob-Ink.ttf */; };
 		B1815C13D0D78E99415C2DC2 /* CodyncBot-cloud-Ink.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 5A21538E748C62E82DF7B139 /* CodyncBot-cloud-Ink.ttf */; };
+		B2249F09BB2D98D7D56ABADC /* NotificationRouting.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0123C09D33B13C3BA9AF1E1 /* NotificationRouting.swift */; };
 		B3450CFD87D4096B3BCA7885 /* CodyncBot-wedge-Ink.ttf in Resources */ = {isa = PBXBuildFile; fileRef = C6B96EE690FC5355C9E3D1B5 /* CodyncBot-wedge-Ink.ttf */; };
 		B3554D38F39916698E961A37 /* WidgetGalleryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B22589689593E0089118FDB /* WidgetGalleryView.swift */; };
+		B57DE6AAF4687FE800C3AFBF /* StateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 132E595632D50DF43297298B /* StateView.swift */; };
+		B7813E22539EA1591A74B479 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 112D343B209740DC2FAE5F41 /* Assets.xcassets */; };
+		B8C9F4A4160606CE99788C93 /* ApprovalCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = B41E5B994F194984425E975C /* ApprovalCard.swift */; };
 		BA978F06CB1E58511FFB541B /* WidgetSetupDemo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D8961FADA8810B6CC479705 /* WidgetSetupDemo.swift */; };
 		BCB60463C96AF5725EC4A2C7 /* CodyncBot-hex-Tint.ttf in Resources */ = {isa = PBXBuildFile; fileRef = D827E43025A592B41CB68EFD /* CodyncBot-hex-Tint.ttf */; };
 		BF77DD7946621D8818EDAB9B /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A87B0091DAF0E4807D62017 /* SettingsView.swift */; };
 		C7ED489193AC0934515D2E85 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = D0DE72EEAEC947C1D3CA237F /* PrivacyInfo.xcprivacy */; };
+		DA3DC725DDD3E5B5B5FA4D39 /* DictationButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06004CEB160CCE4E7F3CEB24 /* DictationButton.swift */; };
 		E695251CFD06AC6F4E3396B7 /* OpenBotIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C4EB0DBA2F08CD7C0E25E30 /* OpenBotIntent.swift */; };
 		E78E3B5FAFEB79F31AAC104D /* CodyncBot-teardrop-Tint.ttf in Resources */ = {isa = PBXBuildFile; fileRef = C8F46BD8301E7E2C83C35111 /* CodyncBot-teardrop-Tint.ttf */; };
+		E91959E38FE73D9B7978D732 /* CodyncKit in Frameworks */ = {isa = PBXBuildFile; productRef = 7F5B59CE9AA24BF276575C76 /* CodyncKit */; };
 		EBB0417A5FB2CE6D514D21BE /* ClerkKit in Frameworks */ = {isa = PBXBuildFile; productRef = D9AB2F442A5F243653EAE936 /* ClerkKit */; };
 		F171F16563D1FF6308697173 /* CodyncUI in Frameworks */ = {isa = PBXBuildFile; productRef = 06C9F37C6502131CAF0F145E /* CodyncUI */; };
+		F268ED9D4C230556F7F9E7C9 /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A84A0FFB212079D8B97A03 /* ChatView.swift */; };
 		F6A380E8A026CA849620F2F7 /* Driver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D16AD9979C77D976BC832D1 /* Driver.swift */; };
 		F842AE1C5ED96AF9A7F5D16C /* Widgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 6D734BEE7CD3F84677B0218B /* Widgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		F97C489DDB806224CEFCEB57 /* ScreenHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28B2CB561A43ED9F2F1A4391 /* ScreenHelper.swift */; };
@@ -72,6 +86,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		72733545783275ABA51B1E3F /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 5B6351DD20AF4506794D6460 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 13088FA2905FE83B11E1FF16;
+			remoteInfo = Watch;
+		};
 		D40A213F2C1B900F886F95EB /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 5B6351DD20AF4506794D6460 /* Project object */;
@@ -89,6 +110,17 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
+		0E157BE83E180B28C173B70B /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
+			dstSubfolderSpec = 16;
+			files = (
+				1CB02422A94B4909CF76666C /* Watch.app in Embed Watch Content */,
+			);
+			name = "Embed Watch Content";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		265004DE0479E150BA3E6AB7 /* Embed Foundation Extensions */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -105,11 +137,14 @@
 
 /* Begin PBXFileReference section */
 		0582B6169BFC36E4BCD51C0D /* BotListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BotListView.swift; sourceTree = "<group>"; };
+		06004CEB160CCE4E7F3CEB24 /* DictationButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictationButton.swift; sourceTree = "<group>"; };
 		0829A4FCADAC108E8C2DB2F1 /* Widgets.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Widgets.entitlements; sourceTree = "<group>"; };
 		0A87B0091DAF0E4807D62017 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		0C44BCF971511A5E94D073D5 /* CodyncOrb-Dot.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "CodyncOrb-Dot.ttf"; sourceTree = "<group>"; };
+		112D343B209740DC2FAE5F41 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		120FD9DBA315A6DD543463D8 /* CodyncBot-tablet-Ink.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "CodyncBot-tablet-Ink.ttf"; sourceTree = "<group>"; };
 		1318104275E5BEC47B7088AD /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		132E595632D50DF43297298B /* StateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StateView.swift; sourceTree = "<group>"; };
 		1E47C60032C326157E0386B8 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		1FECC371F3CD98687C0B69FA /* CodyncBot-pebble-Tint.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "CodyncBot-pebble-Tint.ttf"; sourceTree = "<group>"; };
 		203A43D8DF8D3832F95FA837 /* CodyncBot-teardrop-Ink.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "CodyncBot-teardrop-Ink.ttf"; sourceTree = "<group>"; };
@@ -117,11 +152,15 @@
 		2C0E04490F5C56FD070539E6 /* ViewingBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewingBadge.swift; sourceTree = "<group>"; };
 		305DDCC18BB8AA6CD9D19CEF /* WidgetPreviews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetPreviews.swift; sourceTree = "<group>"; };
 		31BFDAD6DCCE1CC98642ACDD /* AccountSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountSession.swift; sourceTree = "<group>"; };
+		34036C86FD8566159177CB02 /* CodyncWatchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodyncWatchApp.swift; sourceTree = "<group>"; };
 		3F4C4D3B64C608AEF2F85F91 /* Kit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Kit; path = ios/Kit; sourceTree = SOURCE_ROOT; };
 		46538A6E6E6B7C5E212F5CDF /* SessionCandidates.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionCandidates.swift; sourceTree = "<group>"; };
 		4815867922559696EDCA47FD /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		48CF5740717C6915FDBE056D /* RosterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RosterView.swift; sourceTree = "<group>"; };
+		4B9CA372209D228279D12E86 /* WatchCompanion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchCompanion.swift; sourceTree = "<group>"; };
 		4EB282B31FBC94EE70D07638 /* AccountSwitcherView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountSwitcherView.swift; sourceTree = "<group>"; };
 		52A96030D47F1B9678095909 /* iOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = iOS.entitlements; sourceTree = "<group>"; };
+		58DA9C219EFDB3211A4534DC /* WatchStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchStore.swift; sourceTree = "<group>"; };
 		5A21538E748C62E82DF7B139 /* CodyncBot-cloud-Ink.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "CodyncBot-cloud-Ink.ttf"; sourceTree = "<group>"; };
 		5B22589689593E0089118FDB /* WidgetGalleryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetGalleryView.swift; sourceTree = "<group>"; };
 		5C4EB0DBA2F08CD7C0E25E30 /* OpenBotIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenBotIntent.swift; sourceTree = "<group>"; };
@@ -139,16 +178,20 @@
 		8D16AD9979C77D976BC832D1 /* Driver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Driver.swift; sourceTree = "<group>"; };
 		8E783FFF5EC2697C16FA2E1B /* CodyncOrb-Ghost.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "CodyncOrb-Ghost.ttf"; sourceTree = "<group>"; };
 		9AD0BD16672E128A4F26272B /* SignInButtons.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignInButtons.swift; sourceTree = "<group>"; };
+		A19D87F72C5638F3BB0B5FBC /* Watch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Watch.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A65FE0504B741D0B44DB2516 /* CodyncApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodyncApp.swift; sourceTree = "<group>"; };
 		AAD970B8394F4EDFB85A8936 /* CodyncBot-cloud-Tint.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "CodyncBot-cloud-Tint.ttf"; sourceTree = "<group>"; };
 		AD18A04CD014230F1B7B0535 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		B274A0195CB3B2409EA4C194 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		B41E5B994F194984425E975C /* ApprovalCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApprovalCard.swift; sourceTree = "<group>"; };
 		B6E13F8EA6C7B0DA4D899FEE /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		B97102DEC6029268332DF901 /* AccessRequestView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessRequestView.swift; sourceTree = "<group>"; };
+		BD534A9A1AF299CDE2F0D82A /* WatchSessionLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSessionLink.swift; sourceTree = "<group>"; };
 		C3BB9F034194450254CE14EC /* CodyncBot-wedge-Tint.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "CodyncBot-wedge-Tint.ttf"; sourceTree = "<group>"; };
 		C484135603CEF437C27BE67B /* CodyncBot-blob-Ink.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "CodyncBot-blob-Ink.ttf"; sourceTree = "<group>"; };
 		C6B96EE690FC5355C9E3D1B5 /* CodyncBot-wedge-Ink.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "CodyncBot-wedge-Ink.ttf"; sourceTree = "<group>"; };
 		C8F46BD8301E7E2C83C35111 /* CodyncBot-teardrop-Tint.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "CodyncBot-teardrop-Tint.ttf"; sourceTree = "<group>"; };
+		CA8EB23DC1269FF2AAC56EE7 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		CE63C84233B14A2D63640EAA /* Capture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Capture.swift; sourceTree = "<group>"; };
 		CEF1A5792B9675FDA7E07740 /* CodyncBot-squircle-Ink.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "CodyncBot-squircle-Ink.ttf"; sourceTree = "<group>"; };
 		CFEBE2E6A9D0AF0A0D89FFE7 /* UsageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageView.swift; sourceTree = "<group>"; };
@@ -160,8 +203,10 @@
 		D827E43025A592B41CB68EFD /* CodyncBot-hex-Tint.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "CodyncBot-hex-Tint.ttf"; sourceTree = "<group>"; };
 		DC3927FC6343A00B3970BC08 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		DD3DE9A4EEB369C4F75C9448 /* ActivityGalleryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityGalleryView.swift; sourceTree = "<group>"; };
+		E0123C09D33B13C3BA9AF1E1 /* NotificationRouting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationRouting.swift; sourceTree = "<group>"; };
 		E3BF4D3B82FE8274F610C703 /* Push.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Push.swift; sourceTree = "<group>"; };
 		ECD0B4EA4BBA2BB2826C4362 /* PairingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PairingView.swift; sourceTree = "<group>"; };
+		F1A84A0FFB212079D8B97A03 /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
 		F21AEC12DC761C28A997BEF3 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		F4375A206703EC65F0D15BD6 /* CodyncBot-pebble-Ink.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "CodyncBot-pebble-Ink.ttf"; sourceTree = "<group>"; };
 		F6932F782C1B87C9608359A6 /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
@@ -171,6 +216,14 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		54175C75F54D731A2C9849A8 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E91959E38FE73D9B7978D732 /* CodyncKit in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		9BF4C7DD5C26BAD44BD453BF /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -235,6 +288,17 @@
 			path = Fonts;
 			sourceTree = "<group>";
 		};
+		138061056412DD11A963218F /* watch */ = {
+			isa = PBXGroup;
+			children = (
+				BC327089442B9D670FF10936 /* App */,
+				E20FD6116AEF61D572AF26FF /* Resources */,
+				FD6BF296FD316AFB7B91AE4D /* Store */,
+				C07A58CBD9B215FCA6F7C965 /* Views */,
+			);
+			path = watch;
+			sourceTree = "<group>";
+		};
 		39BD6D06FC3DE74E5AA24856 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
@@ -261,6 +325,7 @@
 				60422D3CA8FEBCDC5AC465E0 /* iOS.app */,
 				7B7E845BA1B8696B266CF578 /* NotificationService.appex */,
 				741B706007BA1B91CB853699 /* Screen.app */,
+				A19D87F72C5638F3BB0B5FBC /* Watch.app */,
 				6D734BEE7CD3F84677B0218B /* Widgets.appex */,
 			);
 			name = Products;
@@ -344,6 +409,28 @@
 			name = Packages;
 			sourceTree = "<group>";
 		};
+		BC327089442B9D670FF10936 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				34036C86FD8566159177CB02 /* CodyncWatchApp.swift */,
+				E0123C09D33B13C3BA9AF1E1 /* NotificationRouting.swift */,
+				BD534A9A1AF299CDE2F0D82A /* WatchSessionLink.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		C07A58CBD9B215FCA6F7C965 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				B41E5B994F194984425E975C /* ApprovalCard.swift */,
+				F1A84A0FFB212079D8B97A03 /* ChatView.swift */,
+				06004CEB160CCE4E7F3CEB24 /* DictationButton.swift */,
+				48CF5740717C6915FDBE056D /* RosterView.swift */,
+				132E595632D50DF43297298B /* StateView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
 		C2E4BC991A101B97C0E4F058 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
@@ -361,9 +448,19 @@
 				75D64C75DA194CAF10294493 /* ios */,
 				AD54741A2330C502CD3BB628 /* Packages */,
 				95C8CE71ADF48ACFE026A1AF /* screen-macos */,
+				138061056412DD11A963218F /* watch */,
 				3B3D0635CC47A804415E49C9 /* Frameworks */,
 				3EC1FDCCFFFB4BA1A23FDDB0 /* Products */,
 			);
+			sourceTree = "<group>";
+		};
+		E20FD6116AEF61D572AF26FF /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				112D343B209740DC2FAE5F41 /* Assets.xcassets */,
+				CA8EB23DC1269FF2AAC56EE7 /* PrivacyInfo.xcprivacy */,
+			);
+			path = Resources;
 			sourceTree = "<group>";
 		};
 		F25D9D57F88C5EFD30A30920 /* App */ = {
@@ -372,13 +469,42 @@
 				31BFDAD6DCCE1CC98642ACDD /* AccountSession.swift */,
 				A65FE0504B741D0B44DB2516 /* CodyncApp.swift */,
 				E3BF4D3B82FE8274F610C703 /* Push.swift */,
+				4B9CA372209D228279D12E86 /* WatchCompanion.swift */,
 			);
 			path = App;
+			sourceTree = "<group>";
+		};
+		FD6BF296FD316AFB7B91AE4D /* Store */ = {
+			isa = PBXGroup;
+			children = (
+				58DA9C219EFDB3211A4534DC /* WatchStore.swift */,
+			);
+			path = Store;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		13088FA2905FE83B11E1FF16 /* Watch */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 4371E612FE77801E216B2BDA /* Build configuration list for PBXNativeTarget "Watch" */;
+			buildPhases = (
+				F2D07C1697A4B11BAE749BF4 /* Sources */,
+				4111974E0B1FE98EF57F1320 /* Resources */,
+				54175C75F54D731A2C9849A8 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Watch;
+			packageProductDependencies = (
+				7F5B59CE9AA24BF276575C76 /* CodyncKit */,
+			);
+			productName = Watch;
+			productReference = A19D87F72C5638F3BB0B5FBC /* Watch.app */;
+			productType = "com.apple.product-type.application";
+		};
 		907F1F4A709111FC7178EAE9 /* Screen */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = EC3A304F5821443C1DD50876 /* Build configuration list for PBXNativeTarget "Screen" */;
@@ -407,6 +533,7 @@
 				8C91DA62A73BD91999C1FD70 /* Resources */,
 				B2AF485DB7DA2A4791E60288 /* Frameworks */,
 				265004DE0479E150BA3E6AB7 /* Embed Foundation Extensions */,
+				0E157BE83E180B28C173B70B /* Embed Watch Content */,
 				9900BE8858E71975C4052787 /* Codync environment */,
 			);
 			buildRules = (
@@ -414,6 +541,7 @@
 			dependencies = (
 				40DF4BEA40A82C095F51AB76 /* PBXTargetDependency */,
 				0BA52D71EA0FB37D52E4AE22 /* PBXTargetDependency */,
+				1E3ABF431E125E075A233AF3 /* PBXTargetDependency */,
 			);
 			name = iOS;
 			packageProductDependencies = (
@@ -473,6 +601,10 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
+					13088FA2905FE83B11E1FF16 = {
+						DevelopmentTeam = 7FUM8A8H72;
+						ProvisioningStyle = Automatic;
+					};
 					907F1F4A709111FC7178EAE9 = {
 						DevelopmentTeam = 7FUM8A8H72;
 						ProvisioningStyle = Automatic;
@@ -512,6 +644,7 @@
 			targets = (
 				907F1F4A709111FC7178EAE9 /* Screen */,
 				913BDA9F79CE8C35A9E35830 /* iOS */,
+				13088FA2905FE83B11E1FF16 /* Watch */,
 				A27E4E88D6A5B9850734B594 /* Widgets */,
 				C42E5E078332C6C2B35AF5FA /* NotificationService */,
 			);
@@ -519,6 +652,15 @@
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		4111974E0B1FE98EF57F1320 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B7813E22539EA1591A74B479 /* Assets.xcassets in Resources */,
+				3978FEB8DF1CF75F0E98B139 /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		8C91DA62A73BD91999C1FD70 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -644,6 +786,7 @@
 				BF77DD7946621D8818EDAB9B /* SettingsView.swift in Sources */,
 				76E77CC8A2B7C74213512FAB /* SignInButtons.swift in Sources */,
 				684F7F77EECBA0BD95BDD658 /* UsageView.swift in Sources */,
+				5057818FDC0B5E7F9F94F424 /* WatchCompanion.swift in Sources */,
 				501377099B6CF42761B230CB /* WelcomeView.swift in Sources */,
 				B3554D38F39916698E961A37 /* WidgetGalleryView.swift in Sources */,
 				BA978F06CB1E58511FFB541B /* WidgetSetupDemo.swift in Sources */,
@@ -658,6 +801,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		F2D07C1697A4B11BAE749BF4 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B8C9F4A4160606CE99788C93 /* ApprovalCard.swift in Sources */,
+				F268ED9D4C230556F7F9E7C9 /* ChatView.swift in Sources */,
+				197DA49EA29251FDB347C25E /* CodyncWatchApp.swift in Sources */,
+				DA3DC725DDD3E5B5B5FA4D39 /* DictationButton.swift in Sources */,
+				B2249F09BB2D98D7D56ABADC /* NotificationRouting.swift in Sources */,
+				9C907FBC9E058C60211CFDA1 /* RosterView.swift in Sources */,
+				B57DE6AAF4687FE800C3AFBF /* StateView.swift in Sources */,
+				865595EF4531643488B4A924 /* WatchSessionLink.swift in Sources */,
+				31A89FA9D6C76F39B1BF653E /* WatchStore.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -665,6 +824,11 @@
 			isa = PBXTargetDependency;
 			target = C42E5E078332C6C2B35AF5FA /* NotificationService */;
 			targetProxy = DA04088A6786CD5F92C67AED /* PBXContainerItemProxy */;
+		};
+		1E3ABF431E125E075A233AF3 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 13088FA2905FE83B11E1FF16 /* Watch */;
+			targetProxy = 72733545783275ABA51B1E3F /* PBXContainerItemProxy */;
 		};
 		40DF4BEA40A82C095F51AB76 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -735,6 +899,25 @@
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_STRICT_CONCURRENCY = complete;
 				SWIFT_VERSION = 6.0;
+				WATCHOS_DEPLOYMENT_TARGET = 11.0;
+			};
+			name = Release;
+		};
+		3C8A0BE66A9CFEAA32134A77 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Codync;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.pokai.Codync.ios;
+				INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = NO;
+				PRODUCT_BUNDLE_IDENTIFIER = com.pokai.Codync.ios.watchkitapp;
+				PRODUCT_NAME = CodyncWatch;
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = 4;
 			};
 			name = Release;
 		};
@@ -890,6 +1073,7 @@
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_STRICT_CONCURRENCY = complete;
 				SWIFT_VERSION = 6.0;
+				WATCHOS_DEPLOYMENT_TARGET = 11.0;
 			};
 			name = Debug;
 		};
@@ -977,6 +1161,24 @@
 			};
 			name = Release;
 		};
+		DABFEB7753F3E94EF730312F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Codync;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.pokai.Codync.ios;
+				INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = NO;
+				PRODUCT_BUNDLE_IDENTIFIER = com.pokai.Codync.ios.watchkitapp;
+				PRODUCT_NAME = CodyncWatch;
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = 4;
+			};
+			name = Debug;
+		};
 		EB1D26BC053D93E98D308A5C /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1005,6 +1207,15 @@
 			buildConfigurations = (
 				AA5DD179E0A7875E9EC22904 /* Debug */,
 				D8FAD997F1279E25370608C5 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		4371E612FE77801E216B2BDA /* Build configuration list for PBXNativeTarget "Watch" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DABFEB7753F3E94EF730312F /* Debug */,
+				3C8A0BE66A9CFEAA32134A77 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
@@ -1092,6 +1303,10 @@
 			productName = CodyncKit;
 		};
 		59F5D19A417A7A50596902FA /* CodyncKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = CodyncKit;
+		};
+		7F5B59CE9AA24BF276575C76 /* CodyncKit */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = CodyncKit;
 		};

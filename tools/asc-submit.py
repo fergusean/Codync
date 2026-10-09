@@ -42,7 +42,7 @@ NOTES = Path(__file__).resolve().parent.parent / "apps/ios/WhatsNew.md"
 EMOJI = re.compile("[\U00010000-\U0010FFFF\u2600-\u27BF\uFE0F\u200D]")
 WORKFLOW_ID = "44342080-ce08-4dc1-be35-34ce6cbb41b5"  # Xcode Cloud "Release": Archive iOS for the App Store
 # What the iPhone app is built from; apps/project.yml counts except its version lines.
-IOS_PATHS = ["apps/ios", "apps/shared", "apps/Codync.xcodeproj/project.xcworkspace"]
+IOS_PATHS = ["apps/ios", "apps/watch", "apps/shared", "apps/Codync.xcodeproj/project.xcworkspace"]
 
 
 def git(*args):

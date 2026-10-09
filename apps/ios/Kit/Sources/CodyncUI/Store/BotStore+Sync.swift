@@ -9,6 +9,11 @@ extension BotStore {
     func runEvents(_ client: HostClient) async {
         var backoff: Double = 1
         while !Task.isCancelled {
+            // Every pass subscribes again and catches up again.
+            linkCaughtUp = false
+            catchUpIdleTask?.cancel()
+            catchUpRev = .max
+            subscribedClient = eventsClient
             do {
                 try await refreshHello(client)
                 guard !Task.isCancelled, !retired else { return }
@@ -19,11 +24,12 @@ extension BotStore {
                     try await Task.sleep(for: Self.mismatchRecheck)
                     continue
                 }
-                for try await event in client.events(since: rev, client: clientKind) {
+                for try await event in client.events(since: rev, client: subscribedClient) {
                     guard !Task.isCancelled, !retired else { return }
                     setConnection(.online)
                     backoff = 1
                     apply(event)
+                    armCatchUpIdle()
                 }
             } catch is CancellationError {
                 return
@@ -89,15 +95,19 @@ extension BotStore {
             bump(rev)
         case let .bot(bot):
             let neededInput = bots[bot.id]?.needsInput == true
+            let wasBusy = bots[bot.id]?.isWorking == true
+            // A transition inside the catch-up may be old news (a cached "working" turned idle).
+            let caughtUpBefore = isPastCatchUp(bot.rev)
             bots[bot.id] = bot
             bump(bot.rev)
             onBotUpdated?(bot)
             onRosterChanged?()
             if bot.unread > 0 { acknowledgeVisibleConversations(bot.id) }
             if bot.needsInput && !neededInput {
-                for call in Array(voiceCalls.values) where call.botId == bot.id {
-                    call.announce("\(bot.name) needs your approval in the chat.")
-                }
+                for hold in Array(holds.values) where hold.botId == bot.id { hold.needsInput(bot) }
+            }
+            if wasBusy && !bot.isWorking && caughtUpBefore {
+                for hold in Array(holds.values) where hold.botId == bot.id { hold.settled(bot.id) }
             }
         case let .botDeleted(id, r):
             removeComposerDrafts(for: id)
@@ -111,9 +121,9 @@ extension BotStore {
             upsert(e)
             bump(e.rev)
             acknowledgeVisibleConversations(e.botId, entry: e)
-            let calls = Array(voiceCalls.values).filter { $0.botId == e.botId && e.rev > $0.startRev }
-            if e.kind == "agent", e.threadId == nil, e.data.final == true, known?.data.final != true, let text = e.data.text {
-                calls.forEach { $0.speak(spokenReply(e, text)) }
+            let calls = Array(holds.values).filter { $0.botId == e.botId && e.rev > $0.startRev }
+            if e.kind == "agent", e.threadId == nil, e.data.final == true, known?.data.final != true, e.data.text != nil {
+                calls.forEach { $0.reply(e) }
             }
             // A group has no status of its own: its members' approvals arrive as cards.
             if e.kind == "permission", known == nil, e.data.status == "pending", bots[e.botId]?.isGroup == true {
@@ -145,7 +155,7 @@ extension BotStore {
     }
 
     /// In a group, a reply is said with its speaker's name.
-    private func spokenReply(_ e: Entry, _ text: String) -> String {
+    func spokenReply(_ e: Entry, _ text: String) -> String {
         guard bots[e.botId]?.isGroup == true, let name = e.data.author.flatMap({ bots[$0]?.name }) else { return text }
         return "\(name): \(text)"
     }
@@ -165,15 +175,40 @@ extension BotStore {
     }
 
     /// Resubscribes from the current `rev` on the same link.
-    private func restartEvents() {
+    func restartEvents() {
         guard let client, eventsTask != nil else { return }
         eventsTask?.cancel()
         eventsTask = Task { [weak self] in await self?.runEvents(client) }
     }
 
+    /// The event happened after this link's hello (it isn't part of the catch-up).
+    func isPastCatchUp(_ eventRev: Int64) -> Bool {
+        linkCaughtUp || eventRev > catchUpRev || stateFromThisTransport
+    }
+
     private func bump(_ r: Int64) {
         rev = max(rev, r)
-        if !caughtUp && rev >= catchUpRev { caughtUp = true }
+        if rev >= catchUpRev { finishCatchUp() }
+    }
+
+    func finishCatchUp() {
+        catchUpIdleTask?.cancel()
+        catchUpIdleTask = nil
+        linkCaughtUp = true
+        stateFromThisTransport = true
+        caughtUp = true
+    }
+
+    /// While the catch-up is pending, every event restarts the idle wait that ends it.
+    func armCatchUpIdle() {
+        catchUpIdleTask?.cancel()
+        catchUpIdleTask = nil
+        guard !linkCaughtUp, catchUpRev != .max else { return }
+        catchUpIdleTask = Task { [weak self, wait = catchUpIdle] in
+            try? await Task.sleep(for: wait)
+            guard !Task.isCancelled, let self, !retired else { return }
+            finishCatchUp()
+        }
     }
 
     func upsert(_ e: Entry) {

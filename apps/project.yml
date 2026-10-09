@@ -5,6 +5,7 @@ options:
   deploymentTarget:
     iOS: "18.0"
     macOS: "14.0"
+    watchOS: "11.0"
   createIntermediateGroups: true
   fileTypes:
     icon:
@@ -87,6 +88,7 @@ targets:
         embed: true
       - target: NotificationService
         embed: true
+      - target: Watch
     postBuildScripts:
       - name: Codync environment
         basedOnDependencyAnalysis: false
@@ -117,6 +119,26 @@ targets:
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         # Black / white instead of the system blue in menus, alerts and system sheets.
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+  # The Apple Watch companion, embedded in the iOS app: reaches the host through the iPhone (WatchConnectivity).
+  Watch:
+    type: application
+    platform: watchOS
+    sources:
+      - watch
+    dependencies:
+      - package: CodyncKit
+        product: CodyncKit
+    settings:
+      base:
+        PRODUCT_NAME: CodyncWatch
+        PRODUCT_BUNDLE_IDENTIFIER: com.pokai.Codync.ios.watchkitapp
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Codync
+        INFOPLIST_KEY_WKCompanionAppBundleIdentifier: com.pokai.Codync.ios
+        INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp: NO
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
   Widgets:
     type: app-extension

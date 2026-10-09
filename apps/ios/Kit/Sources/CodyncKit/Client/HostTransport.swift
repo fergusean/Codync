@@ -6,7 +6,8 @@ public enum HostRoute: Sendable, Equatable {
 }
 
 public enum HostStreamRequest: Sendable {
-    case events(since: Int64, client: String)
+    /// `client` nil: not a phone for the host's push suppression (a watch relay, say).
+    case events(since: Int64, client: String?)
     case term(String)
     case screenCandidates(String)
 }

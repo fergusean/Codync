@@ -212,7 +212,7 @@ private struct UsageSheet: View {
     @State private var picked: ComputerID?
 
     var body: some View {
-        let store = picked.flatMap(accounts.store(for:)) ?? app.currentStore
+        let store = picked.flatMap(accounts.store(for:)) ?? app.accounts.currentStore
         VStack(spacing: 0) {
             ScreenHeader {
                 IconButton("Close", systemImage: "xmark") { dismiss() }

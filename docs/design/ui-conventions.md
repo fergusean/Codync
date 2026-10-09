@@ -200,3 +200,15 @@ The desktop sidebar computer filter shares the toolbar's subtle outline and 32px
 height, with a capsule enclosing both the computer glyph and its chevron. This
 applies in expanded and compact sidebars. iOS retains native toolbar treatment;
 terminal computer selection has no corresponding icon button.
+
+## Apple Watch
+
+The watch app (`apps/watch/`, [watch app](../features/watch-app.md)) uses the system `NavigationStack`, `List`, toolbar and `TextFieldLink`: navigation, crown scrolling and text input belong to watchOS, and the custom chrome lives in `CodyncUI`, which does not build for watchOS. This is an explicit exception, like the iPhone toolbar one.
+
+Every other rule still applies:
+
+- Buttons an icon can express are icon-only with an accessibility label (dictate, Resend); text only for approval choices.
+- Colors come from `Palette`; tap-driven and visibility changes (the approval orb and dimming, send states, chat states) animate through `Motion.animate` or `Motion.reduced`, so Reduce Motion drops them.
+- A filled shape gets no border line.
+- `CharacterAvatar` and `ThinkingOrb` stand for identity and work. They pause outside `.active`, so the always-on display shows them still.
+- Wording for approvals and send states comes from `ChatPresentation`, so the watch says what the iPhone says.

@@ -80,9 +80,10 @@ struct CodyncApp: App {
                     // Only leaving for the background disconnects; `.inactive` (Control Center,
                     // app switcher, system prompts) comes and goes too often to drop the link.
                     app.accounts.setActive(phase != .background)
+                    app.watch.appActiveChanged()
                     // Back in the app: a computer may have joined the account meanwhile.
                     if phase == .active {
-                        Task { await app.accounts.refreshCloud() }
+                        if !app.runDeferredCloudWork() { Task { await app.accounts.refreshCloud() } }
                         Task { await updates.refresh() }
                     }
                 }
@@ -102,7 +103,7 @@ struct CodyncApp: App {
                     await LiveActivities.shared.previewIfRequested()
                     if ProcessInfo.processInfo.environment["CODYNC_OPEN_SCREEN"] != nil {
                         try? await Task.sleep(for: .seconds(2))
-                        app.currentStore?.screenRequest = ScreenRequest()
+                        app.accounts.currentStore?.screenRequest = ScreenRequest()
                     }
                 }
                 #endif
@@ -141,6 +142,8 @@ final class AppStore {
     var showUsage = false
     /// The computer whose marketplace is open.
     var marketplace: ComputerID?
+    /// The Apple Watch link lives as long as the app; `bind` points it at the current accounts.
+    let watch: WatchBridge
 
     private init() {
         let session = AccountSession()
@@ -149,14 +152,45 @@ final class AppStore {
         account = session
         Analytics.shared.userID = { [session] in session.userID }
         contextID = storage.id
-        (accounts, cloud) = Self.makeAccounts(storage, session: session)
+        // Built before UIKit exists (the App's @State runs in `CodyncApp.init`): never read
+        // `applicationState` here. Stores start disconnected; the first scene phase activates them.
+        let (made, cloud) = Self.makeAccounts(storage, session: session, active: false)
+        (accounts, self.cloud) = (made, cloud)
+        let link = PhoneWatchLink()
+        let bridge = WatchBridge(accounts: made, link: link, system: PhoneWatchSystem())
+        link.handler = { data in bridge.answer(data) }
+        watch = bridge
+        // The first `.active` scene phase runs it (see `runDeferredCloudWork`).
+        cloudWorkPending = cloud != nil
     }
 
     var storage: SharedStore.Context { accounts.storage }
 
-    /// The computer the Usage tab, widgets and "open screen" links act on: the last active one.
-    var currentStore: BotStore? {
-        accounts.storage.lastComputerId.flatMap(accounts.store(for:)) ?? accounts.computers.first.flatMap { accounts.store(for: $0.id) }
+    /// Account work a launch without a scene (a watch message, say) leaves for the first `.active`.
+    private var cloudWorkPending = false
+
+    /// Signed in: make this iPhone known to the account, then list its computers (and ask for access
+    /// to the ones it can't use yet). Callers are in the foreground; launch defers it to the first `.active`.
+    private func startCloud() {
+        guard let cloud else { return }
+        cloudWorkPending = false
+        Task { [weak accounts] in
+            do {
+                try await cloud.registerDevice(name: UIDevice.current.name, platform: "ios")
+            } catch let error as CloudError where !error.isTransient {
+                accounts?.lastError = error.localizedDescription
+            } catch {
+                // Transient (network, busy cloud, token not ready): the next launch registers again.
+            }
+            await accounts?.refreshCloud()
+        }
+    }
+
+    /// Foreground: runs what a background launch deferred. Returns whether it also refreshed the account.
+    func runDeferredCloudWork() -> Bool {
+        guard cloudWorkPending else { return false }
+        startCloud()
+        return true
     }
 
     func switchAccount(to userID: String?) {
@@ -171,7 +205,9 @@ final class AppStore {
         tab = .bots
         showComputers = false
         marketplace = nil
-        (accounts, cloud) = Self.makeAccounts(storage, session: account)
+        (accounts, cloud) = Self.makeAccounts(storage, session: account, active: true)
+        watch.bind(accounts)
+        startCloud()
         BotsWidgetFeed.reset()
         WidgetCenter.shared.reloadAllTimelines()
     }
@@ -208,8 +244,10 @@ final class AppStore {
         marketplace = nil
         tab = .bots
         contextID = storage.id
-        (accounts, cloud) = Self.makeAccounts(storage, session: account)
+        (accounts, cloud) = Self.makeAccounts(storage, session: account, active: true)
         generation += 1
+        watch.bind(accounts)
+        startCloud()
         BotsWidgetFeed.reset()
         WidgetCenter.shared.reloadAllTimelines()
     }
@@ -239,7 +277,7 @@ final class AppStore {
         case "plugins":
             accounts.selection = nil
             tab = .bots
-            marketplace = currentStore?.computer.id
+            marketplace = accounts.currentStore?.computer.id
         case "usage":
             accounts.selection = nil
             tab = .state
@@ -249,16 +287,17 @@ final class AppStore {
             tab = .bots
             showComputers = true
         case "screen":
-            currentStore?.screenRequest = ScreenRequest()
+            accounts.currentStore?.screenRequest = ScreenRequest()
         default:
             break
         }
     }
 
-    private static func makeAccounts(_ storage: SharedStore.Context, session: AccountSession) -> (AccountStore, CloudClient?) {
+    private static func makeAccounts(_ storage: SharedStore.Context, session: AccountSession, active: Bool) -> (AccountStore, CloudClient?) {
         let identity = storage.accountID == nil ? nil : try? DeviceIdentity.load(context: storage)
         let cloud = session.cloudClient(for: storage.accountID, identity: identity)
-        let accounts = AccountStore(storage: storage, clientKind: "ios", cloud: cloud)
+        let accounts = AccountStore(storage: storage, clientKind: "ios", cloud: cloud,
+                                    active: active)
         accounts.asksForAccess = true
         accounts.onConnected = { store in
             PushRegistrar.shared.syncDevice(with: store)
@@ -275,19 +314,6 @@ final class AppStore {
         accounts.onSent = { [weak accounts] ref, bot, progress in
             guard let store = accounts?.store(for: ref.computerId) else { return }
             LiveActivities.shared.sent(ref, bot: bot, progress: progress, store: store)
-        }
-        if let cloud {
-            // Signed in: make this iPhone known to the account, then list its computers.
-            Task { [weak accounts] in
-                do {
-                    try await cloud.registerDevice(name: UIDevice.current.name, platform: "ios")
-                } catch let error as CloudError where !error.isTransient {
-                    accounts?.lastError = error.localizedDescription
-                } catch {
-                    // Transient (network, busy cloud, token not ready): the next launch registers again.
-                }
-                await accounts?.refreshCloud()
-            }
         }
         return (accounts, cloud)
     }
@@ -315,6 +341,8 @@ final class AppStore {
 final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         UNUserNotificationCenter.current().delegate = self
+        // WCSession activates in `AppStore.shared`'s init, which runs at App init (the App's @State),
+        // before any watch message is delivered, so a message that launches the app with no scene is handled.
         let open = UNNotificationAction(identifier: "openConversation", title: "Open conversation", options: [.foreground])
         let review = UNNotificationAction(identifier: "reviewRequest", title: "Review request", options: [.foreground])
         UNUserNotificationCenter.current().setNotificationCategories([
