@@ -37,6 +37,11 @@ The recipient can use `send_message` for user-facing updates and its report. If 
 its final text becomes the main-chat report. The request notice shows completion
 status; it does not copy this user-facing report into a bot reply.
 
+Each independent request includes reporting guidance, even when it reuses a
+session that previously handled an ask. The ask's reply restrictions apply
+only to that ask; later user turns and independent requests can report in
+the recipient's chat normally.
+
 Accepted messages survive sender completion, Stop, disconnection and deletion. Recipient Stop or deletion cancels queued messages and stops running work; started work may have left partial changes. Outcomes update both notices; failures mark them as failed. The recipient uses its normal completion notifications. Messages have no ask timeout or automatic retry and are not replayed after host restart.
 
 Bot request chains can make at most eight handoffs. Both `message_bot` and
