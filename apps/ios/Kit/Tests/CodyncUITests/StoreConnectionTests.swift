@@ -180,7 +180,7 @@ import Testing
     }
     defer { store.retire() }
     store.setActive(true)
-    let offline = await waitForStoreCondition { store.connection == .offline("Can't reach") }
+    let offline = await waitForObservedCondition { store.connection == .offline("Can't reach") }
     try #require(offline)
     store.stop("b1")
     let subscriptions = await up.checkpoints()
@@ -215,12 +215,12 @@ import Testing
     }
     defer { store.retire() }
     store.setActive(true)
-    let offline = await waitForStoreCondition { store.connection == .offline("Can't reach") }
+    let offline = await waitForObservedCondition { store.connection == .offline("Can't reach") }
     try #require(offline)
     store.stop("b1")
     let preparing = await waitForTestEvent(requested.stream, matching: { $0 })
     try #require(preparing)
-    let waiting = await waitForStoreCondition { store.waiting == 1 }
+    let waiting = await waitForObservedCondition { store.waiting == 1 }
     try #require(waiting)
     let downCalls = await down.calls
     let before = await up.calls

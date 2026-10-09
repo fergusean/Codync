@@ -26,7 +26,7 @@ func waitForTestEvent<Event: Sendable>(_ events: AsyncStream<Event>, matching: @
 
 /// Observe store state instead of racing a two-second polling window on MainActor.
 @MainActor
-func waitForStoreCondition(_ condition: @escaping @MainActor () -> Bool) async -> Bool {
+func waitForObservedCondition(_ condition: @escaping @MainActor () -> Bool) async -> Bool {
     let observer = StoreConditionObserver(condition)
     defer { observer.stop() }
     return await waitForTestEvent(observer.events, matching: { $0 })
@@ -54,10 +54,11 @@ private final class StoreConditionObserver {
 
     private func observe() {
         guard !stopped else { return }
-        withObservationTracking {
-            sink.yield(condition())
+        let value = withObservationTracking {
+            condition()
         } onChange: { [weak self] in
             Task { @MainActor in self?.observe() }
         }
+        sink.yield(value)
     }
 }

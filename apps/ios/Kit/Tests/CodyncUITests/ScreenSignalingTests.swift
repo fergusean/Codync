@@ -172,36 +172,76 @@ private actor FailingSignalingTransport: HostTransport {
 private actor LateSignalingFailureTransport: HostTransport {
     private(set) var preparations = 0
     private var streams: [String: AsyncThrowingStream<Data, Error>.Continuation] = [:]
+    private var installedAnswers: Set<String> = []
+    private var answerWaiters: [String: AsyncStream<Bool>.Continuation] = [:]
     private let gateRecovery: Bool
-    private var preparing: CheckedContinuation<Void, Never>?
+    private let preparationGate: AsyncStream<Void>
+    private let preparationRelease: AsyncStream<Void>.Continuation
+    nonisolated let recoveryRequested: AsyncStream<Bool>
+    private let recoverySink: AsyncStream<Bool>.Continuation
 
-    init(gateRecovery: Bool = false) { self.gateRecovery = gateRecovery }
+    init(gateRecovery: Bool = false) {
+        self.gateRecovery = gateRecovery
+        let gate = AsyncStream<Void>.makeStream()
+        preparationGate = gate.stream
+        preparationRelease = gate.continuation
+        let requested = AsyncStream<Bool>.makeStream()
+        recoveryRequested = requested.stream
+        recoverySink = requested.continuation
+    }
 
-    func resumePreparation() { preparing?.resume(); preparing = nil }
+    func resumePreparation() { preparationRelease.yield(()) }
+
+    func answerInstalled(_ session: String) -> AsyncStream<Bool> {
+        let pair = AsyncStream<Bool>.makeStream()
+        if installedAnswers.contains(session) {
+            pair.continuation.yield(true)
+            pair.continuation.finish()
+        } else {
+            answerWaiters[session] = pair.continuation
+        }
+        return pair.stream
+    }
+
+    func failSignaling(_ session: String) {
+        streams.removeValue(forKey: session)?.finish(throwing: HostError.unreachable)
+    }
+
+    private func installed(_ session: String) {
+        guard installedAnswers.insert(session).inserted else { return }
+        if let waiter = answerWaiters.removeValue(forKey: session) {
+            waiter.yield(true)
+            waiter.finish()
+        }
+    }
 
     func call(_ method: String, body: Data, timeout: TimeInterval) async throws -> Data {
         switch method {
         case "screenPrepare":
             preparations += 1
             if gateRecovery && preparations == 2 {
-                await withCheckedContinuation { preparing = $0 }
+                recoverySink.yield(true)
+                for await _ in preparationGate { break }
+                try Task.checkCancellation()
             }
             return Data(#"{"session":"late-\#(preparations)","iceServers":[],"expiresAt":4102444800000,"trickle":true}"#.utf8)
         case "screenOffer":
             struct Offer: Decodable { let session: String; let sdp: String }
             let offer = try JSONDecoder().decode(Offer.self, from: body)
             let answer = try await Self.answer(offer.sdp)
-            let sink = streams[offer.session]
-            Task {
-                try? await Task.sleep(for: .milliseconds(100))
-                sink?.finish(throwing: HostError.unreachable)
-            }
             struct Answer: Encodable { let session: String; let sdp: String }
             return try JSONEncoder().encode(Answer(session: offer.session, sdp: answer))
+        case "screenCandidate":
+            struct Upload: Decodable { let session: String }
+            let upload = try JSONDecoder().decode(Upload.self, from: body)
+            // Candidate uploads start only after the phone's native answer completion.
+            installed(upload.session)
+            return Data("{}".utf8)
         case "screenClose":
             struct Close: Decodable { let session: String }
             let close = try JSONDecoder().decode(Close.self, from: body)
             streams.removeValue(forKey: close.session)?.finish()
+            answerWaiters.removeValue(forKey: close.session)?.finish()
             return Data("{}".utf8)
         default: return Data("{}".utf8)
         }
@@ -240,23 +280,43 @@ private actor LateSignalingFailureTransport: HostTransport {
 @Test(.timeLimit(.minutes(1))) @MainActor func signalingLossAfterAnswerDoesNotResetRecoveryUntilMediaIsLive() async throws {
     let transport = LateSignalingFailureTransport()
     let session = ScreenSession(client: HostClient(transport: transport), display: nil)
+    defer { session.close() }
     await session.start()
     #expect(session.phase == .connecting, "the initial answer was installed successfully")
-    try await waitUntil(attempts: 2000) {
+    for attempt in 1...4 {
+        let id = "late-\(attempt)"
+        let installations = await transport.answerInstalled(id)
+        let installed = await waitForTestEvent(installations, matching: { $0 })
+        try #require(installed)
+        #expect(session.track != nil, "the negotiated peer exists before its signaling is lost")
+        #expect(session.phase == (attempt == 1 ? .connecting : .reconnecting))
+        let preparations = await transport.preparations
+        #expect(preparations == attempt)
+        await transport.failSignaling(id)
+    }
+    let exhausted = await waitForObservedCondition {
         if case .failed = session.phase { return true }
         return false
     }
+    try #require(exhausted)
     let preparations = await transport.preparations
     #expect(preparations == 4, "one initial attempt and three retries, even when answers succeed")
-    session.close()
 }
 
 @Test(.timeLimit(.minutes(1))) @MainActor func fatalSignalingLossRetiresTheOldPeerBeforePreparingItsReplacement() async throws {
     let transport = LateSignalingFailureTransport(gateRecovery: true)
     let session = ScreenSession(client: HostClient(transport: transport), display: nil)
+    defer { session.close() }
     await session.start()
     #expect(session.track != nil)
-    try await waitUntil { let count = await transport.preparations; return count == 2 }
+    let installations = await transport.answerInstalled("late-1")
+    let installed = await waitForTestEvent(installations, matching: { $0 })
+    try #require(installed)
+    await transport.failSignaling("late-1")
+    let preparing = await waitForTestEvent(transport.recoveryRequested, matching: { $0 })
+    try #require(preparing)
+    let preparations = await transport.preparations
+    #expect(preparations == 2)
     #expect(session.phase == .reconnecting)
     #expect(session.track == nil, "the failed peer must close even while replacement preparation waits")
     session.close()
