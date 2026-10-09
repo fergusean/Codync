@@ -52,9 +52,15 @@ struct ChatView: View {
         } else if entries.isEmpty {
             StateView(kind: .noMessages, fullScreen: false).transition(.opacity)
         } else {
-            ForEach(entries) { entry in
-                ChatRow(entry: entry, isGroup: bot?.isGroup == true)
-                    .transition(.opacity)
+            ForEach(BotExchangeGroup.collapse(entries)) { item in
+                switch item {
+                case .entry(let entry):
+                    ChatRow(entry: entry, isGroup: bot?.isGroup == true)
+                        .transition(.opacity)
+                case .exchanges(let group):
+                    BotExchangeRow(group: group)
+                        .transition(.opacity)
+                }
             }
         }
     }
@@ -92,6 +98,29 @@ private struct ChatRow: View {
             .padding(.vertical, 8)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(fill, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+    }
+}
+
+/// The compact bot-to-bot line: the verb and the peer. Not tappable; the phone has the sheet.
+private struct BotExchangeRow: View {
+    let group: BotExchangeGroup
+    @Environment(WatchStore.self) private var store
+
+    var body: some View {
+        let failed = group.failed
+        let peer = store.bot(group.peerId)
+        let name = peer?.name ?? "A deleted bot"
+        HStack(spacing: 4) {
+            if failed { Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(Palette.danger) }
+            Text(group.title)
+            if let peer { CharacterAvatar(bot: peer, size: 14, animated: false) }
+            Text(name).fontWeight(.semibold)
+        }
+        .font(.caption2)
+        .foregroundStyle(failed ? Palette.danger : Palette.secondary)
+        .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(group.accessibilityLabel(peerName: name))
     }
 }
 

@@ -155,6 +155,25 @@ private enum WatchFailureCases {
     #expect(chat.bot.cwd.isEmpty)
 }
 
+@Test func botExchangeKeepsItsBotsWithoutItsText() throws {
+    var notice = entry("m", seq: 6, kind: "notice", final: nil)
+    let heading = "Asked Owen: " + String(repeating: "h", count: 3_000)
+    notice.data.text = heading + "\nReply from Owen:\nreply"
+    notice.data.heading = heading
+    notice.data.delegationId = "d1"
+    notice.data.sourceBotId = "b1"
+    notice.data.targetBotId = "b2"
+    notice.data.botMessage = BotMessage(sourceBotId: "b1", targetBotId: "b2", text: heading, reply: "reply")
+    notice.data.status = "completed"
+    let chat = WatchChat.build(scope: scope, bot: try bot("b1"), entries: [notice], answering: [:], fresh: true, now: t0)
+    let kept = try #require(chat.entries.first?.data)
+    #expect(kept.text == nil)
+    #expect(kept.botMessage == BotMessage(sourceBotId: "b1", targetBotId: "b2", text: ""))
+    #expect(kept.status == "completed")
+    let exchange = try #require(BotExchange(chat.entries[0]))
+    #expect(exchange.outcome == .done && exchange.reply == nil && exchange.peerId == "b2")
+}
+
 @Test func chatKeepsNewest25() throws {
     let entries = (1...40).map { entry("e\($0)", seq: Int64($0)) }
     let chat = WatchChat.build(scope: scope, bot: try bot("b1"), entries: entries, answering: [:], fresh: true, now: t0)

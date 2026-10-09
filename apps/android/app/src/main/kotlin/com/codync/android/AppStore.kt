@@ -580,7 +580,7 @@ class AppStore(application: Application) : AndroidViewModel(application) {
                 mutableState.update { it.copy(historyComplete = it.historyComplete + id) }
                 return@action
             }
-            val before = state.value.entries.filter { it.botId == id }.minOfOrNull(Entry::seq) ?: Long.MAX_VALUE
+            val before = state.value.entries.filter { it.botId == id && it.threadId == null }.minOfOrNull(Entry::seq) ?: Long.MAX_VALUE
             val active = ready()
             val response = active.call("history", buildJsonObject { put("botId", id); put("beforeSeq", before); put("limit", 100) })
             val entries = response.jsonObject.getValue("entries").jsonArray.map { Entry.decode(it.jsonObject) }
@@ -941,7 +941,7 @@ class AppStore(application: Application) : AndroidViewModel(application) {
         done()
     }
     /** Queries belong to the account runtime as well as their screen; retiring either cancels them. */
-    private suspend fun hostQuery(method: String, payload: JsonObject, timeoutMillis: Long = 20_000,
+    internal suspend fun hostQuery(method: String, payload: JsonObject, timeoutMillis: Long = 20_000,
         expectedGeneration: Int = state.value.generation): JsonElement {
         val request = contextScope.async {
             check(state.value.generation == expectedGeneration) { "The active account changed." }

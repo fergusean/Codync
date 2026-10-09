@@ -74,10 +74,14 @@ import java.util.Date
     if (connectorItem != null) { ConnectorInstaller(requireNotNull(connectorItem), state, store, requestId = setupEntry) {
         connectorItem = null; setupEntry = null
     }; return }
+    var botChat by remember(bot.id) { mutableStateOf<String?>(null) }
     var menu by remember { mutableStateOf(false) }
     var confirm by remember { mutableStateOf<String?>(null) }
     val entries = state.entries.filter { it.botId == bot.id &&
         (if (thread != null) it.threadId == thread && (state.trace || it.isChat) else state.trace || it.threadId == null && it.isChat) }
+    val items = remember(entries, thread, state.trace) {
+        if (thread == null && !state.trace) groupBotExchanges(entries) else entries.map { ChatItem.Single(it) }
+    }
     val pending = state.pending.filter { it.botId == bot.id && it.threadId == state.thread }
     val list = rememberLazyListState()
     var messageViewport by remember { mutableStateOf(Rect.Zero) }
@@ -106,10 +110,10 @@ import java.util.Date
     fun back() { if (closeThread != null) closeThread() else if (state.trace) store.showTrace(false) else store.openBot(null) }
     BackHandler(onBack = ::back)
     LaunchedEffect(bot.id, state.thread, state.trace) {
-        if (entries.isNotEmpty() || pending.isNotEmpty()) list.scrollToItem(maxOf(0, entries.size + pending.size))
+        if (entries.isNotEmpty() || pending.isNotEmpty()) list.scrollToItem(maxOf(0, items.size + pending.size))
     }
     LaunchedEffect(entries.lastOrNull()?.id, entries.lastOrNull()?.rev, pending.lastOrNull()?.nonce) {
-        if (following && (entries.isNotEmpty() || pending.isNotEmpty())) list.animateScrollToItem(entries.size + pending.size)
+        if (following && (entries.isNotEmpty() || pending.isNotEmpty())) list.animateScrollToItem(items.size + pending.size)
     }
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(if (closeThread == null) Modifier.safeDrawingPadding().imePadding() else Modifier) {
@@ -180,7 +184,7 @@ import java.util.Date
                     if (thread != null && !state.trace) Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         if (root != null) EntryRow(root, state, store, messageViewport,
                             { id, app -> setupEntry = id; appName = app.name; appSlug = app.slug },
-                            { id, item -> setupEntry = id; connectorItem = item })
+                            { id, item -> setupEntry = id; connectorItem = item }, { botChat = it })
                         else Text("The original message is not available in the saved history.",
                             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -192,35 +196,40 @@ import java.util.Date
                     }
                     if (bot.id !in state.historyComplete && (thread == null || root == null)) TextButton(
                     enabled = "history" !in state.busy, onClick = store::loadHistory) { Text(if ("history" in state.busy) "Loading…" else "Older messages") } }
-                itemsIndexed(entries, key = { _, entry -> entry.id }) { index, entry ->
+                itemsIndexed(items, key = { _, item -> item.entry.id }) { index, item ->
+                    val entry = item.entry
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        if (thread == null && entry.createdAt > 0 && (index == 0 || entry.createdAt - entries[index - 1].createdAt > 3_600_000))
+                        if (thread == null && entry.createdAt > 0 && (index == 0 || entry.createdAt - items[index - 1].entry.createdAt > 3_600_000))
                             Text(conversationDate(entry.createdAt), Modifier.fillMaxWidth().padding(top = 18.dp, bottom = 6.dp),
                                 textAlign = androidx.compose.ui.text.style.TextAlign.Center, style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = .7f))
-                        EntryRow(entry, state, store, messageViewport,
+                        if (item is ChatItem.Exchanges) BotMessageRow(item.group, state) { botChat = item.group.peer }
+                        else EntryRow(entry, state, store, messageViewport,
                             { id, app -> setupEntry = id; appName = app.name; appSlug = app.slug },
-                            { id, item -> setupEntry = id; connectorItem = item })
+                            { id, connector -> setupEntry = id; connectorItem = connector }, { botChat = it })
                     }
                 }
                 items(pending, key = { "local-" + it.nonce }) { send -> PendingRow(send, state, store) }
                 item { if (thread == null && entries.isEmpty() && pending.isEmpty()) Text("Start a conversation", color = MaterialTheme.colorScheme.onSurfaceVariant) }
             }
-            if (!following && !atBottom) TextButton(onClick = { following = true; scope.launch { list.animateScrollToItem(entries.size + pending.size) } }) { Text("Latest messages") }
+            if (!following && !atBottom) TextButton(onClick = { following = true; scope.launch { list.animateScrollToItem(items.size + pending.size) } }) { Text("Latest messages") }
             if (!state.trace) key(bot.id, state.thread) { Box(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) { MessageComposer(bot, state, store) } }
         }
     }
+    botChat?.let { peer -> CodyncSheet(botPairTitle(bot.id, peer, state.bots), close = { botChat = null }) { close ->
+        BotConversationScreen(bot.id, peer, state, store, close)
+    } }
 }
 
 @Composable private fun EntryRow(entry: Entry, state: AppState, store: AppStore, viewport: Rect,
-    openApp: (String, ComposioApp) -> Unit, install: (String, MarketConnector) -> Unit) {
-    entry.botMessage?.let { message ->
-        BotMessageRow(entry, message, showReply = !entry.hasRecipientReply(state.entries))
+    openApp: (String, ComposioApp) -> Unit, install: (String, MarketConnector) -> Unit,
+    openBotChat: (String) -> Unit) {
+    entry.botExchange?.let { exchange ->
+        BotMessageRow(BotExchangeGroup(exchange, 1, exchange.outcome is BotOutcome.Failed), state) { openBotChat(exchange.peer) }
         return
     }
     val user = entry.kind == "user"
     val notice = entry.kind == "notice"
-    val botReply = entry.isRecipientReply(state.entries)
     val actionable = entry.isChat && entry.kind != "permission"
     val context = LocalContext.current
     val reactions = entry.data["reactions"]?.jsonArray?.map { it.jsonPrimitive.content }.orEmpty()
@@ -228,9 +237,6 @@ import java.util.Date
         contentAlignment = if (user) Alignment.CenterEnd else if (notice) Alignment.Center else Alignment.CenterStart) {
         key(state.contextId, state.generation, state.thread, state.trace, entry.id) {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            if (botReply) Text("Reply from " + (state.bots.firstOrNull { it.id == entry.botId }?.name ?: "Bot"),
-                Modifier.padding(start = 14.dp), style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
             MessageActionBubble(viewport, enabled = actionable, reactions = reactions, reacting = "react:" + entry.id in state.busy,
                 react = { emoji -> store.command("react", body("entryId" to entry.id, "emoji" to emoji), "react:" + entry.id) },
                 reply = if (state.thread == null && entry.threadId == null) ({ store.openBot(entry.botId, entry.id) }) else null,
@@ -239,7 +245,7 @@ import java.util.Date
                     .setPrimaryClip(android.content.ClipData.newPlainText("Message", entry.text)) },
                 modifier = Modifier.widthIn(max = 680.dp)
                 .background(if (notice) androidx.compose.ui.graphics.Color.Transparent else if (user) MaterialTheme.colorScheme.surfaceContainerHighest
-                    else if (botReply) botMessageBackground else MaterialTheme.colorScheme.surfaceContainer,
+                    else MaterialTheme.colorScheme.surfaceContainer,
                     androidx.compose.foundation.shape.RoundedCornerShape(18.dp)),
                 padding = if (notice) 6.dp else 14.dp) {
                 val author = entry.data["author"]?.jsonPrimitive?.contentOrNull
@@ -270,28 +276,6 @@ import java.util.Date
             }
             }
         }
-    }
-}
-
-@Composable private fun BotMessageRow(entry: Entry, message: BotMessage, showReply: Boolean = true) {
-    Column(Modifier.fillMaxWidth().padding(end = 24.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        BotMessageBubble(message.label, message.body)
-        if (message.detail.isNotEmpty()) SelectionContainer {
-            Text(message.detail, Modifier.padding(start = 14.dp), style = MaterialTheme.typography.bodySmall,
-                color = if (entry.data["style"]?.jsonPrimitive?.contentOrNull == "error") MaterialTheme.colorScheme.error
-                    else MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        if (showReply) message.reply?.let { reply -> BotMessageBubble(reply.label, reply.body) }
-    }
-}
-
-@Composable private fun BotMessageBubble(label: String, text: String) {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(label, Modifier.padding(start = 14.dp), style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Column(Modifier.widthIn(max = 680.dp)
-            .background(botMessageBackground, androidx.compose.foundation.shape.RoundedCornerShape(22.dp))
-            .padding(14.dp)) { MarkdownText(text) }
     }
 }
 
@@ -348,7 +332,7 @@ import java.util.Date
     }
 }
 
-private fun conversationDate(milliseconds: Long): String {
+internal fun conversationDate(milliseconds: Long): String {
     val date = Instant.ofEpochMilli(milliseconds).atZone(ZoneId.systemDefault()).toLocalDate()
     val today = LocalDate.now()
     val day = when (date) {

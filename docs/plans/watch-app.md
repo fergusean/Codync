@@ -53,7 +53,7 @@ New `CodyncKit/Models/Watch.swift`, shared by both sides; all types are `Codable
   - An unknown state or failure from a newer phone decodes as `unknown` ("Update Codync on Apple Watch"), never as *Needs update*, so additive changes need no floor bump.
 - **`WatchChat { scope, botId, bot, entries: [Entry], answering: [String: String], recentNonces: [String], fresh, builtAt }`.** `recentNonces` lists the nonces of the newest 50 user messages, so a send older than `entries` is still confirmed.
 
-Reuse `Bot` and `Entry` rather than lean copies. Their lenient decoding (`Models.swift:489`) and helpers then work on the watch unchanged: `isChat`, `isWorking`, `needsInput`, `BotMessage`, `AvatarWithStatus`, `GroupAvatar`. Builders scrub before encoding:
+Reuse `Bot` and `Entry` rather than lean copies. Their lenient decoding (`Models.swift:489`) and helpers then work on the watch unchanged: `isChat`, `isWorking`, `needsInput`, `BotExchange`, `AvatarWithStatus`, `GroupAvatar`. Builders scrub before encoding:
 
 - **`WatchSnapshot.build`:**
   - Bots in `store.roster` order, at most 40.
@@ -65,7 +65,8 @@ Reuse `Bot` and `Entry` rather than lean copies. Their lenient decoding (`Models
   - `EntryData` keeps only these fields:
     - `text` (≤ 1,500), `final`, `status`, `clientNonce`
     - `title` (≤ 300), `toolKind`, `options`, `selected`
-    - `style`, `heading`, `delegationId`, `author`, `callSeconds`
+    - `style`, `author`, `callSeconds`
+    - for a bot-exchange notice (`botMessage` set): `botMessage`, `sourceBotId`, `targetBotId`, `delegationId` and `status` only; `heading` is "" and `text` is dropped, so the row still parses without the request or reply
     - attachment names
   - It drops `diffs`, `output`, `detail`, `locations`, plans and `connectionRequest`.
 - **Size budget:** both builders drop items until the encoded envelope is ≤ 48 KiB, below WC's payload limit (`WCError.payloadTooLarge`): faces first, then the roster's tail; a chat's oldest entries.

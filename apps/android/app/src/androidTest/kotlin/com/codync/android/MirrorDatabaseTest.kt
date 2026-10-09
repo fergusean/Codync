@@ -96,25 +96,80 @@ class MirrorDatabaseTest {
         assertEquals(1, mirror.snapshot().entries.size)
     }
 
-    @Test fun upgradingTheMirrorRetainsMessagesAndBackfillsNonceReconciliation() {
+    private fun entry(id: String, seq: Long, rev: Long, thread: String? = null): Entry =
+        Entry(id, seq, "bot", rev = rev, kind = "notice", threadId = thread)
+
+    @Test fun aResumedConnectionDropsNewEntriesBelowItsFloor() {
+        mirror.apply(MirrorEvent.BotChanged(Bot("bot", "Bot", rev = 1)))
+        mirror.receive(listOf(entry("a", 10, 2), entry("b", 11, 3), entry("t", 2, 4, thread = "thread")))
+        mirror.apply(MirrorEvent.EntryChanged(entry("b", 11, 5)))
+        mirror.apply(MirrorEvent.Hello("database", 100, JsonObject(emptyMap()), null))
+        mirror.apply(listOf(
+            MirrorEvent.EntryChanged(entry("old", 4, 50)), // rewritten old notice
+            MirrorEvent.EntryChanged(entry("a", 10, 51)), // held entry updates
+            MirrorEvent.EntryChanged(entry("new", 12, 52)),
+            MirrorEvent.EntryChanged(entry("sub", 3, 53, thread = "thread")),
+        ))
+        assertEquals(setOf("a", "b", "t", "new", "sub"), mirror.snapshot().entries.map { it.id }.toSet())
+        assertEquals(53, mirror.snapshot().rev)
+        assertEquals(51L, mirror.snapshot().entries.single { it.id == "a" }.rev)
+    }
+
+    @Test fun aFreshCatchUpHasNoFloorEvenAfterAnRpcUpsert() {
+        mirror.apply(MirrorEvent.BotChanged(Bot("bot", "Bot", rev = 1)))
+        mirror.apply(MirrorEvent.Hello("database", 100, JsonObject(emptyMap()), null))
+        mirror.receive(listOf(entry("sent", 30, 90)))
+        mirror.apply(listOf(MirrorEvent.EntryChanged(entry("x", 20, 2)), MirrorEvent.EntryChanged(entry("y", 5, 3))))
+        assertEquals(setOf("sent", "x", "y"), mirror.snapshot().entries.map { it.id }.toSet())
+    }
+
+    @Test fun theFloorIsReplacedPerConnectionAndClearedWithTheBot() {
+        mirror.apply(MirrorEvent.BotChanged(Bot("bot", "Bot", rev = 1)))
+        mirror.apply(MirrorEvent.EntryChanged(entry("a", 10, 2)))
+        mirror.apply(MirrorEvent.Hello("database", 100, JsonObject(emptyMap()), null))
+        mirror.apply(MirrorEvent.EntryChanged(entry("low", 4, 50)))
+        assertNull(mirror.snapshot().entries.find { it.id == "low" })
+        mirror.rewind()
+        mirror.apply(MirrorEvent.Hello("database", 100, JsonObject(emptyMap()), null))
+        mirror.apply(MirrorEvent.EntryChanged(entry("low", 4, 51)))
+        assertNotNull(mirror.snapshot().entries.find { it.id == "low" })
+    }
+
+    @Test fun upgradingFromV2ClearsEntriesAndHistoryButKeepsBotsAndPendingSends() = upgradeFrom(2)
+
+    @Test fun upgradingFromV3ClearsEntriesAndHistoryButKeepsBotsAndPendingSends() = upgradeFrom(3)
+
+    private fun upgradeFrom(version: Int) {
         mirror.close()
         val path = File(directory, "mirror-$computer.db")
         path.delete()
         SQLiteDatabase.openOrCreateDatabase(path, null).use { db ->
             db.execSQL("CREATE TABLE meta(k TEXT PRIMARY KEY, v TEXT NOT NULL)")
             db.execSQL("CREATE TABLE bots(id TEXT PRIMARY KEY, rev INTEGER NOT NULL, deleted INTEGER NOT NULL, payload TEXT NOT NULL)")
-            db.execSQL("CREATE TABLE entries(id TEXT PRIMARY KEY, bot_id TEXT NOT NULL, thread_id TEXT, seq INTEGER NOT NULL, rev INTEGER NOT NULL, payload TEXT NOT NULL)")
+            db.execSQL("CREATE TABLE entries(id TEXT PRIMARY KEY, bot_id TEXT NOT NULL, thread_id TEXT, seq INTEGER NOT NULL, rev INTEGER NOT NULL, payload TEXT NOT NULL, nonce TEXT)")
             db.execSQL("CREATE TABLE pending(nonce TEXT PRIMARY KEY, created INTEGER NOT NULL, payload TEXT NOT NULL)")
             db.execSQL("CREATE TABLE history(lane TEXT PRIMARY KEY)")
+            db.insertOrThrow("meta", null, ContentValues().apply { put("k", "rev"); put("v", "9") })
+            db.insertOrThrow("bots", null, ContentValues().apply {
+                put("id", "bot"); put("rev", 1); put("deleted", 0); put("payload", WireJson.encodeToString(Bot("bot", "Bot", rev = 1)))
+            })
             db.insertOrThrow("entries", null, ContentValues().apply {
                 put("id", "message"); put("bot_id", "bot"); put("seq", 1); put("rev", 3)
                 put("payload", WireJson.encodeToString(entry(3, nonce = "stable")))
             })
-            db.version = 1
+            db.insertOrThrow("pending", null, ContentValues().apply {
+                put("nonce", "queued"); put("created", 1)
+                put("payload", WireJson.encodeToString(PendingSend("queued", "bot", text = "hi", createdAt = 1)))
+            })
+            db.insertOrThrow("history", null, ContentValues().apply { put("lane", "bot") })
+            db.version = version
         }
         mirror = MirrorDatabase(context, directory, computer)
-        assertEquals("stable", mirror.snapshot().entries.single().clientNonce)
-        mirror.save(PendingSend("stable", "bot", text = "message", createdAt = 1))
-        assertTrue(mirror.snapshot().pending.isEmpty())
+        val snapshot = mirror.snapshot()
+        assertTrue(snapshot.entries.isEmpty())
+        assertEquals(0, snapshot.rev)
+        assertFalse(mirror.historyComplete("bot"))
+        assertEquals("Bot", snapshot.bots.single().name)
+        assertEquals("queued", snapshot.pending.single().nonce)
     }
 }

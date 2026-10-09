@@ -10,6 +10,7 @@ import com.codync.android.core.MirrorEvent
 import com.codync.android.core.MirrorSnapshot
 import com.codync.android.core.PendingSend
 import com.codync.android.core.SendStatus
+import com.codync.android.core.outsideLoadedWindow
 import com.codync.android.core.WireJson
 import java.io.File
 import kotlinx.serialization.encodeToString
@@ -18,7 +19,9 @@ import kotlinx.serialization.json.jsonObject
 
 /** All entity writes, send reconciliation and the event cursor commit together. */
 class MirrorDatabase(context: Context, directory: File, computerId: String) :
-    SQLiteOpenHelper(context, File(directory, "mirror-$computerId.db").absolutePath, null, 2) {
+    SQLiteOpenHelper(context, File(directory, "mirror-$computerId.db").absolutePath, null, 4) {
+    /** Per-connection floors for the outside-window rule, replaced at every hello. */
+    private var floors: Map<String, Long> = emptyMap()
     init { require(computerId.matches(Regex("[A-Za-z0-9_-]{22}"))) }
 
     override fun onCreate(db: SQLiteDatabase) {
@@ -31,12 +34,13 @@ class MirrorDatabase(context: Context, directory: File, computerId: String) :
         db.execSQL("CREATE TABLE history(lane TEXT PRIMARY KEY)")
     }
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        require(oldVersion == 1 && newVersion == 2) { "Unsupported mirror schema" }
-        db.execSQL("ALTER TABLE entries ADD COLUMN nonce TEXT")
-        db.execSQL("CREATE INDEX entries_nonce ON entries(bot_id, nonce)")
-        rows(db, "SELECT payload FROM entries") { WireJson.decodeFromString<Entry>(it) }.forEach { entry ->
-            if (entry.kind == "user") db.update("entries", ContentValues().apply { put("nonce", entry.clientNonce) }, "id=?", arrayOf(entry.id))
+        require(newVersion == 4 && oldVersion in 1..3) { "Unsupported mirror schema" }
+        if (oldVersion == 1) {
+            db.execSQL("ALTER TABLE entries ADD COLUMN nonce TEXT")
+            db.execSQL("CREATE INDEX entries_nonce ON entries(bot_id, nonce)")
         }
+        // 3-4: drops mirrors that held out-of-window notices and earlier bot-exchange notice shapes (the cached `data` changed); bots stay, history reloads.
+        dropMirroredEntries(db)
     }
 
     @Synchronized fun snapshot(): MirrorSnapshot {
@@ -55,7 +59,7 @@ class MirrorDatabase(context: Context, directory: File, computerId: String) :
 
     @Synchronized fun setStamp(hostId: String, stamp: String) = transaction { db ->
         if (meta(db, "hostId")?.let { it != hostId } == true) reset(db)
-        if (meta(db, "stamp")?.let { it != stamp } == true) setMeta(db, "rev", "0")
+        if (meta(db, "stamp")?.let { it != stamp } == true) { setMeta(db, "rev", "0"); floors = emptyMap() }
         setMeta(db, "hostId", hostId)
         setMeta(db, "stamp", stamp)
     }
@@ -70,9 +74,12 @@ class MirrorDatabase(context: Context, directory: File, computerId: String) :
                 setMeta(db, "usage", event.usage.toString())
                 event.screen?.let { setMeta(db, "screen", it.toString()) }
                 // Hello's head revision precedes catch-up; it is never a checkpoint.
+                // The stored cursor is what this connection requested as `since`; only a resumed one has a floor.
+                val since = meta(db, "rev")?.toLong() ?: 0
+                floors = if (since > 0) snapshotFloors(db, since) else emptyMap()
             }
             is MirrorEvent.BotChanged -> { writeBot(db, event.bot); bump(db, event.bot.rev) }
-            is MirrorEvent.EntryChanged -> { writeEntry(db, event.entry); bump(db, event.entry.rev) }
+            is MirrorEvent.EntryChanged -> { if (!outsideWindow(db, event.entry)) writeEntry(db, event.entry); bump(db, event.entry.rev) }
             is MirrorEvent.Usage -> setMeta(db, "usage", event.value.toString())
             is MirrorEvent.Screen -> setMeta(db, "screen", event.value.toString())
             MirrorEvent.Resync, MirrorEvent.Ignored -> Unit
@@ -120,6 +127,7 @@ class MirrorDatabase(context: Context, directory: File, computerId: String) :
             rows(db, "SELECT payload FROM pending") { WireJson.decodeFromString<PendingSend>(it) }
                 .filter { it.botId == bot.id }.forEach { db.delete("pending", "nonce=?", arrayOf(it.nonce)) }
             db.delete("history", "lane=?", arrayOf(bot.id))
+            floors = floors - bot.id
         }
     }
     private fun writeEntry(db: SQLiteDatabase, entry: Entry) {
@@ -134,7 +142,27 @@ class MirrorDatabase(context: Context, directory: File, computerId: String) :
         }, SQLiteDatabase.CONFLICT_REPLACE) != -1L) { "Couldn't save the conversation update." }
         entry.clientNonce?.takeIf { entry.kind == "user" && it.isNotEmpty() }?.let { db.delete("pending", "nonce=?", arrayOf(it)) }
     }
+    private fun dropMirroredEntries(db: SQLiteDatabase) {
+        db.delete("entries", null, null)
+        db.delete("history", null, null)
+        setMeta(db, "rev", "0")
+    }
+    private fun outsideWindow(db: SQLiteDatabase, entry: Entry): Boolean {
+        val known = db.rawQuery("SELECT 1 FROM entries WHERE id=?", arrayOf(entry.id)).use { it.moveToFirst() }
+        return outsideLoadedWindow(entry, known, floors[entry.botId])
+    }
+    /** Lowest persisted main-chat seq per bot; pending sends live in their own table, so every row counts. */
+    /** Only rows the mirror had at `since`: a send's newer RPC response comes again in this catch-up. */
+    private fun snapshotFloors(db: SQLiteDatabase, since: Long): Map<String, Long> {
+        val result = mutableMapOf<String, Long>()
+        db.rawQuery("SELECT bot_id, MIN(seq) FROM entries WHERE thread_id IS NULL AND seq>0 AND rev<=? GROUP BY bot_id",
+            arrayOf(since.toString())).use {
+            while (it.moveToNext()) result[it.getString(0)] = it.getLong(1)
+        }
+        return result
+    }
     private fun reset(db: SQLiteDatabase) {
+        floors = emptyMap()
         listOf("bots", "entries", "history").forEach { db.delete(it, null, null) }
         setMeta(db, "rev", "0")
         db.delete("meta", "k IN ('usage','screen')", null)

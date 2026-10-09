@@ -394,6 +394,11 @@ extension Entry {
         kept.options = data.options
         kept.selected = data.selected
         kept.style = data.style
+        // The watch draws the row only: the bots and status, never the request or reply.
+        if let message = data.botMessage {
+            kept.text = nil
+            kept.botMessage = BotMessage(sourceBotId: message.sourceBotId, targetBotId: message.targetBotId, text: "")
+        }
         kept.author = data.author
         kept.callSeconds = data.callSeconds
         kept.attachments = data.attachments?.map { Attachment(id: $0.id, name: $0.name, size: 0) }

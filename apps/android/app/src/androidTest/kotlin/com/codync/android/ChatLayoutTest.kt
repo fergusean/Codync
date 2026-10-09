@@ -21,66 +21,34 @@ import java.io.File
 class ChatLayoutTest {
     @get:Rule val compose = createAndroidComposeRule<MainActivity>()
 
-    @Test fun oneWayBotMessagesShowAttributionWithoutAStatusLine() {
+    @Test fun botExchangesShowACompactRowThatOpensTheConversationSheet() {
         assumeTrue(Build.PRODUCT.startsWith("sdk"))
         val store = ViewModelProvider(compose.activity)[AppStore::class.java]
-        val bot = Bot("handoff-preview", "Dex")
+        val bot = Bot("egan", "Egan")
+        val peer = Bot("owen", "Owen", avatarColor = "green")
         val body = "Urgent. Investigate the connection error."
-        val heading = "Message from Miles: $body"
-        val detail = "Recipient stopped. Partial work may have happened."
-        val entry = Entry("bot-message", 1, bot.id, rev = 1, kind = "notice", data = buildJsonObject {
-            put("text", "$heading\n$detail"); put("heading", heading); put("delegationId", "request"); put("style", "error")
-        })
-        val state = AppState(loading = false, selectedBot = bot.id, bots = listOf(bot),
-            connection = LinkState.Ready(HostRoute.Direct), actualConnection = LinkState.Ready(HostRoute.Direct),
-            historyComplete = setOf(bot.id), entries = listOf(entry))
-        compose.runOnUiThread { compose.activity.setContent { CodyncTheme { ChatScreen(state, store, {}) } } }
-        val label = compose.onNodeWithText("Message from Miles").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
-        val message = compose.onNodeWithText(body).assertIsDisplayed().fetchSemanticsNode().boundsInRoot
-        assertTrue(label.bottom <= message.top)
-        compose.onNodeWithText(detail).assertDoesNotExist()
-        compose.onNodeWithText(heading).assertDoesNotExist()
-        if (InstrumentationRegistry.getArguments().getString("layoutSnapshots") == "true") {
-            val bitmap = compose.onRoot().captureToImage().asAndroidBitmap()
-            File(compose.activity.cacheDir, "bot-message-preview.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
-        }
-    }
-
-    @Test fun botRepliesAppearBelowTheRequestInSeparateBubbles() {
-        assumeTrue(Build.PRODUCT.startsWith("sdk"))
-        val store = ViewModelProvider(compose.activity)[AppStore::class.java]
-        val bot = Bot("reply-preview", "Dex")
-        val body = "Investigate the connection error."
-        val heading = "Request from Miles: $body"
         val answer = "The caller cancelled while audio was connecting."
-        val entry = Entry("bot-reply", 1, bot.id, rev = 1, kind = "notice", data = buildJsonObject {
-            put("text", "$heading\nReply from Dex:\n$answer"); put("heading", heading)
-            put("delegationId", "request"); put("status", "completed")
+        val entry = Entry("bot-message", 1, bot.id, rev = 1, kind = "notice", data = buildJsonObject {
+            val heading = "Asked Owen: $body"
+            put("text", "$heading\nReply from Owen:\n$answer"); put("heading", heading); put("status", "completed")
+            put("delegationId", "request"); put("sourceBotId", bot.id); put("targetBotId", peer.id)
+            put("botMessage", buildJsonObject { put("sourceBotId", bot.id); put("targetBotId", peer.id); put("text", body); put("reply", answer) })
         })
-        val state = AppState(loading = false, selectedBot = bot.id, bots = listOf(bot),
+        val state = AppState(loading = false, selectedBot = bot.id, bots = listOf(bot, peer),
             connection = LinkState.Ready(HostRoute.Direct), actualConnection = LinkState.Ready(HostRoute.Direct),
             historyComplete = setOf(bot.id), entries = listOf(entry))
         compose.runOnUiThread { compose.activity.setContent { CodyncTheme { ChatScreen(state, store, {}) } } }
-        val request = compose.onNodeWithText(body).assertIsDisplayed().fetchSemanticsNode().boundsInRoot
-        val attribution = compose.onNodeWithText("Reply from Dex").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
-        val reply = compose.onNodeWithText(answer).assertIsDisplayed().fetchSemanticsNode().boundsInRoot
-        assertTrue(request.bottom <= attribution.top)
-        assertTrue(attribution.bottom <= reply.top)
-        val fullReply = Entry("full-reply", 2, bot.id, rev = 2, kind = "agent", data = buildJsonObject {
-            put("text", answer); put("final", true)
-        })
-        compose.runOnUiThread { compose.activity.setContent {
-            CodyncTheme { ChatScreen(state.copy(entries = listOf(entry, fullReply)), store, {}) }
-        } }
-        compose.onAllNodesWithText("Reply from Dex").assertCountEquals(1)
-        compose.onAllNodesWithText(answer).assertCountEquals(1)
-        compose.onNode(hasText(answer) and hasClickAction()).performTouchInput { longClick(Offset(4f, 4f)) }
-        compose.onNodeWithText("Reply in thread").assertIsDisplayed()
-        compose.onNodeWithText("Show what it did").assertIsDisplayed()
-        InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(android.view.KeyEvent.KEYCODE_BACK)
+        compose.onNodeWithText("Messaged").assertIsDisplayed()
+        compose.onNodeWithText("Owen").assertIsDisplayed()
+        compose.onNodeWithText(body).assertDoesNotExist()
+        compose.onNode(hasText("Messaged") and hasClickAction()).performClick()
+        compose.waitUntil(5_000) { compose.onAllNodesWithText(body).fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithText(answer).assertIsDisplayed()
+        compose.onNodeWithContentDescription("Close conversation").assertIsDisplayed().performClick()
+        compose.waitUntil(5_000) { compose.onAllNodesWithText(body).fetchSemanticsNodes().isEmpty() }
         if (InstrumentationRegistry.getArguments().getString("layoutSnapshots") == "true") {
             val bitmap = compose.onRoot().captureToImage().asAndroidBitmap()
-            File(compose.activity.cacheDir, "bot-reply-preview.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+            File(compose.activity.cacheDir, "bot-exchange-preview.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
         }
     }
 
