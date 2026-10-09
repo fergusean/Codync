@@ -76,6 +76,22 @@ same way; the shared desktop behavior covers macOS and Linux.
 
 ## Development
 
+SSH host discovery preserves the remote login shell's `PATH`, then searches
+`/opt/homebrew/bin`, `/usr/local/bin`, `/home/linuxbrew/.linuxbrew/bin`,
+`~/.local/bin`, and `/Applications/Codync.app/Contents/Resources` (Electron) or
+`Contents/MacOS` (older native apps). Custom prefixes or relocated app bundles
+must expose `codync-host` through the remote login shell's `PATH`.
+Managed tunnels use `ssh -S none` to bypass connection sharing: the app's SSH
+child must own the listening socket and stay alive until disconnect. This keeps
+`ControlMaster` / `ControlPersist` in the user's config from transferring the
+forward to a shared master that outlives the app.
+
+For a read-only macOS integration check against an already trusted SSH computer,
+run `node --experimental-strip-types tools/ssh-e2e.mjs <ssh-alias>` from
+`apps/desktop`. It checks discovery, listener ownership, host identity, API
+authentication and sync, SSE, disconnect/reconnect, and an occupied local port.
+It uses port 19222 on the remote computer and leaves bots and settings unchanged.
+
 ```sh
 cd apps/desktop
 npm ci
