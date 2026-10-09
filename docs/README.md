@@ -11,6 +11,8 @@ Source review, a passing build, local integration tests and production acceptanc
 | Understand clients, host, cloud and data ownership | [Architecture](architecture/overview.md) |
 | Work on the macOS, Linux and Windows desktop app (Electron) | [Desktop app](architecture/desktop-app.md) |
 | Build, install, restart and run checks | [Development](guides/development.md) |
+| Upgrade Sean's local app and private infrastructure | [Local upgrade guide](guides/local-upgrades.md) |
+| Plan and build Android | [Android plan](plans/android-app.md), [Android status](../apps/android/README.md) |
 | Test a phone over Cloudflare instead of LAN | [Cloudflare testing](guides/cloudflare-testing.md) |
 | Configure dev/main or deploy the services | [Environments and deployment](guides/environments-and-deployment.md) |
 | Run the host on a Linux server or cloud VM | [Linux servers](guides/linux-servers.md) |

@@ -234,6 +234,30 @@ mod tests {
     use super::*;
 
     #[test]
+    fn phone_streams_hold_pushes_until_the_last_one_closes() {
+        let dir = std::env::temp_dir().join(format!("codync-phone-events-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).expect("temp dir");
+        let hub = Hub::new(
+            crate::store::Store::open(std::path::Path::new(":memory:")).expect("store"),
+            "test".into(),
+            crate::remote::identity::Identity::load_or_create(&dir).expect("identity"),
+            "test".into(),
+            19222,
+        );
+        let desktop = events_stream(&hub, 0, Some("macos"), &Caller::Local).expect("desktop events");
+        assert!(!hub.ios_connected());
+        let android = events_stream(&hub, 0, Some("android"), &Caller::Local).expect("Android events");
+        let ios = events_stream(&hub, 0, Some("ios"), &Caller::Local).expect("iOS events");
+        assert!(hub.ios_connected());
+        drop(android);
+        assert!(hub.ios_connected(), "the iOS phone remains connected");
+        drop(ios);
+        assert!(!hub.ios_connected(), "desktop streams do not hold phone alerts");
+        drop(desktop);
+        let _ = std::fs::remove_dir_all(dir);
+    }
+
+    #[test]
     fn only_loopback_counts_as_this_computer() {
         let ip = |s: &str| s.parse::<IpAddr>().expect("test addresses are valid");
         assert!(is_loopback(ip("127.0.0.1")));
