@@ -2,7 +2,7 @@
 
 use super::{Actor, Cmd};
 use anyhow::{Result, bail};
-use serde_json::json;
+use serde_json::{Value, json};
 use std::time::Duration;
 use tokio::sync::mpsc;
 use tokio::time::Instant;
@@ -26,6 +26,11 @@ impl Lifecycle {
 pub(super) enum LiveSession {
     /// A fork or partially prepared session may still own adapter resources.
     Preparing,
+    /// Allocation succeeded; model selection can retry without replacing the session.
+    PendingModel {
+        system: Option<String>,
+        response: Value,
+    },
     Ready {
         system: Option<String>,
     },

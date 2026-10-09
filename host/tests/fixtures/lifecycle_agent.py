@@ -96,7 +96,8 @@ def prompt(message):
         summary = f"SID={sid} COUNT={len(saved[sid])} {text.splitlines()[-1]}"
     send({"method": "session/update", "params": {"sessionId": sid, "update": {
         "sessionUpdate": "agent_message_chunk", "content": {"type": "text", "text": summary}}}})
-    event("prompted", sid)
+    event("prompted", sid, profile="<bot-profile>" in text, threadIntro="[Thread]" in text,
+          forkIntro="starts from everything said so far" in text)
     send({"id": message["id"], "result": {"stopReason": "cancelled" if cancel.is_set() else "end_turn"}})
 
 
@@ -139,7 +140,8 @@ for line in sys.stdin:
             saved[sid] = saved[parent].copy()
             persist()
             allocate(sid, params)
-            send({"id": rid, "result": {"sessionId": sid}})
+            returned = {"empty": "", "parent": parent}.get(config.get("forkResponse"), sid)
+            send({"id": rid, "result": {"sessionId": returned}})
     elif method == "session/load":
         sid = params["sessionId"]
         if Path("fail-load").exists():
@@ -175,5 +177,11 @@ for line in sys.stdin:
         cancel.set()
         permission.set()
     elif method in ("session/set_model", "session/set_config_option"):
-        event("model", params["sessionId"])
-        send({"id": rid, "result": {}})
+        if Path("hang-model").exists():
+            event("model_pending", params["sessionId"])
+        elif Path("fail-model").exists():
+            event("model_failed", params["sessionId"])
+            send({"id": rid, "error": {"code": -32001, "message": "transient model selection failure"}})
+        else:
+            event("model", params["sessionId"])
+            send({"id": rid, "result": {}})
