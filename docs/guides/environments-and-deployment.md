@@ -2,11 +2,13 @@
 
 Reviewed against repository configuration on 2026-09-26; migration log updated 2026-10-07. Checked-in configuration does not prove that a deployment is healthy or that an external dashboard is configured.
 
+See [side-by-side Dev and production apps](dev-app.md) for schemes, identifiers, data isolation and the running-host/Offline troubleshooting checklist.
+
 ## Configuration ownership
 
 | Layer | Source | Selection |
 | --- | --- | --- |
-| Apple app | `apps/shared/Config/dev.plist`, `main.plist` | `project.yml` copies the selected file to bundled `AccountConfig.plist`; Debug uses dev, Release uses main |
+| Apple app | `apps/shared/Config/dev.plist`, `main.plist` | `project.yml` copies the selected file to bundled `AccountConfig.plist`; `iOS Dev` uses dev; `iOS` uses main |
 | Account SDK | `apps/shared/AccountSession.swift` | Public Clerk configuration; development environment overrides are supported |
 | Host | `host/src/remote/cloud.rs` | `CODYNC_CLOUD=off` or stored disable wins; then `CODYNC_CLOUD_URL`, then the build's cloud (`CODYNC_ENV` at compile time) |
 | Cloud Worker / D1 / DO | `cloud/wrangler.toml` | Root production, `dev`, or `local` environment |
