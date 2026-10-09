@@ -167,7 +167,7 @@ import Testing
     #expect(await fake.calls.filter { $0 == "newSession" }.count == 1)
 }
 
-@MainActor @Test func offlineTapReconnectsBeforeGivingUp() async throws {
+@MainActor @Test(.timeLimit(.minutes(1))) func offlineTapReconnectsBeforeGivingUp() async throws {
     let (storage, suite) = context()
     defer { UserDefaults(suiteName: suite)?.removePersistentDomain(forName: suite) }
     // The first link can't reach the computer; a fresh attempt would.
@@ -180,11 +180,66 @@ import Testing
     }
     defer { store.retire() }
     store.setActive(true)
-    #expect(await until { store.connection == .offline("Can't reach") })
+    let offline = await waitForStoreCondition { store.connection == .offline("Can't reach") }
+    try #require(offline)
     store.stop("b1")
-    #expect(await until { await up.subscribed })
+    let subscriptions = await up.checkpoints()
+    let subscribed = await waitForTestEvent(subscriptions, matching: { $0 == .eventsSubscribed })
+    try #require(subscribed)
     await up.emit(botEvent("b1", name: "Bot", rev: 1))
-    #expect(await until { await up.calls.contains("stop") })
+    let calls = await up.checkpoints()
+    let stopped = await waitForTestEvent(calls, matching: { $0 == .called("stop") })
+    try #require(stopped)
+    let downCalls = await down.calls
+    #expect(made == 2)
+    #expect(downCalls.isEmpty)
+    #expect(store.lastError == nil)
+}
+
+@MainActor @Test(.timeLimit(.minutes(1))) func offlineActionWaitsForFreshTransportBeforeSending() async throws {
+    let (storage, suite) = context()
+    defer { UserDefaults(suiteName: suite)?.removePersistentDomain(forName: suite) }
+    let down = FakeRemote(.failed("Can't reach"))
+    let up = FakeRemote(.ready(.relay))
+    let requested = AsyncStream<Bool>.makeStream()
+    let release = AsyncStream<Void>.makeStream()
+    defer { release.continuation.finish(); requested.continuation.finish() }
+    var made = 0
+    let store = BotStore(computer: randomComputer("Mac"), clientKind: "ios", storage: storage) {
+        made += 1
+        if made == 1 { return down }
+        requested.continuation.yield(true)
+        for await _ in release.stream { break }
+        try Task.checkCancellation()
+        return up
+    }
+    defer { store.retire() }
+    store.setActive(true)
+    let offline = await waitForStoreCondition { store.connection == .offline("Can't reach") }
+    try #require(offline)
+    store.stop("b1")
+    let preparing = await waitForTestEvent(requested.stream, matching: { $0 })
+    try #require(preparing)
+    let waiting = await waitForStoreCondition { store.waiting == 1 }
+    try #require(waiting)
+    let downCalls = await down.calls
+    let before = await up.calls
+    #expect(store.shownConnection == .connecting)
+    #expect(downCalls.isEmpty)
+    #expect(before.isEmpty)
+    #expect(store.lastError == nil)
+
+    release.continuation.yield(())
+    let subscriptions = await up.checkpoints()
+    let subscribed = await waitForTestEvent(subscriptions, matching: { $0 == .eventsSubscribed })
+    try #require(subscribed)
+    await up.emit(botEvent("b1", name: "Bot", rev: 1))
+    let calls = await up.checkpoints()
+    let stopped = await waitForTestEvent(calls, matching: { $0 == .called("stop") })
+    try #require(stopped)
+    let after = await up.calls
+    #expect(after.filter { $0 == "stop" }.count == 1)
+    #expect(made == 2)
     #expect(store.lastError == nil)
 }
 

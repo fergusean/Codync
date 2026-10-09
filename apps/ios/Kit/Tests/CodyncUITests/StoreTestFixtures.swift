@@ -6,6 +6,11 @@ import Testing
 
 /// A scripted transport: tests set its link state and push events; it records what the store asked.
 actor FakeRemote: RemoteTransport {
+    enum Checkpoint: Equatable, Sendable {
+        case eventsSubscribed
+        case called(String)
+    }
+
     private var state: LinkState
     private var stateSinks: [AsyncStream<LinkState>.Continuation] = []
     private var eventSinks: [AsyncThrowingStream<Data, Error>.Continuation] = []
@@ -16,6 +21,25 @@ actor FakeRemote: RemoteTransport {
     private(set) var readAttempts = 0
     private(set) var shutdownCount = 0
     private var isShutdown = false
+    private var checkpointSinks: [UUID: AsyncStream<Checkpoint>.Continuation] = [:]
+
+    func checkpoints() -> AsyncStream<Checkpoint> {
+        let id = UUID()
+        let pair = AsyncStream<Checkpoint>.makeStream()
+        checkpointSinks[id] = pair.continuation
+        if subscribed { pair.continuation.yield(.eventsSubscribed) }
+        for call in calls { pair.continuation.yield(.called(call)) }
+        pair.continuation.onTermination = { [weak self] _ in
+            Task { await self?.removeCheckpointSink(id) }
+        }
+        return pair.stream
+    }
+
+    private func removeCheckpointSink(_ id: UUID) { checkpointSinks[id] = nil }
+
+    private func record(_ checkpoint: Checkpoint) {
+        for sink in checkpointSinks.values { sink.yield(checkpoint) }
+    }
 
     func setReadFailure(_ fail: Bool) { failReadReceipts = fail }
     private(set) var calls: [String] = []
@@ -50,6 +74,7 @@ actor FakeRemote: RemoteTransport {
     private func respond(_ method: String, _ body: Data) throws -> Data {
         guard !isShutdown else { throw HostError.unreachable }
         calls.append(method)
+        record(.called(method))
         if let left = failures[method], left > 0 {
             failures[method] = left - 1
             throw HostError.unreachable
@@ -76,7 +101,10 @@ actor FakeRemote: RemoteTransport {
         try await respond(method, body)
     }
 
-    private func addEvents(_ c: AsyncThrowingStream<Data, Error>.Continuation) { eventSinks.append(c) }
+    private func addEvents(_ c: AsyncThrowingStream<Data, Error>.Continuation) {
+        eventSinks.append(c)
+        record(.eventsSubscribed)
+    }
     private func addState(_ c: AsyncStream<LinkState>.Continuation) {
         isShutdown = false
         c.yield(state)
@@ -134,7 +162,8 @@ func context() -> (SharedStore.Context, String) {
 @MainActor
 func until(_ condition: @MainActor () async -> Bool) async -> Bool {
     for _ in 0..<200 {
-        if await condition() { return true }
+        let satisfied = await condition()
+        if satisfied { return true }
         try? await Task.sleep(for: .milliseconds(10))
     }
     return false
