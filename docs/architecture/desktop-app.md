@@ -36,6 +36,18 @@ app restores the exact text. Submitting clears only that conversation's draft. D
 cleared when the host identity changes or the bot is deleted. iOS and the TUI keep drafts the
 same way; the shared desktop behavior covers macOS and Linux.
 
+When several computers are selected, the sidebar groups bots by computer, with connection
+status and update notices in each section. Drag a heading or press Alt+Up/Down on the
+heading to reorder sections. Click a heading to fold its bots.
+Order and folded sections stay on this device; the iPhone and other computers keep
+independent orders even when signed in to the same account. Filtering a computer out
+does not discard its position. One selected computer keeps a flat roster. Bot pin/activity
+ordering stays within each section, and arrow-key navigation skips folded sections.
+Search still includes their bots. The compact sidebar uses computer badges for the same
+section controls. Ordering is saved locally immediately and survives restart, with separate
+preferences per account and cloud environment. See [computer ordering](../features/computer-order.md).
+The TUI connects to one host at a time, so it keeps its single roster.
+
 ## Platform notes
 
 - **SSH startup** in the shared desktop UI keeps the workspace open whenever saved profiles
