@@ -23,7 +23,7 @@ Keep backups, deployment records and any credential-bearing files in this privat
 
 Choose the affected components and run their [development checks](development.md#component-checks) before deployment. Use `xcodebuild test -scheme CodyncKit-Package` from `apps/ios/Kit/` for Swift checks on this Mac: the unqualified `swift` command can resolve to an unrelated OpenStack CLI. Rust commands should use rustup's Cargo, available as `$HOME/.cargo/bin/cargo`, so the repository's pinned toolchain applies.
 
-Building an existing revision does not require another version bump. For new shipped source changes, follow [repository versioning](../../AGENTS.md#versioning--releases): keep the app and host versions aligned, and retain a pending bump already ahead of the latest release tag. Documentation-only changes do not bump versions.
+Branch refreshes inherit upstream's current app and host versions. Keep feature PRs free of version-only changes; version bumps belong to separate release work on `main`, following [repository versioning](../../AGENTS.md#versioning--releases). Documentation-only changes do not bump versions.
 
 Build and stage artifacts before interrupting work. Capture identity and webhook-key hashes before cutover when verifying their preservation. For a feature spanning components, the usual deployment order is:
 
@@ -33,6 +33,16 @@ Build and stage artifacts before interrupting work. Capture identity and webhook
 4. Verify the feature through its actual host and transport.
 
 Review migrations and protocol changes when choosing the order. Worker rollback and binary rollback do not undo data migrations.
+
+## Refresh feature branches and consolidated
+
+Fetch both remotes and inspect each feature's live PR, local head and fork head. A clean remote branch can contain newer reviewed work than a dirty local worktree; a local branch can also contain newer committed fixes than its remote. Archive refs in a private Git bundle and save every dirty worktree's diffs, index, file bytes and hashes before rewriting branches. Preserve deleted files as deletions when checking the snapshot.
+
+Rebase each active feature onto current upstream `dev`. Replay only that feature's own commits when its old base includes unrelated consolidated work. Reconstruct consolidated from the refreshed heads, preserving private integration behavior and fork documentation. Resolve conflicts against all affected clients and the current shared models. Generate private Apple projects in `build/dd/private-source` so existing generated-project edits remain intact.
+
+Validate the integrated source, then publish each feature and consolidated to the fork with an explicit `--force-with-lease=refs/heads/<branch>:<fetched-sha>`. Verify that the remote heads match. Delete merged source branches only after checking for newer local work; a squash merge can require comparing the feature's files rather than ancestry. Retire empty aliases and temporary integration branches only after retaining recovery refs. Preserve dirty worktrees.
+
+Build and deploy the coordinated components above. Confirm the installed client's host version and actual feature data after cutover. A rebuilt client connected to an older host can still show an older feature set. Check both new exchanges and saved history when a notice format changes; a passing build and a running app process do not establish either. Any required private history conversion needs a frozen plan, database backup, guarded updates and verification that original transcript fields and unrelated tables remain intact.
 
 ## Build and stage the Mac app
 
@@ -44,7 +54,7 @@ Build with `npm ci`, `npm run typecheck`, `npm test` and `npm run build` in `app
 
 The Electron renderer currently reaches remote computers through SSH. Before replacing the installed native app, migrate and verify its saved SSH profiles, connect to rdev, and confirm chat, pairing and account behavior with the preserved configuration. Encrypted account-computer transport from the old Mac app was not ported upstream. Do not assume installing the new bundle migrates native preferences or account sessions.
 
-Stage a signed Electron bundle beside the installed app and verify its signature and embedded Screen helper before cutover. Stop old app/host processes according to [desktop restart](development.md#desktop-app), retain a rollback copy, and launch only the verified replacement. Source integration and a successful renderer build do not establish installed-app acceptance.
+Stage a signed Electron bundle in `build/dd/electron` and verify its signature and embedded Screen helper before cutover. Stop old app/host processes according to [desktop restart](development.md#desktop-app), retain a compressed private rollback copy, and launch only the verified replacement. Source integration and a successful renderer build do not establish installed-app acceptance.
 
 ## Upgrade changed Cloudflare Workers
 
