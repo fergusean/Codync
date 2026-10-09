@@ -76,7 +76,10 @@ impl Actor {
         } else {
             self.ensure_session(slot.as_deref()).await?;
         }
-        if hidden && self.session_fresh {
+        let sid = self.turn_session.clone().ok_or_else(|| anyhow!("no session"))?;
+        let snapshot = self.snapshot(&sid).await?;
+        let fresh = matches!(snapshot.prelude, Some(context::Prelude::New | context::Prelude::UnpromptedFork));
+        if hidden && fresh {
             // A new session must never silently repeat an interrupted routine.
             self.finish_routine(
                 crate::routines::Status::Interrupted,
@@ -98,7 +101,7 @@ impl Actor {
         }
         // Session-start chatter (banners, command lists) isn't part of the reply.
         // Some adapters (pi-acp) send it on a timer right after session/new.
-        if self.session_fresh {
+        if fresh {
             tokio::time::sleep(Duration::from_millis(400)).await;
         }
         if let Some(conn) = self.conn.as_mut() {
@@ -109,15 +112,13 @@ impl Actor {
             }
         }
         let claude = self.conn.as_ref().is_some_and(|c| c.claude);
-        let sid = self.turn_session.clone().ok_or_else(|| anyhow!("no session"))?;
-        let snapshot = self.snapshot(&sid).await?;
         let remind_files = !snapshot.system.contains("send_file");
         let mut prompt = text.to_owned();
-        if let Some(intro) = self.thread_intro.take() {
+        if let (Some(root), Some(prelude)) = (&slot, snapshot.prelude) {
+            let intro = self.thread_intro(root, prelude != context::Prelude::New);
             prompt = format!("{intro}\n\n{prompt}");
         }
-        if self.session_fresh {
-            self.session_fresh = false;
+        if fresh {
             // Claude already has the instructions as its system prompt.
             if !claude {
                 prompt = format!("<bot-profile>\n{}\n</bot-profile>\n\n{prompt}", snapshot.system);
@@ -125,7 +126,7 @@ impl Actor {
         }
         if let Some((update, identity)) = context::profile_update(&self.hub.store, &snapshot, &self.cfg) {
             prompt = format!("{prompt}\n\n{update}");
-            self.announce = Some((snapshot, identity));
+            self.announce = Some((snapshot.clone(), identity));
         }
         if remind_files && self.active_group.is_none() && self.active_request.is_none() && self.active_routine.is_none()
         {
@@ -143,6 +144,11 @@ impl Actor {
         }
         // Written before this returns, so a Stop right after is sent after the prompt.
         let answer = acp.send("session/prompt", params).await?;
+        if snapshot.prelude.is_some()
+            && let Err(error) = context::mark_prompted(&self.hub.store, &self.cfg.id, &snapshot)
+        {
+            tracing::warn!(bot = %self.cfg.id, %error, "couldn't acknowledge initial session instructions");
+        }
         let done_tx = done_tx.clone();
         tokio::spawn(async move {
             let _ = done_tx.send(answer.response().await);

@@ -124,13 +124,11 @@ pub fn spawn(hub: Arc<Hub>, cfg: BotConfig) -> BotHandle {
         thread_sessions: HashMap::new(),
         lane,
         turn_session: None,
-        thread_intro: None,
         active_group: None,
         active_routine: None,
         routine_deadline: None,
         routine_timed_out: false,
         routine_completion: None,
-        session_fresh: false,
         keeper,
         turn_text: None,
         announce: None,
@@ -205,15 +203,11 @@ struct Actor {
     lane: Lane,
     /// The session the current turn prompts.
     turn_session: Option<String>,
-    /// Told on the first message of a new thread session: what the thread is about.
-    thread_intro: Option<String>,
     active_group: Option<GroupTurn>,
     active_routine: Option<String>,
     routine_deadline: Option<Instant>,
     routine_timed_out: bool,
     routine_completion: Option<RoutineCompletion>,
-    /// True until the first prompt of a new ACP session has been sent.
-    session_fresh: bool,
     keeper: mpsc::UnboundedSender<memory::Exchange>,
     /// The user's words for this turn (None for a hidden turn); feeds memory.
     turn_text: Option<String>,

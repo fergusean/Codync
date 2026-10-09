@@ -101,6 +101,11 @@ impl Actor {
             self.turn_session = Some(sid.to_owned());
             return Ok(());
         }
+        if matches!(existing, Some(LiveSession::PendingModel { system: applied, .. }) if *applied == system) {
+            self.finish_session_model(sid).await?;
+            self.turn_session = Some(sid.to_owned());
+            return Ok(());
+        }
         if existing.is_some() {
             self.release_session(sid, Retirement::Refresh).await?;
         }
@@ -125,10 +130,8 @@ impl Actor {
                 return Err(error).context("Couldn't reload the saved conversation; retry to resume it. Its session identity has been preserved");
             }
         };
-        self.record_session(sid, LiveSession::Preparing);
-        let conn = self.conn.as_ref().ok_or_else(|| anyhow!("agent not running"))?;
-        select_model(&conn.acp, &res, sid, &self.cfg).await?;
-        self.record_session(sid, LiveSession::Ready { system });
+        self.record_session(sid, LiveSession::PendingModel { system, response: res });
+        self.finish_session_model(sid).await?;
         self.turn_session = Some(sid.to_owned());
         Ok(())
     }
@@ -144,7 +147,7 @@ impl Actor {
         let params = json!({"sessionId":main,"cwd":self.cfg.cwd,"mcpServers":servers});
         let response = self.session_request("session/fork", params).await;
         let sid = match response {
-            Ok(res) => res["sessionId"].as_str().map(str::to_owned),
+            Ok(res) => res["sessionId"].as_str().filter(|sid| !sid.is_empty() && *sid != main).map(str::to_owned),
             Err(error) => {
                 tracing::warn!(bot = %self.cfg.id, error = format!("{error:#}"), "session fork failed");
                 None
@@ -156,11 +159,10 @@ impl Actor {
             return Ok(false);
         };
         self.record_session(&sid, LiveSession::Preparing);
+        let parent = self.snapshot(&main).await?;
+        context::fork(&self.hub.store, &self.cfg, &parent, &sid)?;
         self.set_session(slot, Some(&sid));
         self.load_saved_session(&sid, slot).await?;
-        if let Some(root) = slot {
-            self.thread_intro = Some(self.thread_intro(root, true));
-        }
         Ok(true)
     }
 
@@ -194,17 +196,23 @@ impl Actor {
             }
             bail!("agent returned no sessionId");
         };
-        self.record_session(&sid, LiveSession::Preparing);
+        self.record_session(&sid, LiveSession::PendingModel { system: claude.then(|| system.clone()), response: res });
+        context::adopt_new(&self.hub.store, &self.cfg, &sid, system)?;
         self.set_session(slot, Some(&sid));
-        context::adopt(&self.hub.store, &self.cfg, &sid, system.clone())?;
-        let conn = self.conn.as_ref().ok_or_else(|| anyhow!("agent not running"))?;
-        select_model(&conn.acp, &res, &sid, &self.cfg).await?;
-        self.record_session(&sid, LiveSession::Ready { system: claude.then_some(system) });
-        self.session_fresh = true;
+        self.finish_session_model(&sid).await?;
         self.turn_session = Some(sid);
-        if let Some(root) = slot {
-            self.thread_intro = Some(self.thread_intro(root, false));
-        }
+        Ok(())
+    }
+
+    async fn finish_session_model(&mut self, sid: &str) -> Result<()> {
+        let conn = self.conn.as_ref().ok_or_else(|| anyhow!("agent not running"))?;
+        let Some(LiveSession::PendingModel { system, response }) = conn.loaded.get(sid) else {
+            bail!("session is not awaiting model selection");
+        };
+        let system = system.clone();
+        let selected = tokio::time::timeout(SESSION_TIMEOUT, select_model(&conn.acp, response, sid, &self.cfg)).await;
+        selected.context("agent model selection timed out")??;
+        self.record_session(sid, LiveSession::Ready { system });
         Ok(())
     }
 
