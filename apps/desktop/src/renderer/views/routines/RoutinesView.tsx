@@ -143,7 +143,7 @@ export function RoutinesView({ botId, initialId, onClose }: { botId: string; ini
               {i > 0 ? <Hairline /> : null}
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <button className="routine-row" onClick={() => open(routine.id)}>
-                  <span style={{ color: 'var(--text)' }}>{routine.name}</span>
+                  <span style={{ ...font('compactBody'), color: 'var(--text)' }}>{routine.name}</span>
                   <span style={{ ...font('caption'), color: routine.lastError ? 'var(--danger)' : 'var(--secondary)' }}>{summary(routine)}</span>
                 </button>
                 <span aria-label={routine.name} style={{ display: 'flex' }}>
