@@ -21,9 +21,7 @@ fn app_with_bots() -> App {
     let (tx, _) = tokio::sync::mpsc::unbounded_channel();
     let mut app = App::new(super::super::super::net::Client::new("http://127.0.0.1:1", None), tx, String::new());
     for (id, name) in [("a", "Egan"), ("b", "Owen")] {
-        app.on_msg(super::super::super::app::Msg::Event(
-            serde_json::json!({"type":"bot","bot":{"id":id,"name":name}}),
-        ));
+        app.on_msg(super::super::super::app::Msg::Event(serde_json::json!({"type":"bot","bot":{"id":id,"name":name}})));
     }
     app
 }
