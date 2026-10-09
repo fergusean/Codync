@@ -207,4 +207,3 @@ import Testing
     try await Task.sleep(for: .milliseconds(100))
     #expect(await fake.calls.filter { $0 == "respondPermission" }.count == 1)
 }
-
