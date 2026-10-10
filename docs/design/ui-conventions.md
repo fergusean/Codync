@@ -122,7 +122,7 @@ carries its behavior; the October 2026 parity changes brought the TUI up to it.
   the editor without cancelling. Secrets are masked and never sent as chat text.
 - A bot-to-bot exchange is a compact centered row ("Messaged [avatar] Owen" / "Message from
   [avatar] Egan"; same verbs for asks; the TUI draws one ` · ` line), never a bubble. Only a
-  failure is marked: danger color, a warning mark (triangle icon; Android and TUI use a
+  failure is marked: danger color, a warning mark (triangle icon; the TUI uses a
   glyph), "failed" in the accessibility label. The row
   opens a read-only "A ⇄ B" sheet. In the main chat consecutive exchanges with the same peer
   (either direction; trace entries don't break the run, any other visible entry does) are one
@@ -133,8 +133,7 @@ carries its behavior; the October 2026 parity changes brought the TUI up to it.
   time separators after gaps over an hour, "Waiting for {name}…" or the failure detail under
   a pending or failed exchange, no composer. TUI:
   `v`/`r` picks a message, j/k moves to the row, ↵ (or a click) opens it, j/k ↑↓ and
-  ^u/^d scroll, esc closes; `r`, `f` and `1…6` on the row say it is read-only. The
-  watch shows the row only, not tappable. The data contract is
+  ^u/^d scroll, esc closes; `r`, `f` and `1…6` on the row say it is read-only. The data contract is
   [bot collaboration](../features/bot-collaboration.md#notice-data).
 - TUI bot settings include **Use computer**, matching the iPhone and desktop apps. The
   remote-screen viewer and voice-call UI are not in the TUI.
