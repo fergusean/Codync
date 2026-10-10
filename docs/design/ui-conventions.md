@@ -16,6 +16,12 @@ Sources: `apps/ios/Views/BotListView.swift`, `AccountSwitcherView.swift`, `apps/
 
 ## Desktop menu bar (tray)
 
+The iPhone App Store update reminder uses a hierarchical `arrow.down.circle.fill`
+symbol in the primary text color, keeping the download arrow clear against its
+softer circle in both appearances. Desktop updates live in Settings and the native
+tray menu; the TUI uses a text action and status message. Neither has this App Store
+reminder card, so its decorative icon treatment is iPhone-only.
+
 Release update controls live in the tray's Settings → Updates submenu; the chat
 window's Settings has the same controls on its Updates page (**Check for updates**,
 which becomes **Update to <version>** once a release is found). The TUI action list
@@ -114,6 +120,21 @@ carries its behavior; the October 2026 parity changes brought the TUI up to it.
   and pressing Enter opens that request. Credentials, connector installation/sign-in
   and hosted apps use the secure setup APIs. Ctrl+X cancels the request; Escape closes
   the editor without cancelling. Secrets are masked and never sent as chat text.
+- A bot-to-bot exchange is a compact centered row ("Messaged [avatar] Owen" / "Message from
+  [avatar] Egan"; same verbs for asks; the TUI draws one ` · ` line), never a bubble. Only a
+  failure is marked: danger color, a warning mark (triangle icon; the TUI uses a
+  glyph), "failed" in the accessibility label. The row
+  opens a read-only "A ⇄ B" sheet. In the main chat consecutive exchanges with the same peer
+  (either direction; trace entries don't break the run, any other visible entry does) are one
+  row, "{N} messages with [avatar] Owen", failed if any failed, keyed by the first exchange
+  (TUI: one pick, `c` on it says it is read-only). The sheet matches "Full conversation" (same size;
+  `ModalHeader` with the pair, own bot first, as its left title and the close X on the right):
+  the pair's whole history as author-labelled grey bubbles (avatar and name above each run),
+  time separators after gaps over an hour, "Waiting for {name}…" or the failure detail under
+  a pending or failed exchange, no composer. TUI:
+  `v`/`r` picks a message, j/k moves to the row, ↵ (or a click) opens it, j/k ↑↓ and
+  ^u/^d scroll, esc closes; `r`, `f` and `1…6` on the row say it is read-only. The data contract is
+  [bot collaboration](../features/bot-collaboration.md#notice-data).
 - TUI bot settings include **Use computer**, matching the iPhone and desktop apps. The
   remote-screen viewer and voice-call UI are not in the TUI.
 
@@ -200,3 +221,5 @@ The desktop sidebar computer filter shares the toolbar's subtle outline and 32px
 height, with a capsule enclosing both the computer glyph and its chevron. This
 applies in expanded and compact sidebars. iOS retains native toolbar treatment;
 terminal computer selection has no corresponding icon button.
+
+Dialog scrims cover the entire presentation surface, including the iPhone status-bar and home-indicator safe areas, throughout opening and closing. The shared iPhone overlay fades a full-screen canvas without scaling its backdrop; root in-place dialogs also extend the canvas beyond container safe areas. Desktop dialogs keep their viewport-sized backdrop fixed and scale only the card. Terminal dialogs already dim the complete terminal buffer.

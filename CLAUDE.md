@@ -34,7 +34,7 @@ Bot-based remote for coding agents: persistent named bots on your computer, mess
 - Remote access (Cloudflare relay primary, direct LAN/Tailscale alternative, accounts, SSH, public routine webhooks queued in the relay §7.8): [docs/reference/remote-relay.md](docs/reference/remote-relay.md).
 - Remote screen (`host/src/screen/` is the reference): phones view/control the computer over WebRTC (hardware H.264, non-trickle SDP relayed by `screenOffer`, input on data channels `input` / `input-fast`); bots get the built-in `computer` MCP server (`codync-host mcp computer`, `host/src/mcp.rs`) when their `computer` flag is on; its tools run on the bundled cua-driver, which Codync Screen starts on macOS so its grants apply ([computer use](docs/features/computer-use.md)). Capture/input live in a helper on `~/.codync/screen.sock`: `apps/screen-macos` (macOS, launchd agent the desktop app registers via `SMAppService`, owns the TCC grants) or `apps/screen-linux` (`codync-screen`: portals + GStreamer, started by the host). On by default (Linux: only with a graphical session); `setScreenEnabled` is accepted only from loopback. An interactive phone takes over (bots may only look).
 - Multiple computers per account are future work, not a current priority: the product targets one computer. The multi-computer structure (`AccountStore`, `BotReference`) stays because relay/accounts/SSH build on it; don't extend or polish multi-computer features unless asked.
-- Environments: **dev** (`dev-api.codync.dev`, Clerk development instance, Debug builds) and **main** (`api.codync.dev`, Clerk production, Release builds); `apps/shared/Config/<env>.plist` becomes the iOS `AccountConfig.plist` and the desktop `resources/account-config.json` (`tools/account-config.mjs`). Details: [spec §14.0](docs/reference/remote-relay.md).
+- Environments: `iOS Dev` / desktop `dist:*:dev` use the isolated Codync Dev app; `iOS` / `dist:*:main` retain production identities. Stop only the variant being rebuilt. Resource map, signing and diagnostics: [Dev app isolation](docs/guides/dev-app.md).
 - Push: iOS registers its APNs token with `relay/` → gets an AES-GCM ticket → gives it (plus its X25519 push key) to the host; the host seals title/body to that key and a Notification Service Extension opens it, so `relay/` sees only generic text. Alert kinds: *needs you*, *done*, and *failed*, suppressed while the iOS app is connected. Delivery and lifecycle: [notification design](docs/design/push-and-live-activity.md).
 - Voice call (iPhone, desktop): on-device speech (macOS desktop: the `codync-speech` helper), or OpenAI / Gemini realtime on the user's own key (kept in the host's vault, which mints per-call credentials; audio goes device ↔ provider); the host sees plain messages. Grok-style call bar: [docs/features/voice-call.md](docs/features/voice-call.md).
 - Analytics: opt-in PostHog, asked once per device, feature use only (never content); host events come from `api::dispatch`: [docs/features/analytics.md](docs/features/analytics.md).
@@ -89,13 +89,7 @@ Build targets, folder layout, file naming and shared terms: [docs/architecture/f
 
 ## Commit messages
 
-- Conventional Commits: `type(scope): subject`. Types: `feat`, `fix`, `refactor`, `perf`, `docs`, `test`, `build`, `ci`, `chore`. Scope is the area touched: `ios`, `desktop`, `host`, `cloud`, `relay`, `web`, `docs`.
-- Subject: imperative mood ("add", not "added"), lowercase after the colon, no trailing period, at most 72 characters (aim for 50). Say what changes for the user, not which files moved.
-- Body (after a blank line, wrapped at 72 columns) when the change isn't obvious from the subject: what and why, not how. Bullets are fine.
-- One logical change per commit. Don't mix unrelated work, and stage only your own hunks when others have uncommitted changes in the tree.
-- Breaking changes: `!` after the type/scope, or a `BREAKING CHANGE:` footer.
-- English only.
-- PRs: fill the template's *What's New* bullets (zh-Hant + en-US) for user-visible iOS changes; they become the App Store notes when `apps/ios/WhatsNew.md` has no section for the release.
+Follow the Conventional Commit and PR rules in [AGENTS.md](AGENTS.md#commit--pull-request-guidelines); stage only your own changes.
 
 ## Keeping this file short
 

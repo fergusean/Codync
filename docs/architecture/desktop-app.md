@@ -4,6 +4,11 @@ Codync's computer-side app is one Electron app in `apps/desktop/` for macOS, Lin
 replaced the SwiftUI Mac app (`apps/macos/`) and the GTK 4 Linux app (`apps/linux/`) in 2.7.0.
 The iPhone app stays native SwiftUI; its package moved from `kit/` into `apps/ios/Kit/`.
 
+Conversation history stays available even when the recent snapshot contains mostly thread
+replies. The desktop, iPhone and terminal clients page the main conversation independently
+of the number of main-chat entries in that snapshot; reaching the end of a history response
+determines when there are no earlier messages.
+
 ## Why
 
 - **The chat was too slow.** Long transcripts with Markdown, variable-height rows and
@@ -36,8 +41,30 @@ app restores the exact text. Submitting clears only that conversation's draft. D
 cleared when the host identity changes or the bot is deleted. iOS and the TUI keep drafts the
 same way; the shared desktop behavior covers macOS and Linux.
 
+When several computers are selected, the sidebar groups bots by computer, with connection
+status and update notices in each section. Drag a heading or press Alt+Up/Down on the
+heading to reorder sections. Click a heading to fold its bots.
+Order and folded sections stay on this device; the iPhone and other computers keep
+independent orders even when signed in to the same account. Filtering a computer out
+does not discard its position. One selected computer keeps a flat roster. Bot pin/activity
+ordering stays within each section, and arrow-key navigation skips folded sections.
+Search still includes their bots. The compact sidebar uses computer badges for the same
+section controls. Ordering is saved locally immediately and survives restart, with separate
+preferences per account and cloud environment. See [computer ordering](../features/computer-order.md).
+The TUI connects to one host at a time, so it keeps its single roster.
+
 ## Platform notes
 
+- **SSH startup** in the shared desktop UI keeps the workspace open whenever saved profiles
+  exist. With no online computer, the detail pane shows each profile's connection
+  progress, failures, reconnect and host-key confirmation controls, plus local host
+  install/retry actions. Manage computers stays reachable throughout. The computer
+  filter distinguishes connecting, attention, disconnected and opening states and
+  keeps local recovery actions reachable when a remote computer is already online.
+  iOS uses direct/encrypted host connections, and the TUI connects to one host;
+  neither manages desktop SSH profiles. Windows exposes the same profile UI, but
+  the tunnel backend still uses `/usr/bin/ssh*` and Unix socket ownership checks;
+  Windows tunnel support has not been implemented.
 - **Icons**: SF Symbols may only ship in apps for Apple platforms, so the masks are generated
   on macOS at build time and never committed; Linux draws the closest Lucide icons.
 - **On-device speech** is macOS only; Linux calls use OpenAI or Gemini on the user's key.
@@ -66,11 +93,27 @@ same way; the shared desktop behavior covers macOS and Linux.
 
 ## Development
 
+SSH host discovery preserves the remote login shell's `PATH`, then searches
+`/opt/homebrew/bin`, `/usr/local/bin`, `/home/linuxbrew/.linuxbrew/bin`,
+`~/.local/bin`, and `/Applications/Codync.app/Contents/Resources` (Electron) or
+`Contents/MacOS` (older native apps). Custom prefixes or relocated app bundles
+must expose `codync-host` through the remote login shell's `PATH`.
+Managed tunnels use `ssh -S none` to bypass connection sharing: the app's SSH
+child must own the listening socket and stay alive until disconnect. This keeps
+`ControlMaster` / `ControlPersist` in the user's config from transferring the
+forward to a shared master that outlives the app.
+
+For a read-only macOS integration check against an already trusted SSH computer,
+run `node --experimental-strip-types tools/ssh-e2e.mjs <ssh-alias>` from
+`apps/desktop`. It checks discovery, listener ownership, host identity, API
+authentication and sync, SSE, disconnect/reconnect, and an occupied local port.
+It uses port 19222 on the remote computer and leaves bots and settings unchanged.
+
 ```sh
 cd apps/desktop
 npm ci
 npm run icons                       # macOS: SF Symbol masks
-npm run dev                         # dev config, against the installed host on 19222
+npm run dev                         # Codync Dev, separate host on 19223
 CODYNC_PORT=19333 CODYNC_HOME=/path/to/home npm run dev   # against a manually run host
 npm run typecheck && npm test
 ```
@@ -97,8 +140,7 @@ helper at the top of `electron-builder.yml` doesn't depend on the environment; p
 `package.json`): the Screen launch agent only runs code from that team, and the keychain holds
 another team's certificate electron-builder would otherwise pick. Update the name when it is
 renewed.
-Only one environment's host runs on a computer at a time (one `~/.codync`, port and service):
-switching environments means installing the other build.
+Codync and Codync Dev can run side by side: separate app identities, host services, ports, data and login callbacks. See [Dev app isolation](../guides/dev-app.md) for the resource map and external signing/account setup.
 
 For a local signed Mac build, explicitly select a development identity from the project's
 team with `-c.mac.identity="Apple Development: …"`; use `--dir --arm64` and
