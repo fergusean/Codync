@@ -227,6 +227,7 @@ extension BotStore {
             guard !Task.isCancelled, let self, !retired else { return }
             finishCatchUp()
         }
+    }
 
     /// Per bot, the lowest synced main-chat `seq` in the mirror (optimistic entries don't count).
     /// Only entries the mirror had at `requestedSince`: newer ones (a send's RPC response landing
