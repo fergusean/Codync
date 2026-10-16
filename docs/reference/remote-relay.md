@@ -57,6 +57,7 @@ Shared deterministic [vectors](fixtures/remote-relay-vectors.json) and their [ge
 | --- | --- |
 | Worker API / authentication / DO | `cloud/src/api.ts`, `routes/`, `auth.ts`, `relay.ts` |
 | Cloud schema | `cloud/migrations/` |
+| Android transport / crypto / pairing | `apps/android/core/`; device storage in `apps/android/app/` |
 | Host identity / crypto / channel | `host/src/remote/identity.rs`, `crypto.rs`, `channel.rs` |
 | Host cloud / relay | `host/src/remote/cloud.rs`, `relay.rs` |
 | Swift transports / identity | `apps/ios/Kit/Sources/CodyncKit/Client/` |
