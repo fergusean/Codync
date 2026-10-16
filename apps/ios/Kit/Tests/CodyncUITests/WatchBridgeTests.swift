@@ -69,29 +69,6 @@ private final class FakeWatchSystem: WatchSystem {
     func expire() { expirations.last?() }
 }
 
-private func randomComputer(_ name: String) -> Computer {
-    let sk = Curve25519.Signing.PrivateKey().publicKey.rawRepresentation
-    return Computer(id: RelayCrypto.computerId(signKey: sk), name: name, signKey: sk.base64URL,
-                    boxKey: Curve25519.KeyAgreement.PrivateKey().publicKey.rawRepresentation.base64URL,
-                    cloud: URL(string: "https://cloud.example.dev"))
-}
-
-private extension Data {
-    var base64URL: String {
-        base64EncodedString().replacingOccurrences(of: "+", with: "-").replacingOccurrences(of: "/", with: "_").replacingOccurrences(of: "=", with: "")
-    }
-}
-
-/// Polls until `condition` holds (2 s at most).
-@MainActor
-private func until(_ condition: @MainActor () async -> Bool) async -> Bool {
-    for _ in 0..<200 {
-        if await condition() { return true }
-        try? await Task.sleep(for: .milliseconds(10))
-    }
-    return false
-}
-
 private func pause(_ milliseconds: Int = 100) async { try? await Task.sleep(for: .milliseconds(milliseconds)) }
 
 private func bot(_ id: String, name: String = "Ada", rev: Int, status: String = "idle", extra: String = "") -> String {

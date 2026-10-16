@@ -20,6 +20,9 @@ actor FakeRemote: RemoteTransport {
     private var failReadReceipts = false
     private(set) var readAttempts = 0
     private(set) var shutdownCount = 0
+    private(set) var shutdownFinished = 0
+    private var shutdownDelay: Duration?
+    func setShutdownDelay(_ delay: Duration?) { shutdownDelay = delay }
     private var isShutdown = false
     private var checkpointSinks: [UUID: AsyncStream<Checkpoint>.Continuation] = [:]
 
@@ -101,8 +104,10 @@ actor FakeRemote: RemoteTransport {
         try await respond(method, body)
     }
 
-    private func addEvents(_ c: AsyncThrowingStream<Data, Error>.Continuation) {
+    private(set) var eventClients: [String?] = []
+    private func addEvents(_ c: AsyncThrowingStream<Data, Error>.Continuation, client: String?) {
         eventSinks.append(c)
+        eventClients.append(client)
         record(.eventsSubscribed)
     }
     private func addState(_ c: AsyncStream<LinkState>.Continuation) {
@@ -113,7 +118,9 @@ actor FakeRemote: RemoteTransport {
     private func addMailbox(_ c: AsyncStream<MailboxEvent>.Continuation) { mailboxSinks.append(c) }
 
     nonisolated func stream(_ request: HostStreamRequest) -> AsyncThrowingStream<Data, Error> {
-        AsyncThrowingStream { c in Task { await self.addEvents(c) } }
+        var client: String?
+        if case let .events(_, sent) = request { client = sent }
+        return AsyncThrowingStream { [client] c in Task { await self.addEvents(c, client: client) } }
     }
 
     nonisolated func states() -> AsyncStream<LinkState> {
@@ -137,6 +144,8 @@ actor FakeRemote: RemoteTransport {
         for s in stateSinks { s.finish() }
         eventSinks = []
         stateSinks = []
+        if let shutdownDelay { try? await Task.sleep(for: shutdownDelay) }
+        shutdownFinished += 1
     }
 }
 
