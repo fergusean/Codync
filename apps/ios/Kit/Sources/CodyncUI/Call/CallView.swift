@@ -46,7 +46,7 @@ struct CallView: View {
             countCloudMinutes()
             isSpeaking = false
             interrupt = nil
-            model.endVoiceCall(callID)
+            Task { [model, callID] in await model.endHold(callID) }
             model.logCall(botId, seconds: Int(Date.now.timeIntervalSince(startedAt)))
         }
         .onChange(of: session?.phase) { _, phase in
@@ -101,12 +101,17 @@ struct CallView: View {
         }
         engine.onActivityChanged = { [weak engine, model, botId, callID] active in
             if active {
-                model.beginVoiceCall(callID, botId: botId,
-                                     speak: { [weak engine] in engine?.speak(reply: $0) },
-                                     announce: { [weak engine] in engine?.announce($0) },
-                                     end: { [weak engine] in engine?.end() })
+                model.beginHold(callID, botId: botId, mutesPushes: true,
+                                reply: { [weak engine] in
+                                    if let text = $0.data.text { engine?.speak(reply: model.spokenReply($0, text)) }
+                                },
+                                needsInput: { [weak engine] in
+                                    engine?.announce("\($0.name) needs your approval in the chat.")
+                                },
+                                announce: { [weak engine] in engine?.announce($0) },
+                                end: { [weak engine] in engine?.end() })
             } else {
-                model.endVoiceCall(callID)
+                Task { [model, callID] in await model.endHold(callID) }
             }
         }
         session = engine

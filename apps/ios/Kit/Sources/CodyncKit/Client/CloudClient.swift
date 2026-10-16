@@ -29,6 +29,7 @@ public struct CloudError: LocalizedError, Sendable, Equatable {
 
 /// The user-facing `/v1` API (§8.4): account, devices, computers, access requests, claims.
 /// The Clerk session token comes from the app; kit doesn't depend on ClerkKit.
+@available(watchOS, unavailable, message: "The watch reaches the host through the iPhone")
 public struct CloudClient: Sendable {
     public let baseURL: URL
     let identity: DeviceIdentity?

@@ -10,6 +10,9 @@ actor Pipe {
     private var items: [String] = []
     private var waiters: [CheckedContinuation<String, Error>] = []
     private var closedCode: Int?
+    private(set) var drained = false
+
+    func markDrained() { drained = true }
 
     func push(_ s: String) {
         guard closedCode == nil else { return }
@@ -40,6 +43,7 @@ final class FakeSocket: ChannelSocket {
     func send(_ text: String) async throws { await toHost.push(text) }
     func receive() async throws -> String { try await toDevice.pop() }
     func ping() async throws {}
+    func drain() async { await toDevice.markDrained() }
     func close(code: Int) {
         Task {
             await toDevice.close(code)
@@ -229,6 +233,22 @@ private func waitFor(_ states: AsyncStream<LinkState>, _ match: (LinkState) -> B
     try await host.accept(hostKey: Curve25519.Signing.PrivateKey())
     #expect(await t.settled(within: .seconds(5)) == .unauthorized(ChannelTransport.identityChanged))
     await t.shutdown()
+}
+
+@Test(.timeLimit(.minutes(1))) func shutdownWaitsForTheSocketToDrain() async throws {
+    let (dial, sockets) = fakeDialer()
+    var computer = v.computer
+    computer.urls = ["http://127.0.0.1:1"]
+    let t = ChannelTransport(computer: computer, identity: v.identity, pairingCode: nil, dial: dial, watchesNetwork: false)
+    await t.start()
+    var it = sockets.makeAsyncIterator()
+    var host = HostSide(try #require(await it.next()))
+    try await host.accept()
+    guard case .ready = await t.settled(within: .seconds(5)) else {
+        Issue.record("expected ready"); return
+    }
+    await t.shutdown()
+    #expect(await host.socket.toDevice.drained)
 }
 
 @Test(.timeLimit(.minutes(1))) func directRejectFallsBackToTheRelay() async throws {
