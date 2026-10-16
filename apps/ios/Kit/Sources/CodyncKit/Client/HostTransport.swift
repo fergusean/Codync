@@ -9,6 +9,7 @@ public enum HostStreamRequest: Sendable {
     /// `client` nil: not a phone for the host's push suppression (a watch relay, say).
     case events(since: Int64, client: String?)
     case term(String)
+    case screenCandidates(String)
 }
 
 public enum LinkState: Sendable, Equatable {
