@@ -4,11 +4,11 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.Typography
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
 
 /** Keep these pairs aligned with CodyncKit/Design/Theme.swift. */
@@ -17,7 +17,8 @@ val botMessageBackground: Color
 
 @Composable
 fun CodyncTheme(content: @Composable () -> Unit) {
-    val colors = if (isSystemInDarkTheme()) darkColorScheme(
+    val dark = isSystemInDarkTheme()
+    val colors = if (dark) darkColorScheme(
         primary = Color.White,
         onPrimary = Color.Black,
         secondary = Color.White,
@@ -57,15 +58,14 @@ fun CodyncTheme(content: @Composable () -> Unit) {
         error = Color(0xFFC23A2B),
     )
     val type = Typography(
-        titleLarge = TextStyle(fontSize = 20.sp, lineHeight = 25.sp, fontWeight = FontWeight.SemiBold),
-        titleMedium = TextStyle(fontSize = 17.sp, lineHeight = 22.sp, fontWeight = FontWeight.SemiBold),
-        titleSmall = TextStyle(fontSize = 15.sp, lineHeight = 20.sp, fontWeight = FontWeight.Medium),
-        bodyLarge = TextStyle(fontSize = 17.sp, lineHeight = 24.sp),
-        bodyMedium = TextStyle(fontSize = 15.sp, lineHeight = 21.sp),
-        bodySmall = TextStyle(fontSize = 13.sp, lineHeight = 18.sp),
-        labelLarge = TextStyle(fontSize = 15.sp, lineHeight = 20.sp, fontWeight = FontWeight.Medium),
-        labelMedium = TextStyle(fontSize = 12.sp, lineHeight = 16.sp, fontWeight = FontWeight.Medium),
-        labelSmall = TextStyle(fontSize = 11.sp, lineHeight = 14.sp, fontWeight = FontWeight.Medium),
+        headlineLarge = Type.largeTitle, headlineMedium = Type.title, headlineSmall = Type.title2,
+        titleLarge = Type.title3.semibold, titleMedium = Type.headline, titleSmall = Type.subheadline.medium,
+        bodyLarge = Type.body, bodyMedium = Type.subheadline, bodySmall = Type.footnote,
+        labelLarge = Type.subheadline.medium, labelMedium = Type.caption.medium, labelSmall = Type.caption2.medium,
     )
-    MaterialTheme(colorScheme = colors, typography = type, content = content)
+    CompositionLocalProvider(LocalDark provides dark) {
+        MaterialTheme(colorScheme = colors, typography = type) {
+            CompositionLocalProvider(LocalTextStyle provides Type.body, LocalContentColor provides Palette.text, content = content)
+        }
+    }
 }

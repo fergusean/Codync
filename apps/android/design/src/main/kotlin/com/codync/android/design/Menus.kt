@@ -1,0 +1,256 @@
+package com.codync.android.design
+
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.dp
+import com.kyant.shapes.RoundedRectangle
+import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
+
+/** One row in a menu: an action, a choice when `selected` is set, or a submenu with `children`. */
+class MenuItem(
+    val title: String,
+    val icon: String? = null,
+    val selected: Boolean? = null,
+    val destructive: Boolean = false,
+    val divider: Boolean = false,
+    val enabled: Boolean = true,
+    val children: List<MenuItem>? = null,
+    val action: () -> Unit = {},
+)
+
+/** A row of emoji above a message's menu (Slack's quick reactions). */
+class ReactionPick(val emoji: List<String>, val chosen: List<String>, val toggle: (String) -> Unit)
+
+/** A button that opens the system-style glass menu, growing out of the button. */
+@Composable fun DropdownMenu(items: () -> List<MenuItem>, modifier: Modifier = Modifier, enabled: Boolean = true,
+    label: String? = null, content: @Composable BoxScope.() -> Unit) {
+    var anchor by remember { mutableStateOf(Rect.Zero) }
+    var open by remember { mutableStateOf(false) }
+    Box(modifier.onGloballyPositioned { anchor = it.boundsInRoot() }
+        .clickable(enabled = enabled, role = Role.Button, interactionSource = null, indication = null) { open = true }
+        .then(if (label != null) Modifier.semantics { contentDescription = label } else Modifier),
+        contentAlignment = Alignment.Center, content = content)
+    MenuOverlay(open, { open = false }, anchor, items, cover = true)
+}
+
+/** Long-press opens the menu under a lifted copy of the content; `reactions` adds the emoji row. */
+@Composable fun Modifier.contextActions(reactions: ReactionPick? = null, enabled: Boolean = true, onClick: (() -> Unit)? = null,
+    preview: (@Composable () -> Unit)? = null, items: () -> List<MenuItem>): Modifier {
+    var anchor by remember { mutableStateOf(Rect.Zero) }
+    var open by remember { mutableStateOf(false) }
+    val haptics = LocalHapticFeedback.current
+    if (preview != null) ContextOverlay(open, { open = false }, anchor, reactions, items, preview)
+    else MenuOverlay(open, { open = false }, anchor, items, cover = false, reactions = reactions)
+    return onGloballyPositioned { anchor = it.boundsInRoot() }
+        .combinedClickable(enabled = enabled, onClick = { onClick?.invoke() }, onLongClickLabel = "Actions", onLongClick = {
+            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+            open = true
+        })
+}
+
+/** The menu panel and its placement around `anchor`. `cover`: grow over the anchor (pull-down menus). */
+@Composable private fun MenuOverlay(open: Boolean, close: () -> Unit, anchor: Rect, items: () -> List<MenuItem>, cover: Boolean,
+    reactions: ReactionPick? = null) {
+    val shown = remember { Animatable(0f) }
+    var mounted by remember { mutableStateOf(false) }
+    LaunchedEffect(open) {
+        if (open) { mounted = true; shown.animateTo(1f, Motion.layout()) }
+        else { shown.animateTo(0f, Motion.fade()); mounted = false }
+    }
+    if (!mounted) return
+    BackHandler(open, close)
+    Overlay {
+        BoxWithConstraints(Modifier.fillMaxSize()) {
+            Box(Modifier.fillMaxSize().clickable(remember { MutableInteractionSource() }, null, onClick = close))
+            val density = LocalDensity.current
+            val width = with(density) { maxWidth.toPx() }
+            val height = with(density) { maxHeight.toPx() }
+            MenuPlacement(anchor, width, height, cover, shown.value) {
+                MenuPanel(items(), close, reactions)
+            }
+        }
+    }
+}
+
+/** Puts the panel by its anchor: aligned to the anchor's side of the screen, below it (or above). */
+@Composable private fun MenuPlacement(anchor: Rect, width: Float, height: Float, cover: Boolean, shown: Float,
+    leading: Boolean = false, content: @Composable () -> Unit) {
+    val density = LocalDensity.current
+    val margin = with(density) { 12.dp.toPx() }
+    val gap = with(density) { 8.dp.toPx() }
+    var origin by remember { mutableStateOf(TransformOrigin.Center) }
+    Box(Modifier.layout { measurable, constraints ->
+        val placeable = measurable.measure(constraints.copy(minWidth = 0, minHeight = 0))
+        val third = width / 3
+        val x = when {
+            leading || anchor.center.x < third -> anchor.left
+            anchor.center.x > width - third -> anchor.right - placeable.width
+            else -> anchor.center.x - placeable.width / 2f
+        }.coerceIn(margin, (width - margin - placeable.width).coerceAtLeast(margin))
+        val below = if (cover) anchor.top else anchor.bottom + gap
+        val y = if (below + placeable.height <= height - margin) below
+            else (if (cover) anchor.bottom else anchor.top - gap) - placeable.height
+        val top = y.coerceIn(margin, (height - margin - placeable.height).coerceAtLeast(margin))
+        origin = TransformOrigin(((anchor.center.x - x) / placeable.width).coerceIn(0f, 1f),
+            if (top >= anchor.center.y) 0f else 1f)
+        layout(constraints.maxWidth, constraints.maxHeight) { placeable.place(x.roundToInt(), top.roundToInt()) }
+    }.graphicsLayer {
+        alpha = shown.coerceIn(0f, 1f)
+        val scale = 0.55f + 0.45f * shown
+        scaleX = scale; scaleY = scale
+        transformOrigin = origin
+    }) { content() }
+}
+
+private val MenuShape = RoundedRectangle(26.dp)
+
+/** The glass panel of rows. A submenu replaces the rows, with its parent as a back row. */
+@Composable private fun MenuPanel(items: List<MenuItem>, close: () -> Unit, reactions: ReactionPick?) {
+    var submenu by remember { mutableStateOf<MenuItem?>(null) }
+    Column(Modifier.width(250.dp).glass(MenuShape, GlassStyle.Menu).clip(MenuShape).padding(vertical = 10.dp)) {
+        if (reactions != null) ReactionRow(reactions, close)
+        AnimatedContent(submenu, transitionSpec = { fadeIn(Motion.fade()) togetherWith fadeOut(Motion.fade()) }, label = "Submenu") { open ->
+            Column(Modifier.heightIn(max = 520.dp).verticalScroll(rememberScrollState())) {
+                if (open != null) {
+                    MenuRow(MenuItem(open.title, icon = "chevron.left"), bold = true) { submenu = null }
+                    MenuDivider()
+                }
+                for ((index, item) in (open?.children ?: items).withIndex()) {
+                    if (item.divider && index > 0) MenuDivider()
+                    MenuRow(item) {
+                        if (item.children != null) submenu = item else { close(); item.action() }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable private fun MenuDivider() {
+    Box(Modifier.padding(horizontal = 26.dp, vertical = 8.dp).fillMaxWidth().height(1.dp).background(Palette.text.copy(alpha = 0.1f)))
+}
+
+@Composable private fun MenuRow(item: MenuItem, bold: Boolean = false, tap: () -> Unit) {
+    val ink = when {
+        !item.enabled -> Palette.text.copy(alpha = 0.3f)
+        item.destructive -> Color(0xFFFF3B30)
+        else -> Palette.text
+    }
+    val (source, pressed) = rememberPress()
+    Row(Modifier.fillMaxWidth().heightIn(min = 42.dp)
+        .padding(horizontal = 10.dp).clip(RoundedRectangle(14.dp))
+        .background(if (pressed) Palette.text.copy(alpha = 0.08f) else Color.Transparent)
+        .clickable(source, null, enabled = item.enabled, role = Role.Button, onClick = tap)
+        .semantics { if (item.selected != null) selected = item.selected }
+        .padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 4.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(13.dp)) {
+        val leading = when {
+            item.selected == true -> "checkmark"
+            item.selected == false -> null
+            else -> item.icon
+        }
+        Box(Modifier.size(24.dp), contentAlignment = Alignment.Center) {
+            if (leading != null) Symbol(leading, size = 21.dp, tint = ink)
+        }
+        Text(item.title, Modifier.weight(1f), style = if (bold) Type.body.semibold else Type.body, color = ink,
+            maxLines = 2, overflow = TextOverflow.Ellipsis)
+        if (item.children != null) Symbol("chevron.right", size = 16.dp, tint = Palette.secondary)
+    }
+}
+
+@Composable private fun ReactionRow(reactions: ReactionPick, close: () -> Unit) {
+    Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp).padding(bottom = 6.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+        for (emoji in reactions.emoji) {
+            val chosen = emoji in reactions.chosen
+            Box(Modifier.size(38.dp).clip(RoundedRectangle(19.dp))
+                .background(if (chosen) Palette.text.copy(alpha = 0.12f) else Color.Transparent)
+                .clickable(role = Role.Button) { close(); reactions.toggle(emoji) }
+                .semantics { contentDescription = emoji; selected = chosen }, contentAlignment = Alignment.Center) {
+                Text(emoji, style = Type.title3)
+            }
+        }
+    }
+}
+
+/** The long-press menu: the app blurred and dimmed, a lifted copy of the row, the menu under it. */
+@Composable private fun ContextOverlay(open: Boolean, close: () -> Unit, anchor: Rect, reactions: ReactionPick?,
+    items: () -> List<MenuItem>, preview: @Composable () -> Unit) {
+    val shown = remember { Animatable(0f) }
+    var mounted by remember { mutableStateOf(false) }
+    LaunchedEffect(open) {
+        if (open) { mounted = true; shown.animateTo(1f, Motion.layout()) }
+        else { shown.animateTo(0f, Motion.fade()); mounted = false }
+    }
+    if (!mounted) return
+    BackHandler(open, close)
+    Overlay {
+        val density = LocalDensity.current
+        BoxWithConstraints(Modifier.fillMaxSize()) {
+            val height = with(density) { maxHeight.toPx() }
+            val width = with(density) { maxWidth.toPx() }
+            Box(Modifier.fillMaxSize().graphicsLayer { alpha = shown.value }
+                .frost(14.dp, Color.Black.copy(alpha = if (LocalDark.current) 0.3f else 0.14f))
+                .clickable(remember { MutableInteractionSource() }, null, onClick = close))
+            // The lifted row: a rounded card in place, swelling slightly.
+            Box(Modifier.offset { IntOffset(anchor.left.roundToInt(), anchor.top.roundToInt()) }
+                .size(with(density) { anchor.width.toDp() }, with(density) { anchor.height.toDp() })
+                .graphicsLayer { val s = 1f + 0.02f * shown.value; scaleX = s; scaleY = s }
+                .clip(RoundedRectangle(16.dp)).background(Palette.background)) { preview() }
+            MenuPlacement(anchor, width, height, cover = false, shown = shown.value, leading = true) { MenuPanel(items(), close, reactions) }
+        }
+    }
+}

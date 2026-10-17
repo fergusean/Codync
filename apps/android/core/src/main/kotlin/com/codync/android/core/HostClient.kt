@@ -38,6 +38,8 @@ data class Bot(
     val activity: String = "",
     val backend: String = "",
     val pinned: Boolean = false,
+    /** Where the user dragged it in the roster, synced by the host to every device. */
+    val position: Int = 0,
     val hidden: Boolean = false,
     val unread: Int = 0,
     val rev: Long = 0,

@@ -1,7 +1,7 @@
 [versions]
 agp = "9.4.1"
 kotlin = "2.4.20"
-compose = "2025.12.01"
+compose = "2026.09.00"
 activity = "1.12.2"
 lifecycle = "2.10.0"
 coroutines = "1.10.2"
@@ -23,6 +23,8 @@ zxing = "3.5.4"
 vosk = "0.3.75"
 jna = "5.18.1"
 glance = "1.2.0"
+backdrop = "2.0.1"
+kyant-shapes = "1.2.1"
 
 [libraries]
 compose-bom = { module = "androidx.compose:compose-bom", version.ref = "compose" }
@@ -62,6 +64,8 @@ camera-view = { module = "androidx.camera:camera-view", version.ref = "camera" }
 zxing = { module = "com.google.zxing:core", version.ref = "zxing" }
 vosk = { module = "com.alphacephei:vosk-android", version.ref = "vosk" }
 glance = { module = "androidx.glance:glance-appwidget", version.ref = "glance" }
+backdrop = { module = "io.github.kyant0:backdrop", version.ref = "backdrop" }
+kyant-shapes = { module = "io.github.kyant0:shapes", version.ref = "kyant-shapes" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

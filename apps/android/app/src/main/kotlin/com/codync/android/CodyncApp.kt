@@ -85,13 +85,6 @@ fun CodyncApp(state: AppState, pair: (String) -> Unit, skip: () -> Unit, retry: 
     val accountOpen = store != null && showAccount
     val editorOpen = store != null && editor != null && !state.loading
     Box(if (accountOpen || editorOpen) Modifier.clearAndSetSemantics {} else Modifier) {
-        if (store != null && state.selectedBot != null && !state.loading) {
-            ChatScreen(state, store, { bot ->
-                if (bot.kind == "group") groupEditor = com.codync.android.core.GroupDraft.from(bot)
-                else editor = com.codync.android.core.BotDraft.from(bot)
-            })
-            return@Box
-        }
         LaunchedEffect(state.pairing) {
             if (!state.pairing && state.error == null && state.computers.isNotEmpty()) {
                 showPairing = false
@@ -109,15 +102,14 @@ fun CodyncApp(state: AppState, pair: (String) -> Unit, skip: () -> Unit, retry: 
         BackHandler(page == "pair" && !state.pairing) {
             if (state.setupComplete) showPairing = false else welcomePassed = false
         }
-        if (page == "bots") {
-            BotHomeScreen(state, store, accounts = { showAccount = true }, pair = { showPairing = true },
-                marketplace = { showMarketplace = true }, usage = { showUsage = true },
-                newBot = { editor = com.codync.android.core.BotDraft() },
-                newGroup = { groupEditor = com.codync.android.core.GroupDraft() },
-                edit = { bot ->
-                    if (bot.kind == "group") groupEditor = com.codync.android.core.GroupDraft.from(bot)
-                    else editor = com.codync.android.core.BotDraft.from(bot)
-                }, retry = retry, clearError = clearError)
+        if (page == "bots" && store != null) {
+            val edit: (com.codync.android.core.Bot) -> Unit = { bot ->
+                if (bot.kind == "group") groupEditor = com.codync.android.core.GroupDraft.from(bot)
+                else editor = com.codync.android.core.BotDraft.from(bot)
+            }
+            MainTabs(state, store, account = { showAccount = true }, manage = { showAccount = true }, usage = { showUsage = true },
+                newBot = { editor = com.codync.android.core.BotDraft() }, newGroup = { groupEditor = com.codync.android.core.GroupDraft() },
+                edit = edit) { ChatScreen(state, store, edit) }
             return@Box
         }
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {

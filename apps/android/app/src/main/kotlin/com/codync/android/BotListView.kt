@@ -1,0 +1,252 @@
+package com.codync.android
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import coil3.compose.AsyncImage
+import com.codync.android.core.Bot
+import com.codync.android.core.LinkState
+import com.codync.android.design.*
+import com.kyant.shapes.Capsule
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonArray
+
+/** The roster, as iOS `BotListView` draws it: every bot is a person you can message. */
+@Composable internal fun BotListView(state: AppState, store: AppStore, account: () -> Unit, manage: () -> Unit,
+    newBot: () -> Unit, newGroup: () -> Unit, edit: (Bot) -> Unit, bottomInset: androidx.compose.ui.unit.Dp) {
+    var confirmDelete by remember { mutableStateOf<Bot?>(null) }
+    val roster = roster(state.bots)
+    val online = state.actualConnection is LinkState.Ready
+    val top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    GlassStage(Modifier.fillMaxSize().background(Palette.background), chrome = {
+        // iOS 26 scroll edge: content fades as it slides under the bar.
+        Box(Modifier.fillMaxWidth().height(top + 64.dp).background(Brush.verticalGradient(
+            0f to Palette.background, 0.55f to Palette.background.copy(alpha = 0.85f), 1f to Color.Transparent)))
+        Row(Modifier.fillMaxWidth().statusBarsPadding().padding(top = 6.dp).padding(horizontal = 16.dp).height(44.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            AccountSwitcherButton(state, account)
+            Box(Modifier.weight(1f), contentAlignment = Alignment.Center) { ComputerFilterHeader(state, store, manage) }
+            NewMenuButton(enabled = state.computers.isNotEmpty(), groupEnabled = online, newBot, newGroup)
+        }
+    }) {
+        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = top + 56.dp, bottom = bottomInset)) {
+            if (roster.isEmpty()) item {
+                EmptyRoster(canCreate = state.computers.isNotEmpty(), hasComputer = state.computers.isNotEmpty(), create = newBot, showComputers = manage)
+            }
+            items(roster, key = Bot::id) { bot ->
+                BotRowItem(bot, state, store, edit = { edit(bot) }, delete = { confirmDelete = bot })
+            }
+        }
+    }
+    val deleting = confirmDelete
+    CodyncDialog("Delete ${deleting?.name ?: "bot"}?", deleting != null, { confirmDelete = null },
+        message = if (deleting?.kind == "group") "Its bots and their own chats stay." else "Files it changed on your computer stay as they are.") {
+        listOf(DialogAction(if (deleting?.kind == "group") "Delete group chat" else "Delete bot and its conversation", destructive = true) {
+            deleting?.let { store.deleteBot(it) {} }
+        })
+    }
+}
+
+/** Roster order: pinned first, then where the user dragged them, then most recent activity. */
+internal fun roster(bots: List<Bot>): List<Bot> = bots.filter { !it.deleted && !it.hidden }
+    .sortedWith(compareByDescending<Bot> { it.pinned }.thenBy { it.position }.thenByDescending { it.lastAt })
+
+@Composable private fun BotRowItem(bot: Bot, state: AppState, store: AppStore, edit: () -> Unit, delete: () -> Unit) {
+    Box(Modifier.fillMaxWidth().contextActions(onClick = { store.openBot(bot.id) }, preview = {
+        Box(Modifier.padding(horizontal = 8.dp)) { BotRow(bot, state) }
+    }) {
+        listOf(
+            MenuItem(if (bot.pinned) "Unpin" else "Pin", icon = if (bot.pinned) "pin.slash" else "pin") {
+                store.command("updateBot", buildJsonObject { put("id", bot.id); put("pinned", !bot.pinned) }, "roster:" + bot.id)
+            },
+            if (bot.kind == "group") MenuItem("Edit group", icon = "person.2", action = edit)
+            else MenuItem("Edit profile", icon = "pencil", action = edit),
+            MenuItem("Mark as read", icon = "checkmark.message") {
+                store.command("markRead", buildJsonObject { put("botId", bot.id); put("all", true) }, "roster:" + bot.id)
+            },
+            MenuItem("Hide from list", icon = "eye.slash") {
+                store.command("updateBot", buildJsonObject { put("id", bot.id); put("hidden", true) }, "roster:" + bot.id)
+            },
+            MenuItem("Delete", icon = "trash", destructive = true, divider = true, action = delete),
+        )
+    }.semantics { contentDescription = bot.name }) {
+        BotRow(bot, state)
+    }
+}
+
+/** One bot: avatar with its status dot, name and day, then the live activity or last message. */
+@Composable internal fun BotRow(bot: Bot, state: AppState) {
+    Row(Modifier.fillMaxWidth().padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        BotAvatar(bot, state.bots, 46.dp)
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    if (bot.pinned) Symbol("pin.fill", size = 13.dp, tint = Palette.tertiary)
+                    Text(bot.name, Modifier.weight(1f, fill = false), style = Type.body.semibold, color = Palette.text, maxLines = 1,
+                        overflow = TextOverflow.Ellipsis)
+                }
+                Spacer(Modifier.width(8.dp))
+                if (bot.lastAt > 0) Text(RelativeTime.day(bot.lastAt), style = Type.subheadline,
+                    color = if (bot.unread > 0) Palette.text else Palette.tertiary, maxLines = 1)
+            }
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Box(Modifier.weight(1f)) { Preview(bot, state) }
+                if (bot.unread > 0) Box(Modifier.height(18.dp).widthIn(min = 18.dp).clip(Capsule()).background(Palette.accentFill)
+                    .padding(horizontal = 6.dp).semantics { contentDescription = "${bot.unread} unread" }, contentAlignment = Alignment.Center) {
+                    Text("${bot.unread}", style = Type.caption2.bold, color = Palette.onAccent)
+                }
+            }
+        }
+    }
+}
+
+/** Live activity while working, otherwise the last message (Grok Bot row behavior). */
+@Composable private fun Preview(bot: Bot, state: AppState) {
+    when {
+        bot.status == "needsInput" -> Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            ThinkingOrb(ThinkingOrbState.Listening, 16.dp, Palette.warning)
+            Text(bot.activity.ifEmpty { "Needs your approval" }, style = Type.subheadline, color = Palette.warning, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        bot.status == "working" -> Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            ThinkingOrb(size = 13.dp, color = Palette.secondary)
+            Text(bot.activity.ifEmpty { "Working…" }, style = Type.subheadline, color = Palette.secondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        bot.status == "error" -> Text(messagePreview(bot.lastMessage ?: "Something went wrong"), style = Type.subheadline, color = Palette.danger,
+            maxLines = 1, overflow = TextOverflow.Ellipsis)
+        else -> Text(messagePreview(bot.lastMessage ?: if (bot.kind == "group") "${bot.members.size} bots"
+            else "${backendName(state, bot.backend)} · ${if (bot.managedWorkspace) "Personal workspace" else bot.cwd.trimEnd('/').substringAfterLast('/')}"),
+            style = Type.subheadline, color = Palette.secondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+/** The first non-empty line, without Markdown markers (CodyncKit `MessagePreview`). */
+internal fun messagePreview(text: String): String {
+    val first = text.lines().map(String::trim).firstOrNull(String::isNotEmpty).orEmpty()
+    return first.dropWhile { it in "#>-* " }.replace("**", "").replace("`", "")
+}
+
+@Composable private fun EmptyRoster(canCreate: Boolean, hasComputer: Boolean, create: () -> Unit, showComputers: () -> Unit) {
+    Column(Modifier.fillMaxWidth().padding(vertical = 40.dp), horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        CharacterAvatar("cloud", "green", 72.dp)
+        Text("No bots yet", style = Type.title3.semibold, color = Palette.text)
+        Text(if (hasComputer) "Create a bot for each kind of work — a reviewer, a fixer, a docs writer — and point it at a project."
+            else "Ask one of your account's computers for access, or pair one with its code.",
+            style = Type.subheadline, color = Palette.secondary, textAlign = TextAlign.Center)
+        if (canCreate) PrimaryButton("Create your first bot", action = create)
+        else if (!hasComputer) PrimaryButton("Computers", action = showComputers)
+    }
+}
+
+/** The account capsule: who's signed in, opening the account sheet. */
+@Composable private fun AccountSwitcherButton(state: AppState, open: () -> Unit) {
+    val (source, pressed) = rememberPress()
+    val email = state.account.accounts.firstOrNull { it.userId == state.account.userId }?.email
+    Row(Modifier.height(44.dp).glass(Capsule(), pressed = pressed)
+        .clickable(source, null, role = Role.Button, onClick = open)
+        .semantics { contentDescription = "Switch account"; stateDescription = email ?: "Local pairing" }
+        .padding(start = 7.dp, end = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        AccountAvatar(state, 30.dp)
+        Symbol("chevron.down", size = 21.dp, tint = Palette.secondary)
+    }
+}
+
+@Composable internal fun AccountAvatar(state: AppState, size: androidx.compose.ui.unit.Dp) {
+    val avatar = state.account.accounts.firstOrNull { it.userId == state.account.userId }?.avatar
+    Box(Modifier.size(size).clip(Capsule()).background(Palette.bubbleUser), contentAlignment = Alignment.Center) {
+        Symbol("person.fill", size = size * 0.6f, tint = Palette.secondary)
+        if (avatar != null) AsyncImage(avatar, null, imageLoader = LocalNetworkImages.current, contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize())
+    }
+}
+
+/** The quiet connection summary, with reconnect and the computers on demand. */
+@Composable private fun ComputerFilterHeader(state: AppState, store: AppStore, manage: () -> Unit) {
+    val summary = connectionSummary(state)
+    DropdownMenu({
+        listOf(
+            MenuItem("All computers", icon = "checkmark"),
+            *state.computers.map { MenuItem("${it.name} · ${connectionLabel(state)}", icon = "checkmark") }.toTypedArray(),
+            MenuItem("Reconnect", icon = "arrow.clockwise", divider = true, enabled = state.computers.isNotEmpty()) { store.connect() },
+            MenuItem("Manage computers", icon = "desktopcomputer", action = manage),
+        )
+    }, label = "Computers, $summary. Filter conversations") {
+        Row(Modifier.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(summary, style = Type.system(12f).medium, color = Palette.secondary, maxLines = 1)
+            Symbol("chevron.down", size = 15.dp, tint = Palette.secondary)
+        }
+    }
+}
+
+/** "2 connected", "Connecting…", "Offline": what the roster says about its computers. */
+internal fun connectionSummary(state: AppState): String = when {
+    state.computers.isEmpty() -> "No computers"
+    state.connection is LinkState.Ready -> "${state.computers.size} connected"
+    state.connection is LinkState.Connecting -> "Connecting…"
+    else -> "Offline"
+}
+
+internal fun connectionLabel(state: AppState): String = when (state.connection) {
+    is LinkState.Ready -> "Connected"
+    is LinkState.Connecting -> "Connecting…"
+    else -> "Offline"
+}
+
+@Composable private fun NewMenuButton(enabled: Boolean, groupEnabled: Boolean, newBot: () -> Unit, newGroup: () -> Unit) {
+    DropdownMenu({
+        listOf(MenuItem("New bot", icon = "plus", action = newBot),
+            MenuItem("New group chat", icon = "person.2", enabled = groupEnabled, action = newGroup))
+    }, Modifier.size(44.dp).glass(Capsule()), enabled = enabled, label = "New") {
+        Symbol("plus", size = 30.dp, tint = Palette.text.copy(alpha = if (enabled) 1f else 0.35f))
+    }
+}
+
+internal fun backendName(state: AppState, id: String): String =
+    state.hello?.get("backends")?.let { it as? kotlinx.serialization.json.JsonArray }
+        ?.firstOrNull { (it as? kotlinx.serialization.json.JsonObject)?.get("id") == JsonPrimitive(id) }
+        ?.let { ((it as kotlinx.serialization.json.JsonObject)["name"] as? JsonPrimitive)?.content }
+        ?: when (id) { "claude" -> "Claude Code"; "codex" -> "Codex"; "opencode" -> "OpenCode"; "grok" -> "Grok Build"; "gemini" -> "Gemini CLI"; else -> "Custom agent" }
+
+/** Saves a dragged roster order (the host syncs it to every device). */
+internal fun AppStore.reorder(ids: List<String>) =
+    command("reorderBots", buildJsonObject { putJsonArray("ids") { ids.forEach { add(JsonPrimitive(it)) } } }, "reorder")

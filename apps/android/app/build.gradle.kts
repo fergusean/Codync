@@ -84,7 +84,7 @@ fun javaString(value: String): String = "\"" + value.replace("\\", "\\\\").repla
 
 android {
     namespace = "com.codync.android"
-    compileSdk = 36
+    compileSdk = 37
     defaultConfig {
         applicationId = deploymentValue("codyncApplicationId") ?: "com.pokai.Codync.android"
         minSdk = 29

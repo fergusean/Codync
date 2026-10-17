@@ -16,6 +16,7 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.codync.android.design.CodyncTheme
+import com.codync.android.design.OverlayRoot
 import coil3.ImageLoader
 import coil3.disk.DiskCache
 import java.io.File
@@ -41,7 +42,7 @@ class MainActivity : ComponentActivity() {
             DisposableEffect(images) { onDispose { AccountImages.close(images) } }
             CompositionLocalProvider(LocalNetworkImages provides images) {
                 key(state.contextId, state.generation) {
-                    CodyncTheme { CodyncApp(state, store::pair, store::skipSetup, store::connect, store::clearError, store::startOver, store) }
+                    CodyncTheme { OverlayRoot { CodyncApp(state, store::pair, store::skipSetup, store::connect, store::clearError, store::startOver, store) } }
                 }
             }
         }

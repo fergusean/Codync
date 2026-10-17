@@ -7,7 +7,7 @@ flows are available, but it does not match every iOS feature. See the
 
 ## Build
 
-Use JDK 21, Android SDK 36 and Build Tools 36.0.0. Set `JAVA_HOME` and
+Use JDK 21, Android SDK 37 and Build Tools 37.0.0. Set `JAVA_HOME` and
 `ANDROID_HOME`, or set `sdk.dir` in ignored `local.properties`.
 
 ```sh
