@@ -944,7 +944,7 @@ class AppStore(application: Application) : AndroidViewModel(application) {
         return WireJson.decodeFromJsonElement(response)
     }
     internal fun setupTerminal(owner: String, backend: String, step: String, method: String?): SetupTerminalSession {
-        require(step in listOf("install", "login"))
+        require(step in listOf("install", "login", "node"))
         return setupTerminals.getOrPut(owner) {
             val generation = state.value.generation
             val transport = object : SetupTerminalTransport {

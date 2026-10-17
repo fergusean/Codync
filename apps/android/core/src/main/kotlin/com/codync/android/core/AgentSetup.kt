@@ -10,7 +10,11 @@ import kotlinx.serialization.json.*
 
 @Serializable data class AgentBackend(val id: String, val name: String, val installed: Boolean = false,
     val available: Boolean = false, val description: String? = null, val installHint: String = "",
-    val signedIn: Boolean? = null, val canInstall: Boolean = false, val curated: Boolean = false)
+    val signedIn: Boolean? = null, val canInstall: Boolean = false, val curated: Boolean = false,
+    val registry: String? = null, val node: String? = null) {
+    /** Runs on Node.js and the computer has none yet. */
+    val needsNode: Boolean get() = node == "missing"
+}
 @Serializable data class AgentAuth(val signedIn: Boolean? = null, val detail: String? = null,
     val methods: List<AgentAuthMethod> = emptyList(), val savedEnv: List<String> = emptyList(), val login: Boolean = false)
 @Serializable data class AgentAuthMethod(val id: String, val name: String, val description: String? = null,

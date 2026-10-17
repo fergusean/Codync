@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -59,7 +60,6 @@ import androidx.compose.ui.unit.dp
 import com.codync.android.core.*
 import com.codync.android.design.*
 import com.kyant.shapes.Capsule
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -123,10 +123,8 @@ import kotlinx.coroutines.launch
     CodyncSheet(state.thread, { store.openBot(bot.id) }) { root -> RepliesView(bot, root, state, store, connect) }
     CodyncSheet(state.trace, { store.showTrace(false) }) { TraceView(bot, state.thread, state) }
     CodyncSheet(routines, { routines = false }) { RoutinesScreen(bot, state, store) }
-    CodyncSheet(app, { app = null; setupEntry = null }) { AppConnectScreen(it, state, store, { app = null; setupEntry = null }, setupEntry) }
-    CodyncSheet(connector, { connector = null; setupEntry = null }) {
-        ConnectorInstaller(it, state, store, requestId = setupEntry) { connector = null; setupEntry = null }
-    }
+    CodyncSheet(app, { app = null; setupEntry = null }) { ComposioConnectSheet(it, state, store, setupEntry) { store.refreshPlugins() } }
+    CodyncSheet(connector, { connector = null; setupEntry = null }) { InstallConnectorSheet(it, state, store, setupEntry) }
 }
 
 /** The glass back button, the title (its menu holds the bot's actions) and the connection under it. */
@@ -216,8 +214,11 @@ import kotlinx.coroutines.launch
 @Composable private fun Follow(list: LazyListState, last: String?, rev: Long?, working: Boolean) {
     var following by remember { mutableStateOf(true) }
     LaunchedEffect(list) {
-        snapshotFlow { list.isScrollInProgress to list.canScrollForward }.distinctUntilChanged().collect { (scrolling, more) ->
-            if (!scrolling) following = !more
+        // Only the reader's own scroll decides: new content arriving (even while Codync is in the background) keeps the follow.
+        var touched = false
+        launch { list.interactionSource.interactions.collect { if (it is DragInteraction.Start) touched = true } }
+        snapshotFlow { list.isScrollInProgress }.collect { scrolling ->
+            if (!scrolling && touched) { touched = false; following = !list.canScrollForward }
         }
     }
     LaunchedEffect(Unit) {

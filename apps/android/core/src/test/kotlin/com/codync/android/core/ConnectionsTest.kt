@@ -41,6 +41,8 @@ class ConnectionsTest {
         rejected { credentialReplacements(connector, mapOf("KEY" to "é".repeat(33_000))) }
         assertTrue(ConnectionRequest("connection", "pending", "Fixture", "bot", connectorId = "fixture").canConnect)
         assertFalse(ConnectionRequest("future", "pending", "Fixture", "bot").canConnect)
+        assertTrue(ConnectionRequest("agent", "pending", "Claude", "bot", backend = "claude").canConnect)
+        assertFalse(ConnectionRequest("agent", "pending", "Claude", "bot").canConnect)
         assertFalse(ConnectionRequest("login", "future", "Fixture", "bot").canConnect)
     }
     @Test fun browserSignInPausesReadsInBackgroundAndReusesItsOriginalConnection() = runTest {

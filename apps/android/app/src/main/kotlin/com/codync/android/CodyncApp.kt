@@ -89,9 +89,6 @@ private enum class Root { Loading, Welcome, Pairing, Tabs }
                 }
             }
         }
-        if (root == Root.Tabs) {
-            if (showMarketplace) MarketplaceScreen(state, store) { showMarketplace = false }
-        }
     }
     // The account sheet holds its own push (Computers & settings), as the iOS sheet's NavigationStack.
     CodyncSheet(showAccount && (state.setupComplete || signedIn) && !state.loading, { showAccount = false; accountSettings = false }) {
@@ -106,6 +103,7 @@ private enum class Root { Loading, Welcome, Pairing, Tabs }
     CodyncSheet(access, { access = null }) { AccessRequestView(state, store, it) }
     CodyncSheet(showPairing && !state.loading, { showPairing = false }) { PairingView(state, store, inModal = true) }
     CodyncSheet(showUsage && !state.loading, { showUsage = false }) { UsageScreen(state) { store.refreshUsage(it) } }
+    CodyncSheet(showMarketplace && root == Root.Tabs, { showMarketplace = false }) { MarketplaceView(state, store) }
     CodyncSheet(groupEditor.takeIf { !state.loading }, { groupEditor = null }) { draft ->
         key(state.contextId, state.generation, draft.id) { GroupEditor(state, draft, store) }
     }
@@ -113,6 +111,6 @@ private enum class Root { Loading, Welcome, Pairing, Tabs }
         key(state.contextId, state.generation, draft.id) { BotEditor(state, draft, store) }
     }
     // One place for errors the screen showing them doesn't handle itself (pairing, access, the editors do).
-    val inline = root == Root.Pairing || showPairing || access != null || editor != null || groupEditor != null || showMarketplace
+    val inline = root == Root.Pairing || showPairing || access != null || editor != null || groupEditor != null
     CodyncDialog("Something went wrong", state.error != null && !inline, store::clearError, state.error, cancel = "OK") { emptyList() }
 }

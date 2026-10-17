@@ -57,9 +57,11 @@ fun externalHttps(value: String): URI {
 @Serializable data class CredentialStatus(val provider: String, val onePasswordConnected: Boolean = false)
 @Serializable data class ConnectionRequest(val kind: String, val status: String, val title: String, val botId: String,
     val toolkit: String? = null, val registryName: String? = null, val connectorId: String? = null,
-    val field: String? = null, val location: String? = null, val site: String? = null) {
+    val field: String? = null, val location: String? = null, val site: String? = null,
+    val backend: String? = null, val logo: String? = null) {
     val canConnect: Boolean get() = status == "pending" && when (kind) {
         "login", "secret" -> true
+        "agent" -> !backend.isNullOrBlank()
         "app" -> !toolkit.isNullOrBlank()
         "connection" -> !connectorId.isNullOrBlank() || !registryName.isNullOrBlank()
         else -> false
