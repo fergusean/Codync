@@ -9,7 +9,8 @@ import kotlinx.serialization.encodeToString
 
 @Serializable
 data class TaskWatch(val taskId: String = java.util.UUID.randomUUID().toString(), val botId: String, val name: String, val status: String = "working", val finished: Boolean = false,
-    val seenRunning: Boolean = false, val timestamp: Long = 0, val lastRev: Long = 0, val deadline: Long = System.currentTimeMillis() + 900_000)
+    val seenRunning: Boolean = false, val timestamp: Long = 0, val lastRev: Long = 0, val deadline: Long = System.currentTimeMillis() + 900_000,
+    val startedAt: Long = System.currentTimeMillis(), val avatarShape: String = "blob", val avatarColor: String = "blue", val activity: String = "")
 
 /** Bounded delegation markers; inactive contexts never render or accept these updates. */
 class TaskFeed(directory: File) {
@@ -21,7 +22,7 @@ class TaskFeed(directory: File) {
     fun start(bot: Bot): TaskWatch = synchronized(lock) {
         val running = bot.status in setOf("working", "needsInput")
         val watch = TaskWatch(botId = bot.id, name = bot.name, lastRev = bot.rev, seenRunning = running,
-            status = if (running) bot.status else "working")
+            status = if (running) bot.status else "working", avatarShape = bot.avatarShape, avatarColor = bot.avatarColor)
         save((all().filter { it.botId != bot.id } + watch).takeLast(16))
         watch
     }
@@ -29,7 +30,7 @@ class TaskFeed(directory: File) {
         val watch = all().firstOrNull { it.botId == bot.id && !it.finished } ?: return@synchronized null
         if (bot.rev <= watch.lastRev) return@synchronized null
         if (bot.status !in setOf("working", "needsInput", "idle", "error") || bot.status == "idle" && !watch.seenRunning) return@synchronized null
-        val updated = watch.copy(name = bot.name, status = bot.status, finished = bot.status in setOf("idle", "error"),
+        val updated = watch.copy(name = bot.name, status = bot.status, finished = bot.status in setOf("idle", "error"), activity = bot.activity,
             seenRunning = true, lastRev = bot.rev, deadline = System.currentTimeMillis() + 900_000)
         save(all().map { if (it.botId == bot.id) updated else it })
         updated

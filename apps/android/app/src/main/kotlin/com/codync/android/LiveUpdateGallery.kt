@@ -224,9 +224,11 @@ private val TaskPhase.mood get() = when (this) { TaskPhase.Working -> "working";
         Text("9:41", style = Type.system(14f).semibold.monospacedDigit, color = Color.White)
         Spacer(Modifier.width(8.dp))
         Row(Modifier.clip(Capsule()).background(if (phase == TaskPhase.NeedsInput || phase == TaskPhase.Failed) phase.tint() else Color(0xFF2C2C2C))
-            .padding(start = 4.dp, end = 10.dp, top = 3.dp, bottom = 3.dp).animateContentSize(Motion.layoutSize),
+            .padding(start = 7.dp, end = 10.dp, top = 4.dp, bottom = 4.dp).animateContentSize(Motion.layoutSize),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            CharacterAvatar("blob", "green", 18.dp, phase.mood)
+            // Android draws the app's small icon in the chip.
+            androidx.compose.foundation.Image(painterResource(R.drawable.ic_notification), null, Modifier.size(16.dp),
+                colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(Color.White))
             Text(when { phase.live && phase != TaskPhase.NeedsInput -> elapsed(started); phase == TaskPhase.NeedsInput -> "Needs you"
                 phase == TaskPhase.Completed -> "Done"; phase == TaskPhase.Failed -> "Failed"; else -> phase.title },
                 style = Type.system(12f).semibold.monospacedDigit, color = Color.White, maxLines = 1)
