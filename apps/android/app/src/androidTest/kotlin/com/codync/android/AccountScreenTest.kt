@@ -144,7 +144,7 @@ class AccountScreenTest {
         val actions = AccountScreenActions(setRoute = { route = it }, loadGrants = { grantsRequested = it },
             revokeGrant = { id, grantId -> revoked = id to grantId }, forgetComputer = { forgotten++ },
             notifications = { state.value = state.value.copy(notifications = it) }, startOver = { reset++ })
-        compose.setContent { CodyncTheme { AccountScreenContent(state.value, actions, {}, pair = { paired++ }) } }
+        compose.setContent { CodyncTheme { AccountScreenContent(state.value, actions, {}, pair = { paired++ }, pushConfigured = true) } }
         compose.onNodeWithText("Computers").performClick()
         compose.onNodeWithText("Computers & settings").assertIsDisplayed()
         compose.onNodeWithContentDescription("Back to account").assertIsDisplayed()
@@ -176,6 +176,15 @@ class AccountScreenTest {
         compose.onNodeWithContentDescription("Back to account").performClick()
         compose.onNodeWithText("Account").assertIsDisplayed()
         compose.onNodeWithContentDescription("Connection").assertDoesNotExist()
+    }
+
+    @Test fun aBuildWithoutFirebaseExplainsPushAvailability() {
+        compose.setContent { CodyncTheme { AccountScreenContent(fixture(), AccountScreenActions(), {}, pushConfigured = false) } }
+        compose.onNodeWithText("Computers").performScrollTo().performClick()
+        compose.onNodeWithText("Push delivery is not configured in this build. Bots and chat work while the app is open.")
+            .performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Push notifications").assertDoesNotExist()
+        compose.onNodeWithText("Android notification settings").assertIsDisplayed()
     }
 
     @Test fun aPendingAccessRequestShowsItsCodeAndCanBeCancelled() {

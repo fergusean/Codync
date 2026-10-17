@@ -87,7 +87,7 @@ import com.codync.android.design.*
                         }
                     }, trailing = {
                         Box {
-                            CodyncIconButton("New", Glyph.Plus, { creating = !creating }, enabled = computer != null)
+                            CodyncIconButton("New", Glyph.Plus, { creating = !creating }, enabled = computer != null && state.actualConnection is LinkState.Ready)
                             CodyncPopupMenu(creating, { creating = false }) {
                                 MenuAction("New bot") { creating = false; newBot() }
                                 MenuAction("New group chat", enabled = state.bots.any { it.kind != "group" && !it.deleted }) { creating = false; newGroup() }
@@ -95,6 +95,14 @@ import com.codync.android.design.*
                         }
                     })
                     state.error?.let { InlineError(it, clearError) }
+                    if (computer != null && state.bots.isNotEmpty() && !connected) {
+                        Column(Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
+                            Text("${connectionLabel(state.connection)} · Showing saved bots", style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            (state.connection as? LinkState.Failed)?.let { Text(it.message, style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error) }
+                        }
+                    }
                     state.access?.let { ticket ->
                         Row(Modifier.padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                             Text("Compare ${ticket.code.chunked(3).joinToString(" ")} with your computer.", Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
@@ -113,17 +121,15 @@ import com.codync.android.design.*
                     LazyColumn(Modifier.fillMaxWidth().weight(1f), contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)) {
                         if (hidden) item { Text("Hidden bots", Modifier.padding(vertical = 10.dp), style = MaterialTheme.typography.titleSmall) }
                         if (bots.isEmpty()) item {
+                            val empty = emptyRoster(state, query, hidden)
                             Column(Modifier.fillMaxWidth().padding(vertical = 40.dp), horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                 CharacterAvatar("cloud", "green", 72.dp)
-                                Text(when {
-                                    computer == null -> "No computer yet"
-                                    query.isNotBlank() -> "No matching bots"
-                                    connected && !state.rosterLoaded -> "Syncing bots…"
-                                    else -> "No bots yet"
-                                }, style = MaterialTheme.typography.titleMedium)
+                                Text(empty.title, style = MaterialTheme.typography.titleMedium)
+                                empty.detail?.let { Text(it, style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant) }
                                 if (computer == null) Button(onClick = pair) { Text("Pair computer") }
-                                else if (query.isBlank() && state.rosterLoaded) TextButton(onClick = newBot) { Text("Create your first bot") }
+                                else if (empty.canCreate) TextButton(onClick = newBot) { Text("Create your first bot") }
                                 if (state.connection is LinkState.Failed) TextButton(onClick = retry) { Text("Retry") }
                             }
                         }

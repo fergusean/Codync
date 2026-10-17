@@ -1,12 +1,35 @@
 import java.security.MessageDigest
 import java.util.zip.ZipFile
+import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.kotlin.compose)
-    alias(libs.plugins.google.services)
+    alias(libs.plugins.google.services) apply false
 }
+
+// Private deployments opt in as one tuple; never silently mix account providers.
+val deployment = Properties().apply {
+    val local = rootProject.file("codync.local.properties")
+    if (local.exists()) local.inputStream().use(::load)
+}
+fun deploymentValue(name: String): String? = providers.gradleProperty(name).orNull ?: deployment.getProperty(name)
+val accountOverrides = listOf("codyncCloudUrl", "codyncClerkPublishableKey", "codyncPushRelayUrl")
+check(accountOverrides.none { deploymentValue(it) != null } || accountOverrides.all { deploymentValue(it) != null }) {
+    "Override cloud, Clerk and push relay together in codync.local.properties or Gradle properties."
+}
+fun accountValue(variant: String, key: String): String {
+    val plist = rootProject.file("../shared/Config/$variant.plist").readText()
+    return requireNotNull(Regex("<key>$key</key>\\s*<string>([^<]*)</string>").find(plist)?.groupValues?.get(1)) {
+        "Missing $key in the shared $variant account configuration."
+    }
+}
+val upstreamRelay = rootProject.file("../ios/Kit/Sources/CodyncKit/Client/SharedStore.swift").readLines()
+    .first { it.contains("static let relayURL =") }.substringAfter('"').substringBefore('"')
+val firebaseConfig = deploymentValue("codyncGoogleServicesFile")?.takeIf(String::isNotBlank)?.let(::file)
+check(firebaseConfig == null || firebaseConfig.isFile) { "The configured Firebase file does not exist." }
+if (firebaseConfig != null) apply(plugin = "com.google.gms.google-services")
 
 val productVersion = rootProject.file("../project.yml").readLines()
     .first { it.trimStart().startsWith("MARKETING_VERSION:") }
@@ -63,22 +86,27 @@ android {
     namespace = "com.codync.android"
     compileSdk = 36
     defaultConfig {
-        applicationId = "com.sgnl24.codync.android"
+        applicationId = deploymentValue("codyncApplicationId") ?: "com.codync.android"
         minSdk = 29
         targetSdk = 36
         versionCode = 1
         versionName = productVersion
         testInstrumentationRunner = if (releaseTests) "com.codync.android.VoiceReleaseRunner" else "androidx.test.runner.AndroidJUnitRunner"
-        buildConfigField("String", "CLOUD_URL", javaString(providers.gradleProperty("codyncCloudUrl").getOrElse("https://codync-cloud.signal24.workers.dev")))
-        buildConfigField("String", "PUSH_RELAY_URL", javaString(providers.gradleProperty("codyncPushRelayUrl").getOrElse("https://codync-relay.signal24.workers.dev")))
-        buildConfigField("String", "CLERK_PUBLISHABLE_KEY", javaString(providers.gradleProperty("codyncClerkPublishableKey").getOrElse("pk_test_cGlja2VkLWhhbGlidXQtOTgxMi5jbGVyay5hY2NvdW50cy5kZXYk")))
+        buildConfigField("String", "PUSH_RELAY_URL", javaString(deploymentValue("codyncPushRelayUrl") ?: upstreamRelay))
+        buildConfigField("boolean", "PUSH_CONFIGURED", (firebaseConfig != null).toString())
     }
     buildTypes {
         debug {
             applicationIdSuffix = ".dev"
             versionNameSuffix = "-dev"
+            resValue("string", "app_name", deploymentValue("codyncAppName") ?: "Codync Dev")
+            buildConfigField("String", "CLOUD_URL", javaString(deploymentValue("codyncCloudUrl") ?: accountValue("dev", "cloudURL")))
+            buildConfigField("String", "CLERK_PUBLISHABLE_KEY", javaString(deploymentValue("codyncClerkPublishableKey") ?: accountValue("dev", "clerkPublishableKey")))
         }
         release {
+            resValue("string", "app_name", deploymentValue("codyncAppName") ?: "Codync")
+            buildConfigField("String", "CLOUD_URL", javaString(deploymentValue("codyncCloudUrl") ?: accountValue("main", "cloudURL")))
+            buildConfigField("String", "CLERK_PUBLISHABLE_KEY", javaString(deploymentValue("codyncClerkPublishableKey") ?: accountValue("main", "clerkPublishableKey")))
             isMinifyEnabled = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
@@ -94,6 +122,7 @@ android {
     if (releaseTests) testBuildType = "releaseAcceptance"
     buildFeatures.compose = true
     buildFeatures.buildConfig = true
+    buildFeatures.resValues = true
     sourceSets.getByName("androidTest").assets.srcDir(rootProject.file("../../docs/reference/fixtures"))
     compileOptions {
         isCoreLibraryDesugaringEnabled = true
@@ -106,8 +135,8 @@ androidComponents.onVariants { variant ->
     variant.sources.assets?.addGeneratedSourceDirectory(prepareVoiceModel) { task -> task.assetDirectory }
 }
 afterEvaluate {
-    if (releaseTests) tasks.named<com.google.gms.googleservices.GoogleServicesTask>("processReleaseAcceptanceGoogleServices") {
-        googleServicesJsonFiles.set(listOf(project.layout.projectDirectory.file("src/debug/google-services.json").asFile))
+    if (firebaseConfig != null) tasks.withType<com.google.gms.googleservices.GoogleServicesTask>().configureEach {
+        googleServicesJsonFiles.set(listOf(firebaseConfig))
     }
 }
 kotlin.compilerOptions.jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)

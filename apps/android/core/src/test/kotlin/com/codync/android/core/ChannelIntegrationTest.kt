@@ -41,7 +41,8 @@ class ChannelIntegrationTest {
     private fun computer(): Computer = Computer(cid, "Computer", hostKey.base64Url(), urls = listOf(server.url("/").toString()))
     private fun identity(): DeviceIdentity = DeviceIdentity(ByteArray(32) { 3 }, ByteArray(32) { 12 })
 
-    private fun enqueueHost(forgeSignature: Boolean = false, holdCalls: Boolean = false, burst: Int = 0, welcomeDelay: Long = 0) {
+    private fun enqueueHost(forgeSignature: Boolean = false, holdCalls: Boolean = false, burst: Int = 0, welcomeDelay: Long = 0,
+        snapshotHead: Int = 5) {
         server.enqueue(MockResponse().withWebSocketUpgrade(object : WebSocketListener() {
             private lateinit var opener: FrameOpener
             private lateinit var sealer: FrameSealer
@@ -83,7 +84,7 @@ class ChannelIntegrationTest {
                         }) }
                         return
                     }
-                    send(webSocket, buildJsonObject { put("id", id); put("ev", buildJsonObject { put("type", "hello"); put("rev", 5) }) })
+                    send(webSocket, buildJsonObject { put("id", id); put("ev", buildJsonObject { put("type", "hello"); put("rev", snapshotHead) }) })
                     send(webSocket, buildJsonObject { put("id", id); put("ev", buildJsonObject {
                         put("type", "bot"); put("rev", 4); put("bot", buildJsonObject { put("id", "bot-1"); put("name", "Reviewer"); put("rev", 4) })
                     }) })
@@ -106,6 +107,16 @@ class ChannelIntegrationTest {
     @After fun shutdown() {
         sockets.forEach { it.close(1000, null) }
         server.shutdown()
+    }
+
+    @Test fun `initial roster uses the current event protocol and releases the subscription`() = runBlocking {
+        enqueueHost(snapshotHead = 4)
+        val channel = HostConnector.connect(computer(), identity())
+        try {
+            val bots = HostClient.bots(channel)
+            assertEquals(listOf("Reviewer"), bots.map { it.name })
+            withTimeout(2_000) { while (cancelled.get() == null) delay(10) }
+        } finally { channel.close() }
     }
 
     @Test fun `pairing sends the Android platform and returns the pinned computer`() = runBlocking {

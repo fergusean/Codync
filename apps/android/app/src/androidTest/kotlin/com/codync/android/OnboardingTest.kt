@@ -49,4 +49,14 @@ class OnboardingTest {
         compose.onNodeWithText("codync-host pair").assertIsDisplayed()
         compose.onNodeWithText("Pairing link").assertIsDisplayed()
     }
+
+    @Test fun windowsSetupExplainsTheTrayPairingPath() {
+        compose.setContent { CodyncTheme { PairingSetup("", {}, false, false, {}, {}, {}) } }
+        compose.onNodeWithText("Windows").performClick()
+        compose.onNodeWithText("Install and open the Codync desktop app on your Windows PC. It runs the host in the background.").assertIsDisplayed()
+        compose.onNodeWithText("Continue").performClick()
+        compose.onNodeWithText("On your Windows PC, open Codync’s system tray menu and choose Pair iPhone. Its code also pairs this Android phone.").assertIsDisplayed()
+        compose.onNodeWithText("Installation steps").performClick()
+        compose.onNodeWithText("✓ Windows").assertIsDisplayed()
+    }
 }

@@ -22,7 +22,7 @@ class LivePluginsTest {
         assertNull(PushPreferences.activeUser(context))
         val local = LocalStore(context)
         val computer = local.computers().single()
-        assertEquals("9ESVKkTXlLyIExxnW7-PIg", computer.id)
+        requireFixtureHost(computer.id)
         val route = computer.copy(urls = listOf("http://10.0.2.2:29322"), route = ConnectionRoute.DirectOnly)
         val channel = runBlocking { HostConnector.connect(route, local.identity()) }
         val original = runBlocking { HostClient.bots(channel) }

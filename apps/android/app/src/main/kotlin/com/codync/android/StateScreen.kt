@@ -43,7 +43,9 @@ import com.codync.android.design.*
                 Text("Notifications", style = MaterialTheme.typography.titleMedium)
                 Text("Ongoing task notifications keep delegated tasks in view. Tap one to open its conversation.",
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                TextButton(onClick = { store?.notifications(!state.notifications) }) { Text(if (state.notifications) "Bot alerts · On" else "Bot alerts · Off") }
+                if (BuildConfig.PUSH_CONFIGURED) TextButton(onClick = { store?.notifications(!state.notifications) }) { Text(if (state.notifications) "Bot alerts · On" else "Bot alerts · Off") }
+                else Text("Push delivery is not configured in this build. Bots and chat work while the app is open.",
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 TextButton(onClick = { store?.taskNotifications(!state.tasks) }) { Text(if (state.tasks) "Delegated task status · On" else "Delegated task status · Off") }
             }
         }
@@ -109,7 +111,7 @@ import com.codync.android.design.*
             val supported = AppWidgetManager.getInstance(context).isRequestPinAppWidgetSupported
             if (supported) Button(onClick = { pinError = !CodyncWidgets.pin(context, kind) }) { Text("Add to Home Screen") }
             if (pinError) Text("Your launcher couldn't open the pin request. Add a widget from the Home Screen instead.")
-            Text("1. Touch and hold an empty space on your Home Screen.\n2. Choose Widgets, then ZC Codync.\n3. Drag a widget onto your Home Screen.\n4. Touch and hold a provider widget to choose its provider.",
+            Text("1. Touch and hold an empty space on your Home Screen.\n2. Choose Widgets, then Codync.\n3. Drag a widget onto your Home Screen.\n4. Touch and hold a provider widget to choose its provider.",
                 style = MaterialTheme.typography.bodySmall)
             Text("The launcher chooses the initial size. Resize or reconfigure it on the Home Screen. Provider widgets start with Claude; edit the installed widget to choose another provider.",
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

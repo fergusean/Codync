@@ -132,7 +132,7 @@ import java.util.Date
                         Column {
                             Text(if (state.trace) "Full conversation" else bot.name,
                                 style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(if (state.connection is LinkState.Ready) bot.activity.ifBlank { "Connected" } else "Connecting…",
+                            Text(if (state.connection is LinkState.Ready) bot.activity.ifBlank { "Connected" } else connectionLabel(state.connection),
                                 style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }

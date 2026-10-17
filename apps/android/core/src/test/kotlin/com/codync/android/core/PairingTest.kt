@@ -8,10 +8,10 @@ class PairingTest {
     private val fixture = vectors()
     private val keys = fixture.getValue("keys").let { it as kotlinx.serialization.json.JsonObject }
     private val params = linkedMapOf(
-        "v" to "3", "id" to requireNotNull(keys.text("computerId")), "name" to "Sean’s computer",
+        "v" to "3", "id" to requireNotNull(keys.text("computerId")), "name" to "Fixture computer",
         "sk" to requireNotNull(keys.text("hostSignPub")), "bk" to requireNotNull(keys.text("hostBoxPub")),
         "code" to ByteArray(16) { 8 }.base64Url(), "urls" to "http://192.168.1.2:19222,https://example.test:19222",
-        "cloud" to "https://codync-cloud.signal24.workers.dev",
+        "cloud" to "https://cloud.example.test",
     )
     private fun link(fields: Map<String, String> = params): String = "codync://pair?" + fields.entries.joinToString("&") {
         "${it.key}=${URLEncoder.encode(it.value, "UTF-8")}" }

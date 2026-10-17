@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="widget_loading">ZC Codync · Open the app for the latest report</string>
+    <string name="widget_loading">Codync · Open the app for the latest report</string>
     <string name="widget_bots_description">Latest bot status and unread counts</string>
     <string name="widget_usage_description">Latest limits across providers</string>
     <string name="widget_provider_description">Latest limits from your selected provider</string>

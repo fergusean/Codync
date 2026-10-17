@@ -49,7 +49,7 @@ class PushTest {
             PushService.receive(context, data)
             waitUntil { manager.activeNotifications.any { it.tag == tag } }
             val notification = manager.activeNotifications.single { it.tag == tag }.notification
-            assertEquals("ZC Codync", notification.extras.getString(Notification.EXTRA_TITLE))
+            assertEquals(context.getString(R.string.app_name), notification.extras.getString(Notification.EXTRA_TITLE))
             assertEquals("A bot has an update.", notification.extras.getString(Notification.EXTRA_TEXT))
             assertEquals(Notification.VISIBILITY_PRIVATE, notification.visibility)
             manager.cancel(tag, 1)

@@ -203,7 +203,7 @@ class BotEditorTest {
 
     private fun fixture(): AppState = AppState(loading = false, setupComplete = true,
         actualConnection = LinkState.Ready(HostRoute.Direct), plugins = PluginListing(emptyList(), emptyList()),
-        computers = listOf(Computer("fixture", "Sean's computer", "fixture-key")), hello = buildJsonObject {
+        computers = listOf(Computer("fixture", "Fixture computer", "fixture-key")), hello = buildJsonObject {
             put("backends", buildJsonArray {
                 add(buildJsonObject { put("id", "claude"); put("name", "Claude"); put("available", true) })
                 add(buildJsonObject { put("id", "codex"); put("name", "Codex"); put("available", false); put("installHint", "Install Codex on your computer.") })

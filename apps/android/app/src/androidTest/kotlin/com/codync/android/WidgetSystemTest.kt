@@ -41,7 +41,7 @@ class WidgetSystemTest {
         val store = ViewModelProvider(compose.activity)[AppStore::class.java]
         compose.waitUntil(30_000) { !store.state.value.loading }
         val computer = LocalStore(context).computers().single()
-        assertEquals("9ESVKkTXlLyIExxnW7-PIg", computer.id)
+        requireFixtureHost(computer.id)
         val originalFile = AtomicFile(File(context.noBackupFilesDir, "widget-owner.json"))
         val original = if (originalFile.baseFile.exists()) originalFile.readFully() else null
         val local = LocalStore(context, "widget-host-" + UUID.randomUUID())
@@ -96,7 +96,7 @@ class WidgetSystemTest {
             }
             WidgetStore.retire(context, owner)
             runBlocking { CodyncWidgets.update(context) }
-            waitFor(container!!, "Connect a computer in ZC Codync.")
+            waitFor(container!!, "Connect a computer in Codync.")
             assertFalse(texts(container!!).contains("Daily"))
         } finally {
             instrumentation.uiAutomation.dropShellPermissionIdentity()
@@ -119,7 +119,7 @@ class WidgetSystemTest {
         assertNull(PushPreferences.activeUser(context))
         val store = ViewModelProvider(compose.activity)[AppStore::class.java]
         compose.waitUntil(30_000) { !store.state.value.loading && store.state.value.rosterLoaded }
-        assertEquals("9ESVKkTXlLyIExxnW7-PIg", LocalStore(context).computers().single().id)
+        requireFixtureHost(LocalStore(context).computers().single().id)
         val started = System.currentTimeMillis()
         val written = runBlocking { WidgetRefreshWorker.refresh(context) }
         val feed = WidgetStore.feed(context)

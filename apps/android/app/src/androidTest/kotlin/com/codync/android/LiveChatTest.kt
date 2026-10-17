@@ -34,6 +34,7 @@ class LiveChatTest {
         val message = "Android acceptance " + UUID.randomUUID()
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val local = LocalStore(context)
+        requireFixtureHost(local.computers().single().id)
         val mirror = MirrorDatabase(context, local.directory, local.computers().single().id)
         compose.onNode(hasSetTextAction()).performTextReplacement(message)
         compose.onNodeWithContentDescription("Send").performClick()

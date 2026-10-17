@@ -26,7 +26,7 @@ class LiveVoiceSpeechTest {
         val context = instrumentation.targetContext
         assertNull(PushPreferences.activeUser(context))
         val local = LocalStore(context); val computer = local.computers().single()
-        assertEquals("9ESVKkTXlLyIExxnW7-PIg", computer.id)
+        requireFixtureHost(computer.id)
         val channel = runBlocking { HostConnector.connect(computer.copy(urls = listOf("http://10.0.2.2:29322"), route = ConnectionRoute.DirectOnly), local.identity()) }
         val marker = File(context.cacheDir, "voice-speech-stage")
         check(marker.parentFile!!.isDirectory || marker.parentFile!!.mkdirs())

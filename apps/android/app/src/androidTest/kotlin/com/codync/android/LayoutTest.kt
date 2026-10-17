@@ -19,7 +19,7 @@ class LayoutTest {
     @get:Rule val compose = createComposeRule()
     private val state = AppState(loading = false, setupComplete = true, rosterLoaded = true,
         computers = listOf(Computer("fixture", "Acceptance computer", "fixture")),
-        connection = LinkState.Ready(HostRoute.Direct), bots = (1..5).map {
+        connection = LinkState.Ready(HostRoute.Direct), actualConnection = LinkState.Ready(HostRoute.Direct), bots = (1..5).map {
             Bot("bot-$it", "Bot $it", lastMessage = "A recent reply", unread = if (it == 1) 12 else 0)
         })
 

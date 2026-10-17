@@ -30,7 +30,7 @@ class WidgetFeedTest {
     }
     @Test fun anUnpairedWidgetUsesAnHonestEmptyState() {
         assertTrue(WidgetFeed().present(WidgetKind.Bots).empty!!.contains("Connect a computer"))
-        assertEquals("No saved usage report. Open ZC Codync to refresh.", feed.present(WidgetKind.Provider, "absent", 1_000).empty)
+        assertEquals("No saved usage report. Open Codync to refresh.", feed.present(WidgetKind.Provider, "absent", 1_000).empty)
     }
     @Test fun attentionSortingExcludesDeletedAndHiddenBots() {
         val bots = listOf(Bot("idle", "Idle"), Bot("hidden", "Hidden", hidden = true),

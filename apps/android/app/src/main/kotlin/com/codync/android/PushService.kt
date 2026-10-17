@@ -58,6 +58,7 @@ object PushDelivery {
     }
 
     fun schedule(context: Context) {
+        if (!BuildConfig.PUSH_CONFIGURED) return
         val request = OneTimeWorkRequestBuilder<PushRegistrationWorker>()
             .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 15, TimeUnit.SECONDS).build()
@@ -69,6 +70,7 @@ object PushDelivery {
     }
 
     private suspend fun syncLocked(context: Context, local: LocalStore, computer: Computer, active: EncryptedChannel) {
+        if (!BuildConfig.PUSH_CONFIGURED) return
         if (PushPreferences.retired(context) || local.contextId != (PushPreferences.activeUser(context) ?: "local")) return
         val permitted = context.getSystemService(NotificationManager::class.java).areNotificationsEnabled()
         val feed = TaskFeed(local.directory)
@@ -105,6 +107,7 @@ object PushDelivery {
     }
 
     suspend fun background(context: Context) = gate.withLock {
+        if (!BuildConfig.PUSH_CONFIGURED) return@withLock
         if (PushPreferences.retired(context)) return@withLock
         val local = LocalStore(context, PushPreferences.activeUser(context) ?: "local")
         val computers = withContext(Dispatchers.IO) { local.computers() }
@@ -175,7 +178,7 @@ class PushService : FirebaseMessagingService() {
                     return
                 }
                 if (!PushPreferences.enabled(context) || PushDelivery.foreground) return
-                var title = "ZC Codync"
+                var title = context.getString(R.string.app_name)
                 var text = "A bot has an update."
                 try {
                     if (local.hasIdentity()) {
@@ -206,7 +209,7 @@ internal object NotificationDisplay {
         val intent = Intent(context, MainActivity::class.java).setAction(Intent.ACTION_VIEW).setData(url)
         val pending = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val generic = NotificationCompat.Builder(context, channel).setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle("ZC Codync").setContentText("A bot has an update.").build()
+            .setContentTitle(context.getString(R.string.app_name)).setContentText("A bot has an update.").build()
         return NotificationCompat.Builder(context, channel).setSmallIcon(R.drawable.ic_notification).setContentIntent(pending)
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE).setPublicVersion(generic).setGroup("$scope/$computer")
     }

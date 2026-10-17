@@ -22,7 +22,7 @@ class LiveDraftTest {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val local = LocalStore(context)
         val computer = local.computers().single()
-        assertEquals("9ESVKkTXlLyIExxnW7-PIg", computer.id)
+        requireFixtureHost(computer.id)
         assertNull(PushPreferences.activeUser(context))
         val book = DraftBook(local.directory, computer.id)
         val metadata = File(context.cacheDir, "draft-acceptance.json")

@@ -26,7 +26,7 @@ class LiveThreadTest {
         assumeTrue(Build.PRODUCT.startsWith("sdk"))
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val local = LocalStore(context)
-        assertEquals("9ESVKkTXlLyIExxnW7-PIg", local.computers().single().id)
+        requireFixtureHost(local.computers().single().id)
         assertNull(PushPreferences.activeUser(context))
         val store = ViewModelProvider(compose.activity)[AppStore::class.java]
         compose.waitUntil(30_000) { !store.state.value.loading && store.state.value.rosterLoaded &&

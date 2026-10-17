@@ -27,7 +27,7 @@ fun WidgetFeed.present(kind: WidgetKind, providerId: String = "claude", now: Lon
     val title = when (kind) { WidgetKind.Bots -> "Bots"; WidgetKind.Usage -> "Usage limits";
         WidgetKind.Provider -> usage.providers.firstOrNull { it.id == providerId }?.name
             ?: when (providerId) { "claude" -> "Claude"; "codex" -> "Codex"; else -> providerId } }
-    if (computerId == null) return WidgetPresentation(title, "ZC Codync", "Connect a computer in ZC Codync.")
+    if (computerId == null) return WidgetPresentation(title, "Codync", "Connect a computer in Codync.")
     val selectedProviders = if (kind == WidgetKind.Provider) usage.providers.filter { it.id == providerId } else usage.providers
     val updated = if (kind == WidgetKind.Bots) botsAt else selectedProviders.mapNotNull { it.updatedAt?.takeIf { time -> time > 0 } }.minOrNull() ?: usageAt
     val stale = updated <= 0 || updated > now + 60_000 || now - updated > 30 * 60_000
@@ -41,7 +41,7 @@ fun WidgetFeed.present(kind: WidgetKind, providerId: String = "claude", now: Lon
             else -> "Update delayed"
         }, warning = !stale && bot.status in setOf("needsInput", "error"), botId = bot.id, avatarShape = bot.avatarShape, avatarColor = bot.avatarColor) }
         return WidgetPresentation(title, if (stale) subtitle else "$needed needs you · $working working",
-            if (lines.isEmpty()) if (updated == 0L) "Open ZC Codync to sync your bots." else "No visible bots." else null,
+            if (lines.isEmpty()) if (updated == 0L) "Open Codync to sync your bots." else "No visible bots." else null,
             lines, updated, stale)
     }
     val providers = selectedProviders
@@ -51,7 +51,7 @@ fun WidgetFeed.present(kind: WidgetKind, providerId: String = "claude", now: Lon
         if (kind == WidgetKind.Provider) window.label else provider.name,
         window.reportedPercent?.let { "${it.roundToInt()}%" } ?: "Unavailable", window.barFraction,
         (window.reportedPercent ?: 0.0) >= 90, resetsAt = window.resetsAt, resetsText = window.resetsText) }
-    return WidgetPresentation(title, subtitle, if (lines.isEmpty()) "No saved usage report. Open ZC Codync to refresh." else null,
+    return WidgetPresentation(title, subtitle, if (lines.isEmpty()) "No saved usage report. Open Codync to refresh." else null,
         lines, updated, stale)
 }
 

@@ -43,8 +43,8 @@ class WidgetConfigurationActivity : ComponentActivity() {
                         CodyncTopBar(title = { Text("Provider widget", style = MaterialTheme.typography.titleMedium) },
                             leading = { CodyncIconButton("Cancel", Glyph.Close, { finish() }) })
                         Column(Modifier.weight(1f).padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                            Text("Follows the account selected in ZC Codync.")
-                            Text(feed.computerName.ifBlank { "Connect a computer in ZC Codync to see reports." })
+                            Text("Follows the account selected in Codync.")
+                            Text(feed.computerName.ifBlank { "Connect a computer in Codync to see reports." })
                             Text("Provider", style = MaterialTheme.typography.titleMedium)
                             CodyncChoices(provider, choices, { provider = it })
                             if (choices.none { it.first == provider }) Text("Saved provider · $provider")

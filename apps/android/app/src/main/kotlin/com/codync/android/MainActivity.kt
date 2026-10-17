@@ -32,7 +32,7 @@ class MainActivity : ComponentActivity() {
             val state by store.state.collectAsStateWithLifecycle()
             val notifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { store.syncPush() }
             LaunchedEffect(state.computers.isNotEmpty(), state.contextId) {
-                if (state.computers.isNotEmpty() && android.os.Build.VERSION.SDK_INT >= 33 && !PushPreferences.asked(applicationContext)) {
+                if (BuildConfig.PUSH_CONFIGURED && state.computers.isNotEmpty() && android.os.Build.VERSION.SDK_INT >= 33 && !PushPreferences.asked(applicationContext)) {
                     PushPreferences.markAsked(applicationContext)
                     notifications.launch(android.Manifest.permission.POST_NOTIFICATIONS)
                 }

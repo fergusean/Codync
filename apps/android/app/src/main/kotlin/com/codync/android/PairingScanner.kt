@@ -15,6 +15,8 @@ import androidx.camera.core.resolutionselector.ResolutionStrategy
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -53,17 +55,20 @@ import java.util.concurrent.atomic.AtomicBoolean
                 TextButton(onClick = close) { Text("Back") }
                 Text("Scan pairing code", style = MaterialTheme.typography.headlineMedium)
             }
-            when {
-                !hardware || !permitted -> CameraPermissionContent(hardware,
-                    { permission.launch(Manifest.permission.CAMERA) },
-                    { context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}"))) })
-                else -> key(attempt) {
-                    CameraPairingPreview(Modifier.weight(1f).fillMaxWidth(), found) { error = it }
-                    Text("Point the camera at your computer's Codync pairing code.")
+            Column(Modifier.weight(1f).then(if (!hardware || !permitted) Modifier.verticalScroll(rememberScrollState()) else Modifier),
+                verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                when {
+                    !hardware || !permitted -> CameraPermissionContent(hardware,
+                        { permission.launch(Manifest.permission.CAMERA) },
+                        { context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}"))) })
+                    else -> key(attempt) {
+                        CameraPairingPreview(Modifier.weight(1f).fillMaxWidth(), found) { error = it }
+                        Text("Point the camera at your computer's Codync pairing code.")
+                    }
                 }
+                error?.let { Text(it, color = MaterialTheme.colorScheme.error)
+                    TextButton(onClick = { error = null; attempt++ }) { Text("Try camera again") } }
             }
-            error?.let { Text(it, color = MaterialTheme.colorScheme.error)
-                TextButton(onClick = { error = null; attempt++ }) { Text("Try camera again") } }
             TextButton(onClick = close) { Text("Use pairing link") }
         }
     }

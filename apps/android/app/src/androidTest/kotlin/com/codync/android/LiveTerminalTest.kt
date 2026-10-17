@@ -26,7 +26,7 @@ class LiveTerminalTest {
         assertNull(PushPreferences.activeUser(context))
         val local = LocalStore(context)
         val computer = local.computers().single()
-        assertEquals("9ESVKkTXlLyIExxnW7-PIg", computer.id)
+        requireFixtureHost(computer.id)
         runBlocking {
             val channel = HostConnector.connect(computer.copy(urls = listOf("http://10.0.2.2:29322"), route = ConnectionRoute.DirectOnly), local.identity())
             val backend = "android-setup-fixture"
@@ -61,7 +61,7 @@ class LiveTerminalTest {
         val context = instrumentation.targetContext
         assertNull(PushPreferences.activeUser(context))
         val local = LocalStore(context); val computer = local.computers().single()
-        assertEquals("9ESVKkTXlLyIExxnW7-PIg", computer.id)
+        requireFixtureHost(computer.id)
         val channel = runBlocking { HostConnector.connect(computer.copy(urls = listOf("http://10.0.2.2:29322"), route = ConnectionRoute.DirectOnly), local.identity()) }
         val setup = buildJsonObject { put("backend", "android-setup-fixture"); put("step", "login"); put("method", "fixture-terminal"); put("cols", 80); put("rows", 24) }
         var term: String? = null

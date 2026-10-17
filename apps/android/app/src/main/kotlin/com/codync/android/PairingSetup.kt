@@ -15,12 +15,13 @@ import androidx.compose.ui.unit.dp
 import com.codync.android.design.CodyncField
 import kotlinx.coroutines.launch
 
-/** Setup stays usable before private fork builds have a public download. Pairing secrets stay in memory. */
+/** Pairing secrets stay in memory; computer choice survives a trip to the scanner. */
 @Composable internal fun PairingSetup(pasted: String, edit: (String) -> Unit, pairing: Boolean,
     paired: Boolean, pair: () -> Unit, scan: () -> Unit, close: () -> Unit,
     startAtPairing: Boolean = false, closeLabel: String? = null) {
     var scanning by rememberSaveable { mutableStateOf(startAtPairing) }
-    var linux by rememberSaveable { mutableStateOf(false) }
+    var computerOS by rememberSaveable { mutableStateOf("Mac") }
+    val linux = computerOS == "Linux"
     CodyncSheetBackHandler(!pairing) { if (scanning && !startAtPairing) scanning = false else close() }
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(if (scanning || pairing) "Step 2 of 2" else "Step 1 of 2", style = MaterialTheme.typography.labelLarge)
@@ -29,17 +30,17 @@ import kotlinx.coroutines.launch
             if (!scanning && !pairing) {
                 Text("Your bots run on your computer. This phone lets you talk to them.")
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    TextButton(onClick = { linux = false }) { Text(if (linux) "Mac" else "✓ Mac") }
-                    TextButton(onClick = { linux = true }) { Text(if (linux) "✓ Linux" else "Linux") }
+                    for (os in listOf("Mac", "Windows", "Linux")) {
+                        TextButton(onClick = { computerOS = os }) { Text(if (computerOS == os) "✓ $os" else os) }
+                    }
                 }
-                Text("Install the ZC Codync build provided for your workspace. Public downloads for this fork aren't available yet.")
                 if (linux) {
                     Text("After installing codync-host, run this to keep it running in the background:")
                     SetupCommand("codync-host install")
-                } else Text("Open ZC Codync. It sets up the host in the background.")
+                } else Text("Install and open the Codync desktop app on your ${if (computerOS == "Windows") "Windows PC" else "Mac"}. It runs the host in the background.")
                 Text("Already installed? Continue to open the pairing code.")
             } else {
-                Text(if (linux) "On your computer, run this in a terminal:" else "On your Mac, open ZC Codync in the menu bar and choose Pair iPhone. Its code also pairs this Android phone.")
+                Text(if (linux) "On your computer, run this in a terminal:" else "On your ${if (computerOS == "Windows") "Windows PC" else "Mac"}, open Codync’s ${if (computerOS == "Windows") "system tray" else "menu bar"} menu and choose Pair iPhone. Its code also pairs this Android phone.")
                 if (linux) SetupCommand("codync-host pair")
                 TextButton(enabled = !pairing, onClick = scan) { Text("Scan pairing code") }
                 CodyncField(pasted, edit, modifier = Modifier.fillMaxWidth(), label = { Text("Pairing link") },

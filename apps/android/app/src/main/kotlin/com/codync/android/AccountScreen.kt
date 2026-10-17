@@ -105,7 +105,8 @@ private data class AccountConfirmation(val title: String, val message: String,
 
 /** The iPhone's account sheet, with computer management one level inside it. */
 @Composable internal fun AccountScreenContent(state: AppState, actions: AccountScreenActions,
-    close: () -> Unit, scan: () -> Unit = {}, pair: () -> Unit = scan, inPopover: Boolean = false) {
+    close: () -> Unit, scan: () -> Unit = {}, pair: () -> Unit = scan, inPopover: Boolean = false,
+    pushConfigured: Boolean = BuildConfig.PUSH_CONFIGURED) {
     var computers by rememberSaveable(state.contextId) { mutableStateOf(state.access != null || "access" in state.busy) }
     var addingAccount by rememberSaveable(state.contextId) { mutableStateOf(false) }
     var confirmation by remember(state.contextId) { mutableStateOf<AccountConfirmation?>(null) }
@@ -129,7 +130,7 @@ private data class AccountConfirmation(val title: String, val message: String,
                 AccountHeader(if (computers) "Computers & settings" else "Account", computers,
                     { computers = false }, close, sessionBusy)
                 AnimatedContent(computers, Modifier.weight(1f), label = "Account navigation") { detail ->
-                    if (detail) ComputerSettings(state, actions, pair, confirm)
+                    if (detail) ComputerSettings(state, actions, pair, confirm, pushConfigured)
                     else Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(22.dp)) {
@@ -191,7 +192,8 @@ private data class AccountConfirmation(val title: String, val message: String,
                             .semantics { contentDescription = "Dismiss confirmation" })
                         Column(Modifier.padding(24.dp).widthIn(max = 400.dp).fillMaxWidth()
                             .clip(RoundedCornerShape(22.dp)).background(MaterialTheme.colorScheme.surface)
-                            .pointerInput(Unit) { detectTapGestures {} }.padding(22.dp).semantics { paneTitle = current.title },
+                            .pointerInput(Unit) { detectTapGestures {} }.verticalScroll(rememberScrollState())
+                            .padding(22.dp).semantics { paneTitle = current.title },
                             verticalArrangement = Arrangement.spacedBy(16.dp)) {
                             Text(current.title, style = MaterialTheme.typography.titleMedium)
                             Text(current.message, style = MaterialTheme.typography.bodyMedium,
@@ -290,7 +292,7 @@ private data class AccountConfirmation(val title: String, val message: String,
 }
 
 @Composable private fun ComputerSettings(state: AppState, actions: AccountScreenActions, pair: () -> Unit,
-    confirm: (String, String, String, () -> Unit) -> Unit) {
+    confirm: (String, String, String, () -> Unit) -> Unit, pushConfigured: Boolean) {
     val saved = state.computers.firstOrNull()
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(22.dp)) {
@@ -342,8 +344,12 @@ private data class AccountConfirmation(val title: String, val message: String,
             CodyncIcon(Glyph.Refresh, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text("Refresh")
         }
         AccountCard("Notifications", "Get a result summary, a request for input, or a failure notice. Notification previews follow your Android settings.") {
-            AccountToggle("Push notifications", state.notifications, actions.notifications)
-            AccountToggle("Delegated task status", state.tasks, actions.taskNotifications)
+            if (pushConfigured) {
+                AccountToggle("Push notifications", state.notifications, actions.notifications)
+                AccountToggle("Delegated task status", state.tasks, actions.taskNotifications)
+            } else Text("Push delivery is not configured in this build. Bots and chat work while the app is open.",
+                Modifier.padding(vertical = 10.dp), style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
             AccountActionRow("Android notification settings", Glyph.Bell, actions.notificationSettings, chevron = true)
         }
         if (state.devices.isNotEmpty()) AccountCard("Account devices") {
