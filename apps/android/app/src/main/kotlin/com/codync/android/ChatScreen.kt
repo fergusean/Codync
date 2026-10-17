@@ -122,7 +122,7 @@ import kotlinx.coroutines.launch
     // A thread over the chat, and "Full conversation" over either.
     CodyncSheet(state.thread, { store.openBot(bot.id) }) { root -> RepliesView(bot, root, state, store, connect) }
     CodyncSheet(state.trace, { store.showTrace(false) }) { TraceView(bot, state.thread, state) }
-    CodyncSheet(routines, { routines = false }) { RoutinesScreen(bot, state, store) { routines = false } }
+    CodyncSheet(routines, { routines = false }) { RoutinesScreen(bot, state, store) }
     CodyncSheet(app, { app = null; setupEntry = null }) { AppConnectScreen(it, state, store, { app = null; setupEntry = null }, setupEntry) }
     CodyncSheet(connector, { connector = null; setupEntry = null }) {
         ConnectorInstaller(it, state, store, requestId = setupEntry) { connector = null; setupEntry = null }
