@@ -26,10 +26,10 @@ import kotlinx.serialization.Serializable
 }
 data class OAuthReturn(val state: String, val code: String?, val error: String?) {
     companion object {
-        fun parse(value: String): OAuthReturn {
+        fun parse(value: String, scheme: String): OAuthReturn {
             require(value.length <= 16_384)
             val uri = URI(value)
-            require(uri.scheme == "codync" && uri.host == "oauth" && uri.userInfo == null && uri.port == -1 && uri.path.isNullOrEmpty() && uri.fragment == null)
+            require(uri.scheme == scheme && uri.host == "oauth" && uri.userInfo == null && uri.port == -1 && uri.path.isNullOrEmpty() && uri.fragment == null)
             val fields = query(uri)
             val state = fields["state"]
             val code = fields["code"]?.takeIf(String::isNotBlank)

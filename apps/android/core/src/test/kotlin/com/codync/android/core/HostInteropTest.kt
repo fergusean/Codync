@@ -17,7 +17,9 @@ class HostInteropTest {
     @Test fun `pair hello and sync work against a real host on the requested route`() = runBlocking<Unit> {
         val path = System.getenv("CODYNC_ANDROID_PAIRING_FILE")
         assumeTrue("No live host pairing was requested", path != null)
-        val parsed = Pairing.parse(File(requireNotNull(path)).readText())
+        // Real hosts emit their own environment's scheme (codync-dev:// from a development build).
+        val link = File(requireNotNull(path)).readText()
+        val parsed = Pairing.parse(link, link.trim().substringBefore("://"))
         val relay = System.getenv("CODYNC_ANDROID_TEST_ROUTE") == "relay"
         val pairing = if (relay) parsed.copy(computer = parsed.computer.copy(route = ConnectionRoute.CloudflareFirst, urls = emptyList())) else parsed
         val random = SecureRandom()

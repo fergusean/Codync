@@ -22,7 +22,7 @@ class PairingQrTest {
     }
 
     @Test fun `bundled QR decoding accepts every rotation mirrored and inverted pairing images`() {
-        val value = code(); val decoder = PairingQr(); var image = pixels(value)
+        val value = code(); val decoder = PairingQr("codync"); var image = pixels(value)
         repeat(4) {
             assertEquals(PairingScan.Found(value), decoder.decode(image, 512, 512))
             image = ByteArray(image.size) { index -> image[(511 - index % 512) * 512 + index / 512] }
@@ -32,7 +32,7 @@ class PairingQrTest {
     }
 
     @Test fun `unrelated obsolete and malformed QR codes never become a pairing request`() {
-        val decoder = PairingQr()
+        val decoder = PairingQr("codync")
         assertNull(decoder.decode(pixels("https://example.test"), 512, 512))
         for (value in listOf("codync://pair?v=2", code() + "&code=duplicate")) assertTrue(decoder.decode(pixels(value), 512, 512) is PairingScan.Invalid)
         val obsolete = decoder.decode(pixels("codync://pair?v=2"), 512, 512) as PairingScan.Invalid

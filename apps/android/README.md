@@ -58,7 +58,8 @@ which backend the app will use.
 ## Pair and use
 
 Run `codync-host pair` on the computer and scan its code or paste the resulting
-`codync://pair` link. Setup explains Mac, Windows and Linux paths. Pairing links
+`codync://pair` link (`codync-dev://pair` for Codync Dev, which pairs only with a
+development host). Setup explains Mac, Windows and Linux paths. Pairing links
 and one-time codes remain in memory. Account login discovers computers; each
 host must still approve access.
 

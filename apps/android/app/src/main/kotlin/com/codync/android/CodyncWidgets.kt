@@ -107,7 +107,7 @@ private fun widgetBar(fraction: Float, ink: Int, track: Int): android.graphics.B
 internal fun widgetIntent(context: Context, feed: WidgetFeed, bot: String? = null, usage: Boolean = false): Intent {
     val intent = Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
     val computer = feed.computerId ?: return intent
-    if (bot != null || usage) intent.data = Uri.Builder().scheme("codync").authority(if (usage) "usage" else "bot")
+    if (bot != null || usage) intent.data = Uri.Builder().scheme(BuildConfig.URL_SCHEME).authority(if (usage) "usage" else "bot")
         .apply { if (bot != null) appendPath(bot) }.appendQueryParameter("scope", feed.scope).appendQueryParameter("computer", computer).build()
     return intent
 }

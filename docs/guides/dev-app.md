@@ -28,6 +28,7 @@ Xcode configurations separate environment from optimization: `Debug` and `Releas
 | iOS App Group | `group.com.pokai.Codync` | `group.com.pokai.Codync.dev` |
 | iOS Keychain group (team prefix omitted) | `com.pokai.Codync` | `com.pokai.Codync.dev` |
 | Desktop bundle | `com.pokai.Codync` | `com.pokai.Codync.dev` |
+| Android application ID | `com.pokai.Codync.android` | `com.pokai.Codync.android.dev` |
 | Linux package / Windows package cache | `codync-desktop` | `codync-desktop-dev` |
 | Desktop account callback | `com.pokai.Codync://callback` | `com.pokai.Codync.dev://callback` |
 | Pairing and widget links | `codync://` | `codync-dev://` |

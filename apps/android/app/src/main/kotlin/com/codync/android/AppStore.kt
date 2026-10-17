@@ -375,7 +375,7 @@ class AppStore(application: Application) : AndroidViewModel(application) {
             state.first { !it.loading }
             mutableState.update { it.copy(pairing = true, error = null) }
             try {
-                val pairing = Pairing.parse(text)
+                val pairing = Pairing.parse(text, BuildConfig.URL_SCHEME)
                 val old = state.value.computers.firstOrNull()
                 require(old == null || old.id == pairing.computer.id) { "Use Start over to pair a different computer." }
                 require(old == null || old.signKey == pairing.computer.signKey) { "This computer's identity changed. Start over before pairing again." }
@@ -1202,7 +1202,7 @@ class AppStore(application: Application) : AndroidViewModel(application) {
         linkJob = viewModelScope.launch {
             var expectedGeneration: Int? = null
             try {
-                val back = OAuthReturn.parse(uri.toString())
+                val back = OAuthReturn.parse(uri.toString(), BuildConfig.URL_SCHEME)
                 val activated = withTimeout(35_000) { state.first { !it.loading && it.account.ready &&
                     it.contextId == LocalStore.referenceId(it.account.userId ?: "local") } }
                 val generation = activated.generation
@@ -1278,8 +1278,8 @@ class AppStore(application: Application) : AndroidViewModel(application) {
                     current.contextId == LocalStore.referenceId(current.account.userId ?: "local") }
                 val usage = uri.host == "usage"
                 val destination = try {
-                    if (usage) { val target = UsageDestination.parse(uri.toString()); BotDestination(target.scope, target.computerId, "") }
-                    else BotDestination.parse(uri.toString())
+                    if (usage) { val target = UsageDestination.parse(uri.toString(), BuildConfig.URL_SCHEME); BotDestination(target.scope, target.computerId, "") }
+                    else BotDestination.parse(uri.toString(), BuildConfig.URL_SCHEME)
                 }
                 catch (_: Exception) { mutableState.update { it.copy(error = "This notification has an invalid destination.") }; return@withTimeoutOrNull true }
                 if (destination.scope != activated.contextId) {

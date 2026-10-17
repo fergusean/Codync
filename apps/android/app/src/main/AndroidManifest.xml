@@ -61,25 +61,25 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="codync" android:host="pair" />
+                <data android:scheme="${urlScheme}" android:host="pair" />
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="codync" android:host="bot" />
+                <data android:scheme="${urlScheme}" android:host="bot" />
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="codync" android:host="oauth" />
+                <data android:scheme="${urlScheme}" android:host="oauth" />
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="codync" android:host="usage" />
+                <data android:scheme="${urlScheme}" android:host="usage" />
             </intent-filter>
         </activity>
     </application>

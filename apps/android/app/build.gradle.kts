@@ -100,11 +100,15 @@ android {
             applicationIdSuffix = ".dev"
             versionNameSuffix = "-dev"
             resValue("string", "app_name", deploymentValue("codyncAppName") ?: "Codync Dev")
+            manifestPlaceholders["urlScheme"] = "codync-dev"
+            buildConfigField("String", "URL_SCHEME", "\"codync-dev\"")
             buildConfigField("String", "CLOUD_URL", javaString(deploymentValue("codyncCloudUrl") ?: accountValue("dev", "cloudURL")))
             buildConfigField("String", "CLERK_PUBLISHABLE_KEY", javaString(deploymentValue("codyncClerkPublishableKey") ?: accountValue("dev", "clerkPublishableKey")))
         }
         release {
             resValue("string", "app_name", deploymentValue("codyncAppName") ?: "Codync")
+            manifestPlaceholders["urlScheme"] = "codync"
+            buildConfigField("String", "URL_SCHEME", "\"codync\"")
             buildConfigField("String", "CLOUD_URL", javaString(deploymentValue("codyncCloudUrl") ?: accountValue("main", "cloudURL")))
             buildConfigField("String", "CLERK_PUBLISHABLE_KEY", javaString(deploymentValue("codyncClerkPublishableKey") ?: accountValue("main", "clerkPublishableKey")))
             isMinifyEnabled = true

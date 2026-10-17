@@ -7,9 +7,9 @@ import java.nio.charset.StandardCharsets
 /** A bot ID alone is never a destination: notifications and widgets retain their account/computer. */
 data class BotDestination(val scope: String, val computerId: String, val botId: String) {
     companion object {
-        fun parse(value: String): BotDestination {
+        fun parse(value: String, scheme: String): BotDestination {
             val uri = URI(value)
-            require(uri.scheme == "codync" && uri.rawAuthority == "bot" && uri.fragment == null)
+            require(uri.scheme == scheme && uri.rawAuthority == "bot" && uri.fragment == null)
             val path = uri.path
             require(path.startsWith('/') && path.count { it == '/' } == 1)
             val bot = path.drop(1)

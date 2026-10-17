@@ -205,7 +205,7 @@ internal object NotificationDisplay {
         manager.createNotificationChannel(NotificationChannel(TASKS, "Delegated tasks", NotificationManager.IMPORTANCE_LOW))
     }
     private fun builder(context: Context, scope: String, computer: String, bot: String, channel: String): NotificationCompat.Builder {
-        val url = Uri.Builder().scheme("codync").authority("bot").appendPath(bot).appendQueryParameter("scope", scope).appendQueryParameter("computer", computer).build()
+        val url = Uri.Builder().scheme(BuildConfig.URL_SCHEME).authority("bot").appendPath(bot).appendQueryParameter("scope", scope).appendQueryParameter("computer", computer).build()
         val intent = Intent(context, MainActivity::class.java).setAction(Intent.ACTION_VIEW).setData(url)
         val pending = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val generic = NotificationCompat.Builder(context, channel).setSmallIcon(R.drawable.ic_notification)

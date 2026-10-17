@@ -44,7 +44,7 @@ import kotlinx.coroutines.launch
                 if (linux) SetupCommand("codync-host pair")
                 TextButton(enabled = !pairing, onClick = scan) { Text("Scan pairing code") }
                 CodyncField(pasted, edit, modifier = Modifier.fillMaxWidth(), label = { Text("Pairing link") },
-                    placeholder = { Text("codync://pair…") }, enabled = !pairing)
+                    placeholder = { Text("${BuildConfig.URL_SCHEME}://pair…") }, enabled = !pairing)
                 Text("If pairing fails, check that the phone and computer share Wi-Fi or Tailscale, or enable Reach from anywhere on the computer.")
                 Text("End-to-end encrypted on Wi-Fi, Tailscale, or through your computer's cloud relay.",
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

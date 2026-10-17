@@ -14,7 +14,7 @@ sealed interface PairingScan {
 }
 
 /** Bundled decoding works without Play services, network access or a model download. */
-class PairingQr {
+class PairingQr(private val scheme: String) {
     private val reader = QRCodeReader()
     @Synchronized fun decode(pixels: ByteArray, width: Int, height: Int): PairingScan? {
         require(width > 0 && height > 0 && width.toLong() * height <= MAX_PIXELS && pixels.size.toLong() == width.toLong() * height)
@@ -23,8 +23,8 @@ class PairingQr {
             try {
                 val result = reader.decode(BinaryBitmap(HybridBinarizer(luminance)), mapOf(DecodeHintType.TRY_HARDER to true))
                 val value = result.text
-                if (!value.startsWith("codync://pair?")) return null
-                try { Pairing.parse(value); return PairingScan.Found(value) }
+                if (!value.startsWith("$scheme://pair?")) return null
+                try { Pairing.parse(value, scheme); return PairingScan.Found(value) }
                 catch (failure: IllegalArgumentException) { return PairingScan.Invalid(failure.message ?: "Show a fresh Codync pairing code on your computer.") }
             } catch (_: ReaderException) { }
             finally { reader.reset() }

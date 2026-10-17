@@ -17,7 +17,7 @@ class PairingTest {
         "${it.key}=${URLEncoder.encode(it.value, "UTF-8")}" }
 
     @Test fun `a valid pairing preserves pins direct candidates relay and name`() {
-        val pairing = Pairing.parse(" ${link()} \n")
+        val pairing = Pairing.parse(" ${link()} \n", "codync")
         assertEquals(params["id"], pairing.computer.id)
         assertEquals(params["name"], pairing.computer.name)
         assertEquals(2, pairing.computer.urls.size)
@@ -25,20 +25,27 @@ class PairingTest {
         assertEquals(fixture.getValue("pairing").let { it as kotlinx.serialization.json.JsonObject }.text("offerId"), pairing.offerId)
     }
 
+    @Test fun `Codync Dev and Codync only accept their own pairing links`() {
+        val dev = link().replace("codync://", "codync-dev://")
+        assertEquals(params["id"], Pairing.parse(dev, "codync-dev").computer.id)
+        assertFails<IllegalArgumentException> { Pairing.parse(dev, "codync") }
+        assertFails<IllegalArgumentException> { Pairing.parse(link(), "codync-dev") }
+    }
+
     @Test fun `altered pins damaged keys obsolete links and duplicate fields are rejected`() {
         for (fields in listOf(params + ("id" to "invalid"), params + ("sk" to "invalid"), params + ("bk" to "invalid"),
             params + ("code" to "invalid"), params + ("v" to "2"), params + ("cloud" to "http://example.test"),
             params + ("cloud" to "https://user:password@example.test"))) {
-            assertFails<IllegalArgumentException> { Pairing.parse(link(fields)) }
+            assertFails<IllegalArgumentException> { Pairing.parse(link(fields), "codync") }
         }
-        assertFails<IllegalArgumentException> { Pairing.parse(link() + "&sk=" + params["sk"]) }
-        assertFails<IllegalArgumentException> { Pairing.parse("https://example.test/?v=3") }
+        assertFails<IllegalArgumentException> { Pairing.parse(link() + "&sk=" + params["sk"], "codync") }
+        assertFails<IllegalArgumentException> { Pairing.parse("https://example.test/?v=3", "codync") }
     }
 
     @Test fun `unsafe direct endpoints are removed and at least one route must remain`() {
-        val pairing = Pairing.parse(link(params + ("urls" to "javascript:alert(1),http://user:pass@host.test")))
+        val pairing = Pairing.parse(link(params + ("urls" to "javascript:alert(1),http://user:pass@host.test")), "codync")
         assertEquals(emptyList<String>(), pairing.computer.urls)
-        assertFails<IllegalArgumentException> { Pairing.parse(link(params + ("urls" to "ftp://host.test") - "cloud")) }
+        assertFails<IllegalArgumentException> { Pairing.parse(link(params + ("urls" to "ftp://host.test") - "cloud"), "codync") }
     }
 
     @Test fun `strict base64url refuses padding noncanonical bits and wrong lengths`() {

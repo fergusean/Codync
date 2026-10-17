@@ -61,13 +61,13 @@ class MainActivity : ComponentActivity() {
     override fun onStop() { store.setForeground(false); super.onStop() }
     private fun handle(intent: Intent?) {
         val uri = intent?.data ?: return
-        if (uri.scheme == "codync" && uri.host == "pair") {
+        if (uri.scheme == BuildConfig.URL_SCHEME && uri.host == "pair") {
             intent.data = null
             store.pair(uri.toString())
         }
         // Retain the scoped, non-secret destination for Activity/process restoration.
-        if (uri.scheme == "codync" && uri.host in setOf("bot", "usage")) store.openLink(uri)
-        if (uri.scheme == "codync" && uri.host == "oauth") { intent.data = null; store.finishConnectorSignIn(uri) }
+        if (uri.scheme == BuildConfig.URL_SCHEME && uri.host in setOf("bot", "usage")) store.openLink(uri)
+        if (uri.scheme == BuildConfig.URL_SCHEME && uri.host == "oauth") { intent.data = null; store.finishConnectorSignIn(uri) }
     }
 }
 

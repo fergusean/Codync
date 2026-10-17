@@ -97,7 +97,7 @@ import java.util.concurrent.atomic.AtomicBoolean
         val accepted = AtomicBoolean(false)
         val executor = Executors.newSingleThreadExecutor()
         val main = ContextCompat.getMainExecutor(context)
-        val reader = PairingQr()
+        val reader = PairingQr(BuildConfig.URL_SCHEME)
         val preview = Preview.Builder().build().apply { setSurfaceProvider(view.surfaceProvider) }
         val analysis = ImageAnalysis.Builder().setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
             .setResolutionSelector(ResolutionSelector.Builder().setResolutionStrategy(

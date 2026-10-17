@@ -8,12 +8,12 @@ data class Pairing(val computer: Computer, val code: String) {
     internal val offerId: String get() = RelayCrypto.offerId(code.decodeBase64Url(16))
 
     companion object {
-        fun parse(text: String): Pairing {
+        fun parse(text: String, scheme: String): Pairing {
             require(text.length <= 16 * 1024) { "This pairing code is damaged. Show a new one on your computer." }
             val url = try { URI(text.trim()) } catch (error: Exception) {
                 throw IllegalArgumentException("That isn't a Codync pairing code.", error)
             }
-            require(url.scheme == "codync" && url.host == "pair" && url.rawQuery != null) { "That isn't a Codync pairing code." }
+            require(url.scheme == scheme && url.host == "pair" && url.rawQuery != null) { "That isn't a Codync pairing code." }
             val params = linkedMapOf<String, String>()
             try {
                 url.rawQuery.split('&').forEach { part ->
