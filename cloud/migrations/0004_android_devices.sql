@@ -6,7 +6,7 @@ CREATE TABLE devices_android (
   owner_user_id TEXT NOT NULL REFERENCES accounts(user_id),
   sign_pub      TEXT NOT NULL,
   name          TEXT NOT NULL,
-  platform      TEXT NOT NULL CHECK (platform IN ('ios','macos','windows','android')),
+  platform      TEXT NOT NULL CHECK (platform IN ('ios','macos','linux','windows','android')),
   created_at    INTEGER NOT NULL,
   last_used_at  INTEGER,
   revoked_at    INTEGER,

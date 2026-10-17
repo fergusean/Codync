@@ -20,21 +20,25 @@ describe("Android devices", () => {
     expect(refused.status).toBe(403);
   });
 
-  it("migrates populated iOS, Mac and Windows authorizations without losing constraints", async () => {
+  it("adds Android after the existing desktop migration without losing authorizations or constraints", async () => {
     const db = (rawEnv as unknown as { ANDROID_MIGRATION_DB: D1Database }).ANDROID_MIGRATION_DB;
-    const androidMigration = env.TEST_MIGRATIONS.findIndex(migration => migration.name === "0003_android_devices.sql");
+    const androidMigration = env.TEST_MIGRATIONS.findIndex(migration => migration.name === "0004_android_devices.sql");
     expect(androidMigration).toBeGreaterThan(0);
     await applyD1Migrations(db, env.TEST_MIGRATIONS.slice(0, androidMigration));
     await db.batch([
       db.prepare("INSERT INTO accounts(user_id,created_at) VALUES ('android-owner',1)"),
       db.prepare("INSERT INTO computers(id,sign_pub,box_pub,owner_user_id,name,platform,version,created_at,updated_at) VALUES ('host','sign','box','android-owner','Host','linux','2.4.0',1,1)"),
-      ...["ios", "macos", "windows"].map(platform => db.prepare("INSERT INTO devices(id,owner_user_id,sign_pub,name,platform,created_at,last_used_at,revoked_at) VALUES (?, 'android-owner', ?, ?, ?, 1, 2, 3)").bind(platform, platform + "-key", platform, platform)),
+      ...["ios", "linux", "macos", "windows"].map(platform => db.prepare("INSERT INTO devices(id,owner_user_id,sign_pub,name,platform,created_at,last_used_at,revoked_at) VALUES (?, 'android-owner', ?, ?, ?, 1, 2, 3)").bind(platform, platform + "-key", platform, platform)),
       db.prepare("INSERT INTO grants(id,computer_id,device_id,scopes,status,created_at) VALUES ('grant','host','ios','[\"control\"]','revoked',1)"),
       db.prepare("INSERT INTO access_requests(id,computer_id,device_id,user_id,status,commit_hash,created_at,expires_at) VALUES ('request','host','windows','android-owner','denied','hash',1,2)"),
     ]);
+    const tables = ["devices", "grants", "access_requests"];
+    const before = await Promise.all(tables.map(table => db.prepare(`SELECT * FROM ${table} ORDER BY id`).all()));
     await applyD1Migrations(db, env.TEST_MIGRATIONS.slice(androidMigration));
+    const after = await Promise.all(tables.map(table => db.prepare(`SELECT * FROM ${table} ORDER BY id`).all()));
+    expect(after.map(result => result.results)).toEqual(before.map(result => result.results));
     const old = await db.prepare("SELECT platform,created_at,last_used_at,revoked_at FROM devices ORDER BY platform").all();
-    expect(old.results).toEqual(["ios", "macos", "windows"].map(platform => ({ platform, created_at: 1, last_used_at: 2, revoked_at: 3 })));
+    expect(old.results).toEqual(["ios", "linux", "macos", "windows"].map(platform => ({ platform, created_at: 1, last_used_at: 2, revoked_at: 3 })));
     const grant = await db.prepare("SELECT device_id FROM grants").first();
     const request = await db.prepare("SELECT device_id FROM access_requests").first();
     expect(grant).toEqual({ device_id: "ios" });
