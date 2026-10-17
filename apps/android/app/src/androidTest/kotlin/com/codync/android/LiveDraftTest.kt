@@ -30,9 +30,9 @@ class LiveDraftTest {
         compose.waitUntil(30_000) { store.state.value.bots.any { it.name == "Android chat acceptance" } }
         val bot = store.state.value.bots.single { it.name == "Android chat acceptance" }
         compose.runOnUiThread { store.openBot(bot.id) }
-        // A cached roster can arrive before startup finishes; do not target its search field.
+        // A cached roster can arrive before startup finishes; wait for the chat itself.
         compose.waitUntil(10_000) { !store.state.value.loading && store.state.value.rosterLoaded &&
-            compose.onAllNodesWithContentDescription("Conversation actions").fetchSemanticsNodes().size == 1 }
+            compose.onAllNodes(chatMenu).fetchSemanticsNodes().size == 1 }
         val mainText = "Android unsent draft acceptance"
         val replyText = "Android unsent reply acceptance"
         if (phase == "prepare") {
@@ -63,8 +63,8 @@ class LiveDraftTest {
             val main = store.state.value.drafts.getValue(ComposerDraft.lane(bot.id, null))
             assertEquals(nonce, main.nonce)
             assertEquals("Private draft attachment acceptance", File(main.files.single().path).readText())
-            compose.onNode(hasSetTextAction()).assertTextEquals(mainText)
-            compose.onNodeWithContentDescription("Draft attachment: draft.txt").assertIsDisplayed()
+            compose.onNode(hasSetTextAction() and hasText(mainText)).assertIsDisplayed()
+            compose.onNodeWithContentDescription("Remove draft.txt").assertIsDisplayed()
             compose.runOnUiThread { store.openBot(bot.id, root) }
             compose.waitUntil(10_000) { compose.onAllNodes(hasSetTextAction() and hasText(replyText)).fetchSemanticsNodes().size == 1 }
             compose.runOnUiThread { store.openBot(bot.id) }

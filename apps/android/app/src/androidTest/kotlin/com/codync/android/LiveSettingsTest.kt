@@ -41,31 +41,30 @@ class LiveSettingsTest {
             val store = ViewModelProvider(compose.activity)[AppStore::class.java]
             compose.waitUntil(30_000) { !store.state.value.loading && store.state.value.bots.any { it.id == bot.id } && store.state.value.actualConnection is LinkState.Ready }
             compose.runOnUiThread { store.openBot(bot.id) }
-            compose.chatAction("Edit")
-            val name = hasSetTextAction() and hasContentDescription("Name")
-            compose.onNode(name).performTextReplacement("Unsaved draft")
+            compose.chatAction("Edit profile")
+            compose.onNode(hasSetTextAction() and hasText(bot.name)).performTextReplacement("Unsaved draft")
             compose.onNodeWithContentDescription("Workspace").performScrollTo().performClick()
             compose.onNodeWithText("Choose project folder…").performClick()
             val useFolder = "Use “${listing.path.trimEnd('/').substringAfterLast('/').ifEmpty { "/" }}”"
             compose.waitUntil(15_000) { compose.onAllNodesWithText(useFolder).fetchSemanticsNodes().size == 1 }
             InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
-            compose.waitUntil(5_000) { compose.onAllNodesWithContentDescription("Close folder picker").fetchSemanticsNodes().isEmpty() }
-            compose.onNode(name).performScrollTo().assert(hasText("Unsaved draft"))
+            compose.waitUntil(5_000) { compose.onAllNodesWithText(useFolder).fetchSemanticsNodes().isEmpty() }
+            compose.onNode(hasSetTextAction() and hasText("Unsaved draft")).performScrollTo().assertIsDisplayed()
             compose.onNodeWithContentDescription("Close").performClick()
-            compose.waitUntil(5_000) { compose.onAllNodes(isDialog()).fetchSemanticsNodes().isEmpty() }
+            compose.waitUntil(5_000) { compose.onAllNodesWithText("Settings").fetchSemanticsNodes().isEmpty() }
             val cancelledBots = runBlocking { HostClient.bots(channel) }
             val cancelled = cancelledBots.single { it.id == bot.id }
             assertEquals(bot.name, cancelled.name)
             assertEquals(bot.cwd, cancelled.cwd)
             assertNull(cancelled.notify)
-            compose.chatAction("Edit")
+            compose.chatAction("Edit profile")
             compose.onNodeWithContentDescription("Workspace").performScrollTo().performClick()
             compose.onNodeWithText("Choose project folder…").performClick()
             compose.waitUntil(15_000) { compose.onAllNodesWithText(useFolder).fetchSemanticsNodes().size == 1 }
             compose.onNodeWithText(useFolder).performClick()
-            compose.waitUntil(5_000) { compose.onAllNodesWithContentDescription("Close folder picker").fetchSemanticsNodes().isEmpty() }
+            compose.waitUntil(5_000) { compose.onAllNodesWithText(useFolder).fetchSemanticsNodes().isEmpty() }
             compose.onNodeWithContentDescription("Workspace").assert(hasText(listing.path.trimEnd('/').substringAfterLast('/')))
-            compose.onNodeWithContentDescription("Notifications").performScrollTo().assertIsOn().performClick().assertIsOff()
+            compose.onNode(hasText("Notifications") and isToggleable()).performScrollTo().assertIsOn().performClick().assertIsOff()
             compose.onNodeWithContentDescription("Save").performClick()
             compose.waitUntil(15_000) { store.state.value.bots.firstOrNull { it.id == bot.id }?.let { it.notify == false && it.cwd == listing.path } == true && "editor" !in store.state.value.busy }
             val finalBots = runBlocking { HostClient.bots(channel) }

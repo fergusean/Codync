@@ -17,10 +17,27 @@ internal fun ComposeTestRule.computerAction(label: String) {
     onNodeWithText(label).performClick()
 }
 
+/** The button labeled [label] level with [text]: for list rows that merge no semantics of their own. */
+internal fun ComposeTestRule.onRowButton(label: String, text: String): SemanticsNodeInteraction {
+    val row = onNodeWithText(text).performScrollTo().fetchSemanticsNode().boundsInRoot
+    val buttons = onAllNodesWithContentDescription(label)
+    val index = buttons.fetchSemanticsNodes().indexOfFirst { it.boundsInRoot.top < row.bottom && it.boundsInRoot.bottom > row.top }
+    check(index >= 0) { "No $label button beside $text" }
+    return buttons[index]
+}
+
+/** Extensions opens from the paired computer's row in Computers & settings. */
+internal fun ComposeTestRule.openExtensions() {
+    computerAction("Manage computers")
+    waitUntil(10_000) { onAllNodesWithContentDescription("Extensions").fetchSemanticsNodes().size == 1 }
+    onNodeWithContentDescription("Extensions").performClick()
+}
+
 /** The open chat's title menu ("<bot> actions"). */
+internal val chatMenu = hasContentDescription(" actions", substring = true)
+
 internal fun ComposeTestRule.chatAction(label: String) {
-    val menu = hasContentDescription(" actions", substring = true)
-    waitUntil(10_000) { onAllNodes(menu).fetchSemanticsNodes().size == 1 }
-    onNode(menu).performClick()
+    waitUntil(10_000) { onAllNodes(chatMenu).fetchSemanticsNodes().size == 1 }
+    onNode(chatMenu).performClick()
     onNodeWithText(label).performClick()
 }

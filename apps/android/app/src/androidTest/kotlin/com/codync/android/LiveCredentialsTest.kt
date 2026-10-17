@@ -34,41 +34,39 @@ class LiveCredentialsTest {
             val store = ViewModelProvider(compose.activity)[AppStore::class.java]
             compose.waitUntil(30_000) { !store.state.value.loading && store.state.value.actualConnection is LinkState.Ready }
             compose.runOnUiThread { store.openBot(null) }
-            compose.computerAction("Marketplace")
+            compose.openExtensions()
             compose.onNodeWithText("Credentials").performScrollTo().performClick()
-            field("Website or app").performTextReplacement(site)
-            field("Username or email").performTextReplacement("fixture-user")
+            field("github.com").performTextReplacement(site)
+            field("name@example.com").performTextReplacement("fixture-user")
             field("Password or op:// reference").performTextReplacement("  fixture-password  ")
             compose.onNodeWithText("Save sign-in").performScrollTo().performClick()
             compose.waitUntil(20_000) { listedLogins(channel).any { it.site == site } }
             val saved = listedLogins(channel).single { it.site == site }
             assertEquals("fixture-user", saved.username)
             assertFalse(WireJson.encodeToJsonElement(saved).toString().contains("fixture-password"))
-            compose.onNodeWithText("Remove sign-in for $site").performScrollTo().performClick()
-            compose.onNodeWithText("Keep sign-in").performScrollTo().performClick()
-            assertTrue(listedLogins(channel).any { it.id == saved.id })
-            compose.onNodeWithText("Remove sign-in for $site").performScrollTo().performClick()
-            compose.onNodeWithText("Confirm remove sign-in").performScrollTo().performClick()
+            compose.waitUntil(20_000) { compose.onAllNodesWithText(site).fetchSemanticsNodes().size == 1 }
+            compose.onRowButton("Remove", site).performClick()
             compose.waitUntil(20_000) { listedLogins(channel).none { it.id == saved.id } }
-            compose.onControl("Back").performScrollTo().performClick()
-            compose.onNodeWithText("Installed plugins").performScrollTo().performClick()
-            compose.onNodeWithText("Import connectors").performScrollTo().performClick()
+            back()
+            // Paste an MCP config into a custom connector: every server in it is added.
+            compose.onNodeWithText("Custom connector").performScrollTo().performClick()
+            compose.onNodeWithText("Config").performClick()
             val fixturePath = requireNotNull(InstrumentationRegistry.getArguments().getString("credentialMcp"))
             assertTrue(fixturePath.endsWith("/Codync/host/tests/fixtures/credential_mcp.py"))
             val config = buildJsonObject { putJsonObject("mcpServers") { putJsonObject(name) {
                 put("command", "/opt/homebrew/bin/python3.13"); put("args", JsonArray(listOf(JsonPrimitive(fixturePath))))
                 putJsonObject("env") { put("API_KEY", "test-private-key"); put("PRESERVED", "fixture-preserved") }
             } } }.toString()
-            field("MCP config JSON").performTextReplacement(config)
-            compose.onNodeWithText("Import MCP config").performScrollTo().performClick()
-            compose.waitUntil(30_000) { store.state.value.plugins?.connectors?.any { it.name == name } == true }
-            compose.onNodeWithText("Verify $name").performScrollTo().performClick()
-            compose.waitUntil(20_000) { compose.onAllNodesWithText("$name verified.").fetchSemanticsNodes().isNotEmpty() }
+            field("{ \"mcpServers\": { … } }").performTextReplacement(config)
+            compose.onNodeWithContentDescription("Add").performClick()
+            compose.waitUntil(30_000) { compose.onAllNodesWithText("Custom connector", useUnmergedTree = true).fetchSemanticsNodes().size == 1 }
+            compose.waitUntil(30_000) { runBlocking { channel.call("connectors") }.toString().contains(name) }
             compose.onNodeWithText("Credentials").performScrollTo().performClick()
-            compose.onNodeWithText("Edit credentials for $name").performScrollTo().performClick()
+            compose.waitUntil(20_000) { compose.onAllNodesWithText(name).fetchSemanticsNodes().isNotEmpty() }
+            compose.onAllNodesWithText(name).onLast().performScrollTo().performClick()
             field("API_KEY").performTextReplacement("test-private-key")
-            compose.onNodeWithText("Save credentials").performScrollTo().performClick()
-            compose.waitUntil(20_000) { compose.onAllNodesWithText("Edit credentials for $name").fetchSemanticsNodes().isNotEmpty() }
+            compose.onNodeWithContentDescription("Save credentials").performClick()
+            compose.waitUntil(20_000) { compose.onAllNodesWithContentDescription("Save credentials").fetchSemanticsNodes().isEmpty() }
             val listing = runBlocking { channel.call("connectors") }
             val connector = WireJson.decodeFromJsonElement<List<InstalledConnector>>(listing.jsonObject.getValue("items")).single { it.name == name }
             assertEquals(setOf("API_KEY", "PRESERVED"), connector.keys.toSet())
@@ -92,12 +90,11 @@ class LiveCredentialsTest {
         }
     }
 
-    @Test fun connectionCardsSaveAndCancelWithoutPuttingPasswordsInChat() {
+    @Test fun aLoginCardSavesWithoutPuttingThePasswordInChat() {
         val args = InstrumentationRegistry.getArguments()
         val botId = args.getString("credentialBot")
         assumeTrue(botId != null && args.getString("liveCredentials") == "true")
         val savedRequest = requireNotNull(args.getString("loginRequest"))
-        val cancelledRequest = requireNotNull(args.getString("cancelRequest"))
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         assertNull(PushPreferences.activeUser(context))
         val local = LocalStore(context)
@@ -110,24 +107,18 @@ class LiveCredentialsTest {
             compose.waitUntil(30_000) { store.state.value.bots.any { it.id == botId } && store.state.value.entries.any { it.id == savedRequest } }
             assertTrue(store.state.value.bots.single { it.id == botId }.name.startsWith("Android credentials acceptance"))
             compose.runOnUiThread { store.openBot(botId) }
-            cardField(cancelledRequest, "Password or op:// reference").performTextReplacement("fixture-cancel-never-sent")
-            cardAction(cancelledRequest, "Cancel connection request").performClick()
-            compose.waitForIdle()
-            compose.onNodeWithText("Cancellation wasn't confirmed. Reconnect and check this request.").assertDoesNotExist()
-            compose.waitUntil(20_000) { store.state.value.entries.any { it.id == cancelledRequest && it.data["connectionRequest"]?.jsonObject?.get("status")?.jsonPrimitive?.content == "cancelled" } }
             cardField(savedRequest, "Username or email").performTextReplacement("fixture-card-user")
             cardField(savedRequest, "Password or op:// reference").performTextReplacement("fixture-card-password")
-            cardAction(savedRequest, "Save login").performClick()
+            cardAction(savedRequest, "Save").performClick()
             compose.waitUntil(20_000) { store.state.value.entries.any { it.id == savedRequest && it.data["connectionRequest"]?.jsonObject?.get("status")?.jsonPrimitive?.content == "ready" } }
+            compose.onNode(hasText("Saved") and hasAnyAncestor(hasTestTag("connection:$savedRequest"))).assertIsDisplayed()
             runBlocking { store.finishConnectionRequest(savedRequest, value = "fixture-card-password", username = "fixture-card-user") }
             val history = runBlocking { channel.call("history", body("botId" to botId)) }
             val entries = history.jsonObject.getValue("entries").jsonArray
             assertEquals(1, entries.count { it.jsonObject["id"]?.jsonPrimitive?.content == "connection-ack-$savedRequest" })
             assertFalse(history.toString().contains("fixture-card-password"))
-            assertFalse(history.toString().contains("fixture-cancel-never-sent"))
             val publicLogins = runBlocking { channel.call("credentialLogins") }
             assertFalse(publicLogins.toString().contains("fixture-card-password"))
-            assertFalse(publicLogins.toString().contains("fixture-cancel-never-sent"))
         } finally { channel.close() }
     }
 
@@ -135,9 +126,11 @@ class LiveCredentialsTest {
         val response = channel.call("credentialLogins")
         WireJson.decodeFromJsonElement(response.jsonObject.getValue("items"))
     }
-    private fun field(label: String): SemanticsNodeInteraction = compose.onNode(hasSetTextAction() and hasText(label)).performScrollTo()
-    private fun cardField(id: String, label: String): SemanticsNodeInteraction = compose.onNode(
-        hasSetTextAction() and hasText(label) and hasAnyAncestor(hasTestTag("connection:$id"))).performScrollTo()
+    /** Extensions fields are labeled by their prompt. */
+    private fun field(prompt: String): SemanticsNodeInteraction = compose.onNode(hasSetTextAction() and hasContentDescription(prompt)).performScrollTo()
+    private fun cardField(id: String, prompt: String): SemanticsNodeInteraction = compose.onNode(
+        hasSetTextAction() and hasContentDescription(prompt) and hasAnyAncestor(hasTestTag("connection:$id"))).performScrollTo()
+    private fun back() = InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(android.view.KeyEvent.KEYCODE_BACK)
     private fun cardAction(id: String, label: String): SemanticsNodeInteraction = compose.onNode(
         hasClickAction() and hasText(label) and hasAnyAncestor(hasTestTag("connection:$id"))).performScrollTo()
 }

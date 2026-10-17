@@ -81,17 +81,17 @@ class LiveTerminalTest {
             compose.waitUntil(30_000) { !store.state.value.loading && store.state.value.actualConnection is LinkState.Ready }
             compose.runOnUiThread { store.openBot(null); store.refreshBackends() }
             compose.waitUntil(15_000) { store.state.value.hello?.get("backends")?.jsonArray?.any { it.jsonObject["id"]?.jsonPrimitive?.content == "android-setup-fixture" } == true }
-            compose.computerAction("Marketplace")
-            compose.onNodeWithText("Search marketplace").performTextInput("Android setup fixture")
-            compose.onNodeWithText("Search").performClick()
-            compose.onNodeWithText("Set up Android setup fixture").performScrollTo().performClick()
+            compose.openExtensions()
+            compose.onNode(hasSetTextAction() and hasText("Search agents, connectors and skills")).performTextInput("Android setup fixture")
+            compose.onNode(hasSetTextAction() and hasText("Android setup fixture")).performImeAction()
+            compose.onNode(hasText("Android setup fixture") and hasClickAction() and !hasSetTextAction()).performScrollTo().performClick()
             compose.waitUntil(20_000) { compose.onAllNodesWithText("Fixture terminal sign-in").fetchSemanticsNodes().size == 1 }
             compose.onNodeWithText("Fixture terminal sign-in").performScrollTo().performClick()
             compose.waitUntil(20_000) { terminalText().contains("Fixture setup ready: café 🐈") }
             val first = runBlocking { channel.call("agentSetup", setup) }
             term = first.jsonObject.getValue("term").jsonPrimitive.content
-            compose.onControl("Back").assertIsDisplayed().performClick()
-            compose.waitUntil(5_000) { compose.onAllNodesWithText("Check again").fetchSemanticsNodes().size == 1 }
+            compose.onNodeWithContentDescription("Back").assertIsDisplayed().performClick()
+            compose.waitUntil(5_000) { compose.onAllNodesWithContentDescription("Check again").fetchSemanticsNodes().size == 1 }
             runBlocking { withTimeout(10_000) {
                 while (true) {
                     try { channel.call("termInput", body("term" to term, "data" to "")); delay(100) }

@@ -10,7 +10,6 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.lifecycle.ViewModelProvider
 import androidx.test.platform.app.InstrumentationRegistry
 import com.codync.android.core.*
-import com.codync.android.design.CodyncTheme
 import kotlinx.serialization.json.*
 import org.junit.Assert.*
 import org.junit.Assume.assumeTrue
@@ -34,7 +33,7 @@ class ChatLayoutTest {
         val state = AppState(loading = false, selectedBot = bot.id, bots = listOf(bot),
             connection = LinkState.Ready(HostRoute.Direct), actualConnection = LinkState.Ready(HostRoute.Direct),
             historyComplete = setOf(bot.id), entries = listOf(entry))
-        compose.runOnUiThread { compose.activity.setContent { CodyncTheme { ChatScreen(state, store, {}) } } }
+        compose.runOnUiThread { compose.activity.setContent { Hosted { ChatScreen(state, store, {}) } } }
         val label = compose.onNodeWithText("Message from Miles").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
         val message = compose.onNodeWithText(body).assertIsDisplayed().fetchSemanticsNode().boundsInRoot
         assertTrue(label.bottom <= message.top)
@@ -60,7 +59,7 @@ class ChatLayoutTest {
         val state = AppState(loading = false, selectedBot = bot.id, bots = listOf(bot),
             connection = LinkState.Ready(HostRoute.Direct), actualConnection = LinkState.Ready(HostRoute.Direct),
             historyComplete = setOf(bot.id), entries = listOf(entry))
-        compose.runOnUiThread { compose.activity.setContent { CodyncTheme { ChatScreen(state, store, {}) } } }
+        compose.runOnUiThread { compose.activity.setContent { Hosted { ChatScreen(state, store, {}) } } }
         val request = compose.onNodeWithText(body).assertIsDisplayed().fetchSemanticsNode().boundsInRoot
         val attribution = compose.onNodeWithText("Reply from Dex").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
         val reply = compose.onNodeWithText(answer).assertIsDisplayed().fetchSemanticsNode().boundsInRoot
@@ -70,7 +69,7 @@ class ChatLayoutTest {
             put("text", answer); put("final", true)
         })
         compose.runOnUiThread { compose.activity.setContent {
-            CodyncTheme { ChatScreen(state.copy(entries = listOf(entry, fullReply)), store, {}) }
+            Hosted { ChatScreen(state.copy(entries = listOf(entry, fullReply)), store, {}) }
         } }
         compose.onAllNodesWithText("Reply from Dex").assertCountEquals(1)
         compose.onAllNodesWithText(answer).assertCountEquals(1)
@@ -96,7 +95,7 @@ class ChatLayoutTest {
             historyComplete = setOf(bot.id), entries = listOf(
                 Entry("user-layout", 1, bot.id, rev = 1, kind = "user", data = buildJsonObject { put("text", sent) }, createdAt = now),
                 Entry("agent-layout", 2, bot.id, rev = 1, kind = "agent", data = buildJsonObject { put("text", reply); put("author", bot.id); put("final", true) }, createdAt = now)))
-        compose.runOnUiThread { compose.activity.setContent { CodyncTheme { ChatScreen(state, store, {}) } } }
+        compose.runOnUiThread { compose.activity.setContent { Hosted { ChatScreen(state, store, {}) } } }
         compose.onNodeWithText("You").assertDoesNotExist()
         compose.onNodeWithText("Message actions").assertDoesNotExist()
         compose.onNodeWithText("Reply in thread").assertDoesNotExist()
@@ -109,21 +108,21 @@ class ChatLayoutTest {
         assertTrue(userBounds.left > agentBounds.left)
         assertTrue(userBounds.right > agentBounds.right)
         assertTrue(userBounds.top > root.height / 2)
-        compose.onNodeWithContentDescription("Attachments").assertIsDisplayed()
-        compose.onNodeWithContentDescription("Voice chat").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Add files").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Call").assertIsDisplayed()
         if (InstrumentationRegistry.getArguments().getString("layoutSnapshots") == "true") {
             val bitmap = compose.onRoot().captureToImage().asAndroidBitmap()
             File(compose.activity.cacheDir, "layout-chat-preview.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
         }
         user.performTouchInput { longClick(Offset(4f, 4f)) }
         compose.onNodeWithText("Reply in thread").assertIsDisplayed()
-        compose.onNodeWithContentDescription("React 👍").assertIsDisplayed()
+        compose.onNodeWithContentDescription("👍").assertIsDisplayed()
         compose.onNodeWithText("Copy").assertIsDisplayed()
         compose.onNodeWithText("Show what it did").assertDoesNotExist()
         InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(android.view.KeyEvent.KEYCODE_BACK)
         compose.onNodeWithText("Copy").assertDoesNotExist()
-        compose.onNodeWithContentDescription("Conversation actions").performClick()
-        compose.onNodeWithText("Edit").assertIsDisplayed()
+        compose.onNode(chatMenu).performClick()
+        compose.onNodeWithText("Edit profile").assertIsDisplayed()
         compose.onNodeWithText("Routines").assertIsDisplayed()
         compose.onNodeWithText("Full conversation").assertIsDisplayed()
     }

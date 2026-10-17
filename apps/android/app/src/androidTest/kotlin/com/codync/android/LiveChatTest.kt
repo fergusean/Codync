@@ -29,8 +29,7 @@ class LiveChatTest {
         compose.waitUntil(30_000) { compose.onAllNodesWithText(bot).fetchSemanticsNodes().isNotEmpty() }
         val back = compose.onAllNodes(hasText("Back") or hasContentDescription("Back")).fetchSemanticsNodes()
         if (back.isEmpty()) compose.onNodeWithText(bot).performClick()
-        compose.waitUntil(10_000) { compose.onAllNodesWithContentDescription("Conversation actions").fetchSemanticsNodes().size == 1 }
-        compose.onNodeWithText("Search bots").assertDoesNotExist()
+        compose.waitUntil(10_000) { compose.onAllNodes(chatMenu).fetchSemanticsNodes().size == 1 }
         val message = "Android acceptance " + UUID.randomUUID()
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val local = LocalStore(context)
@@ -59,8 +58,8 @@ class LiveChatTest {
                     val uri = FileProvider.getUriForFile(context, context.packageName + ".files", source)
                     context.getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newUri(context.contentResolver, "Acceptance file", uri))
                 }
-                compose.onNodeWithContentDescription("Attachments").performClick()
-                compose.onNodeWithText("Paste image").performClick()
+                compose.onNodeWithContentDescription("Add files").performClick()
+                compose.onNodeWithText("Paste").performClick()
                 compose.waitUntil(10_000) { compose.onAllNodes(hasText(source.name, substring = true)).fetchSemanticsNodes().isNotEmpty() }
                 compose.onNodeWithContentDescription("Send").performClick()
                 compose.waitUntil(30_000) { compose.onAllNodesWithText("Allow once").fetchSemanticsNodes().isNotEmpty() }

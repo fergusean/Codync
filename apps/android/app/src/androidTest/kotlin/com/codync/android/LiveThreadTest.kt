@@ -33,7 +33,7 @@ class LiveThreadTest {
             store.state.value.bots.any { it.name == "Android chat acceptance" } }
         val bot = store.state.value.bots.single { it.name == "Android chat acceptance" }
         compose.runOnUiThread { store.openBot(bot.id) }
-        compose.waitUntil(10_000) { compose.onAllNodesWithContentDescription("Conversation actions").fetchSemanticsNodes().size == 1 }
+        compose.waitUntil(10_000) { compose.onAllNodes(chatMenu).fetchSemanticsNodes().size == 1 }
         val originalText = "Thread original acceptance " + UUID.randomUUID()
         compose.onNode(hasSetTextAction()).performTextReplacement(originalText)
         compose.onNodeWithContentDescription("Send").performClick()
@@ -48,65 +48,61 @@ class LiveThreadTest {
         val root = requireNotNull(original)
         val mainDraft = "Unsent main-chat draft " + UUID.randomUUID()
         val replyDraft = "Unsent thread draft " + UUID.randomUUID()
+        // The thread is a sheet over the chat, which stays underneath: its own copies come last.
+        val threadOpen = hasContentDescription("Close thread")
+        fun threadComposer() = compose.onAllNodes(hasSetTextAction()).onLast()
         try {
             compose.onNode(hasSetTextAction()).performTextReplacement(mainDraft)
             compose.waitUntil(10_000) { store.state.value.drafts[ComposerDraft.lane(bot.id, null)]?.text == mainDraft }
             fun openThread() {
                 compose.onNode(hasText(originalText) and hasClickAction()).performScrollTo().performTouchInput { longClick() }
                 compose.onNodeWithText("Reply in thread").performClick()
-                compose.waitUntil(30_000) { store.state.value.thread == root.id && "thread:${root.id}" !in store.state.value.busy }
-                compose.onNode(isDialog()).assertExists()
+                compose.waitUntil(30_000) { store.state.value.thread == root.id && compose.onAllNodes(threadOpen).fetchSemanticsNodes().size == 1 }
                 compose.onNodeWithText("Thread").assertIsDisplayed()
-                compose.onNodeWithContentDescription("Close thread").assertIsDisplayed()
-                compose.onNodeWithContentDescription("Back").assertDoesNotExist()
-                compose.onAllNodesWithText(originalText).assertCountEquals(1)
-                compose.onNodeWithText(originalText).assertIsDisplayed()
+                compose.onAllNodesWithText(originalText).onLast().assertIsDisplayed()
             }
             openThread()
             compose.onNodeWithText("No replies yet").assertIsDisplayed()
-            compose.onNodeWithText("Reply…").assertIsDisplayed()
-            compose.onNode(hasSetTextAction()).performTextReplacement(replyDraft)
+            compose.onNode(hasSetTextAction() and hasText("Reply…")).performTextReplacement(replyDraft)
             compose.waitUntil(10_000) { store.state.value.drafts[ComposerDraft.lane(bot.id, root.id)]?.text == replyDraft }
             compose.onNodeWithContentDescription("Close thread").performClick()
-            compose.waitUntil(10_000) { store.state.value.thread == null && compose.onAllNodes(isDialog()).fetchSemanticsNodes().isEmpty() }
-            compose.onNode(hasSetTextAction()).assertTextEquals(mainDraft)
+            compose.waitUntil(10_000) { store.state.value.thread == null && compose.onAllNodes(threadOpen).fetchSemanticsNodes().isEmpty() }
+            compose.onNode(hasSetTextAction() and hasText(mainDraft)).assertIsDisplayed()
             openThread()
-            compose.onNode(hasSetTextAction()).assertTextEquals(replyDraft)
+            compose.onNode(hasSetTextAction() and hasText(replyDraft)).assertIsDisplayed()
             val replyText = "Thread reply acceptance " + UUID.randomUUID()
-            compose.onNode(hasSetTextAction()).performTextReplacement(replyText)
-            compose.onNodeWithContentDescription("Send").performClick()
+            threadComposer().performTextReplacement(replyText)
+            compose.onAllNodesWithContentDescription("Send").onLast().performClick()
             compose.waitUntil(30_000) { store.state.value.entries.any { it.botId == bot.id && it.threadId == root.id && it.kind == "permission" && it.status == "pending" } }
-            compose.onNodeWithText("Allow once").performScrollTo().performClick()
+            compose.onAllNodesWithText("Allow once").onLast().performScrollTo().performClick()
             compose.waitUntil(30_000) { store.state.value.entries.any { it.botId == bot.id && it.threadId == root.id && it.kind == "agent" && it.isChat } }
             val sent = store.state.value.entries.single { it.botId == bot.id && it.kind == "user" && it.text == replyText }
             assertEquals(root.id, sent.threadId)
             compose.onNodeWithText(replyText).assertIsDisplayed()
             compose.onNodeWithText("No replies yet").assertDoesNotExist()
-            compose.onNodeWithText("Reply…").assertIsDisplayed()
+            compose.onNode(hasSetTextAction() and hasText("Reply…")).assertIsDisplayed()
             val final = store.state.value.entries.last { it.botId == bot.id && it.threadId == root.id && it.kind == "agent" && it.isChat }
-            compose.onNode(hasText(final.text) and hasClickAction()).performTouchInput { longClick() }
+            compose.onAllNodes(hasText(final.text) and hasClickAction()).onLast().performTouchInput { longClick() }
             compose.onNodeWithText("Show what it did").performClick()
-            compose.onAllNodes(isDialog()).assertCountEquals(2)
             compose.onNodeWithText("Full conversation").assertIsDisplayed()
-            compose.onNodeWithContentDescription("Close full conversation").performClick()
-            compose.waitUntil(10_000) { !store.state.value.trace && compose.onAllNodes(isDialog()).fetchSemanticsNodes().size == 1 }
+            compose.onNodeWithContentDescription("Close").performClick()
+            compose.waitUntil(10_000) { !store.state.value.trace && compose.onAllNodesWithText("Full conversation").fetchSemanticsNodes().isEmpty() }
             assertEquals(root.id, store.state.value.thread)
             compose.onNodeWithText("Thread").assertIsDisplayed()
-            compose.onNodeWithText("Reply…").assertIsDisplayed()
             if (InstrumentationRegistry.getArguments().getString("layoutSnapshots") == "true") {
-                val bitmap = compose.onNode(isDialog()).captureToImage().asAndroidBitmap()
+                val bitmap = compose.onRoot().captureToImage().asAndroidBitmap()
                 File(context.cacheDir, "thread-live-preview.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
             }
-            // Native Back dismisses the modal and restores the unchanged main-chat draft.
+            // Native Back dismisses the sheet and restores the unchanged main-chat draft.
             InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
-            compose.waitUntil(10_000) { store.state.value.thread == null && compose.onAllNodes(isDialog()).fetchSemanticsNodes().isEmpty() }
-            compose.onNode(hasSetTextAction()).assertTextEquals(mainDraft)
+            compose.waitUntil(10_000) { store.state.value.thread == null && compose.onAllNodes(threadOpen).fetchSemanticsNodes().isEmpty() }
+            compose.onNode(hasSetTextAction() and hasText(mainDraft)).assertIsDisplayed()
             compose.onNodeWithText(replyText).assertDoesNotExist()
             val count = store.state.value.entries.single { it.id == root.id }.data.getValue("thread").jsonObject.getValue("count").jsonPrimitive.int
-            compose.onNode(hasText("$count replies") and hasAnyAncestor(hasText(originalText)))
+            compose.onNodeWithContentDescription("View thread, $count ${if (count == 1) "reply" else "replies"}", substring = true)
                 .performScrollTo().performClick()
             compose.waitUntil(10_000) { store.state.value.thread == root.id }
-            compose.onNodeWithText(originalText).assertIsDisplayed()
+            compose.onAllNodesWithText(originalText).onLast().assertIsDisplayed()
             compose.onNodeWithContentDescription("Close thread").performClick()
             compose.waitUntil(10_000) { store.state.value.thread == null }
         } finally {

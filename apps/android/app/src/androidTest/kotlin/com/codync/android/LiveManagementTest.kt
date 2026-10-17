@@ -1,5 +1,6 @@
 package com.codync.android
 
+import android.view.KeyEvent
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.lifecycle.ViewModelProvider
@@ -34,11 +35,14 @@ class LiveManagementTest {
             compose.runOnUiThread { store.openBot(null) }
             compose.onNodeWithContentDescription("New").performClick()
             compose.onNodeWithText("New group chat").performClick()
-            compose.onNode(hasSetTextAction() and hasText("Search bots")).performTextReplacement(member.name)
-            compose.onNodeWithText("Add " + member.name).performClick()
-            compose.onNode(hasSetTextAction() and hasText("Search bots")).performTextReplacement(parent.name)
-            compose.onNodeWithText("Add " + parent.name).performClick()
-            compose.onNodeWithText("Save").performClick()
+            compose.onNodeWithText("Add Member").performClick()
+            val search = hasSetTextAction() and hasText("Search bots")
+            compose.onNode(search).performTextReplacement(member.name)
+            compose.onNodeWithContentDescription("Add " + member.name).performClick()
+            compose.onNode(search).performTextReplacement(parent.name)
+            compose.onNodeWithContentDescription("Add " + parent.name).performClick()
+            compose.onNodeWithContentDescription("Remove " + member.name).assertIsDisplayed()
+            compose.onNodeWithContentDescription("Create").performClick()
             compose.waitUntil(30_000) { store.state.value.bots.any { it.id == store.state.value.selectedBot && it.kind == "group" } }
             val group = store.state.value.bots.single { it.id == store.state.value.selectedBot }
             created.add(group.id)
@@ -51,11 +55,12 @@ class LiveManagementTest {
             assertTrue(replies.isNotEmpty())
             assertTrue(replies.all { it.data["author"]?.jsonPrimitive?.content == member.id })
             openEditor()
-            compose.onNode(hasSetTextAction() and hasText("Name")).performScrollTo().performTextReplacement("Edited group")
-            compose.onNodeWithText("Save").performClick()
+            // The name field shows the members' names until the group has its own.
+            compose.onNode(hasSetTextAction() and hasText(group.name.ifBlank { "${member.name}, ${parent.name}" })).performTextReplacement("Edited group")
+            compose.onNodeWithContentDescription("Save").performClick()
             compose.waitUntil(30_000) { store.state.value.bots.firstOrNull { it.id == group.id }?.name == "Edited group" }
             assertEquals(group.members, store.state.value.bots.single { it.id == group.id }.members)
-            compose.waitUntil(10_000) { compose.onAllNodesWithContentDescription("Conversation actions").fetchSemanticsNodes().size == 1 }
+            compose.waitUntil(10_000) { compose.onAllNodes(chatMenu).fetchSemanticsNodes().size == 1 }
             compose.runOnUiThread { store.openBot(null) }
             rosterActions("Edited group")
             compose.onNodeWithText("Pin").performScrollTo().performClick()
@@ -63,15 +68,16 @@ class LiveManagementTest {
             rosterActions("Edited group")
             compose.onNodeWithText("Hide from list").performScrollTo().performClick()
             compose.waitUntil(30_000) { store.state.value.bots.single { it.id == group.id }.hidden }
-            compose.computerAction("Hidden bots")
-            rosterActions("Edited group")
-            compose.onNodeWithText("Show in roster").performScrollTo().performClick()
+            // Hidden bots come back from Computers & settings.
+            compose.computerAction("Manage computers")
+            compose.onRowButton("Unhide", "Edited group").performClick()
             compose.waitUntil(30_000) { !store.state.value.bots.single { it.id == group.id }.hidden }
-            compose.computerAction("Show visible bots")
+            InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
+            compose.waitUntil(10_000) { compose.onAllNodesWithText("Computers & settings").fetchSemanticsNodes().isEmpty() }
             rosterActions("Edited group")
             compose.onNodeWithText("Edit group").performClick()
             compose.onNodeWithText("Delete group chat").performScrollTo().performClick()
-            compose.onNodeWithText("Delete", useUnmergedTree = true).performScrollTo().performClick()
+            compose.onAllNodesWithText("Delete group chat").onLast().performClick()
             compose.waitUntil(30_000) { store.state.value.bots.none { it.id == group.id } && "delete:" + group.id !in store.state.value.busy }
             val remaining = runBlocking { HostClient.bots(channel) }
             assertFalse(remaining.any { it.id == group.id })
@@ -86,8 +92,7 @@ class LiveManagementTest {
 
     private fun openEditor() {
         // The host event can arrive before the save callback closes the editor.
-        compose.waitUntil(10_000) { compose.onAllNodesWithContentDescription("Conversation actions").fetchSemanticsNodes().size == 1 }
-        compose.chatAction("Edit")
+        compose.chatAction("Edit group")
     }
 
     private fun rosterActions(name: String) {

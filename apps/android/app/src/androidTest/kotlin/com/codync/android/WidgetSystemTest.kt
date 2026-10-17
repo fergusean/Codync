@@ -15,6 +15,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isHeading
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.lifecycle.ViewModelProvider
 import androidx.core.view.drawToBitmap
@@ -132,7 +133,7 @@ class WidgetSystemTest {
         compose.runOnUiThread { store.openLink(link) }
         compose.waitUntil(10_000) { store.state.value.navigationUsage && store.state.value.selectedBot == null }
         // The usage sheet's title (it refreshes on its own and on pull).
-        val refresh = hasText("Usage")
+        val refresh = hasText("Usage") and isHeading()
         compose.waitUntil(10_000) { compose.onAllNodes(refresh).fetchSemanticsNodes().size == 1 }
         compose.onNode(refresh).assertIsDisplayed()
         compose.activityRule.scenario.recreate()

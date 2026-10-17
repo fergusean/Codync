@@ -40,31 +40,31 @@ class LiveRoutinesTest {
             assertNull(store.state.value.error)
             compose.runOnUiThread { store.openBot(bot.id) }
             compose.chatAction("Routines")
-            compose.onNodeWithContentDescription("Routine actions").performClick()
-            compose.onNodeWithText("Ask the bot for a routine").performClick()
-            compose.onNode(hasSetTextAction()).assertTextEquals("I want a routine that ")
+            compose.onNodeWithContentDescription("Ask the bot for a routine").performClick()
+            compose.waitUntil(10_000) { compose.onAllNodes(hasSetTextAction() and hasText("I want a routine that ")).fetchSemanticsNodes().size == 1 }
             compose.runOnUiThread { store.editDraft(bot.id, null, "") }
             compose.chatAction("Routines")
             compose.waitUntil(10_000) { "routines:${bot.id}" !in store.state.value.busy && store.state.value.routines[bot.id] != null }
-            compose.onControl("Set up a routine").performClick()
-            compose.waitUntil(10_000) { compose.onAllNodes(hasSetTextAction() and hasText("Cron")).fetchSemanticsNodes().isNotEmpty() }
-            field("Name").performTextReplacement("Schedule acceptance")
-            field("Instruction").performTextReplacement("Report a fake-agent acceptance result")
-            field("Cron").performTextReplacement("invalid cron")
+            compose.onNodeWithText("No routines yet. Ask the bot for one, or set it up yourself with +.").assertIsDisplayed()
+            compose.onNodeWithContentDescription("Set up a routine").performClick()
+            field(Input.Name).performTextReplacement("Schedule acceptance")
+            field(Input.Instruction).performTextReplacement("Report a fake-agent acceptance result")
+            field(Input.Cron).performTextReplacement("invalid cron")
             compose.waitUntil(10_000) { compose.onAllNodesWithText("Check schedule again").fetchSemanticsNodes().isNotEmpty() }
             compose.onNodeWithText("Create routine").assertIsNotEnabled()
-            field("Cron").performTextReplacement("0 0 1 1 *")
-            field("Time zone").performTextReplacement("America/New_York")
+            field(Input.Cron).performTextReplacement("0 0 1 1 *")
+            field(Input.Zone).performTextReplacement("America/New_York")
             waitEnabled("Create routine")
             compose.onNodeWithText("Create routine").performClick()
             compose.waitUntil(15_000) { store.state.value.routines[bot.id]?.routines?.size == 1 && "routines:${bot.id}" !in store.state.value.busy }
             val schedule = store.state.value.routines.getValue(bot.id).routines.single()
             val originalNext = schedule.nextRunAt
-            compose.onNodeWithText("Pause routine").performClick()
+            // Each row's switch pauses and resumes it.
+            toggle("Schedule acceptance").assertIsOn().performClick()
             compose.waitUntil(15_000) { store.state.value.routines.getValue(bot.id).routines.single().enabled == false && "routines:${bot.id}" !in store.state.value.busy }
             compose.onNodeWithText("Schedule acceptance").performClick()
-            field("Name").performTextReplacement("Edited schedule")
-            field("Name").assert(hasText("Edited schedule"))
+            compose.onNodeWithText("Edit routine").assertIsDisplayed()
+            field(Input.Name).performTextReplacement("Edited schedule")
             waitEnabled("Save changes")
             compose.onNodeWithText("Save changes").performClick()
             try { compose.waitUntil(15_000) { store.state.value.routines.getValue(bot.id).routines.single().name == "Edited schedule" && "routines:${bot.id}" !in store.state.value.busy } }
@@ -72,7 +72,7 @@ class LiveRoutinesTest {
             val edited = store.state.value.routines.getValue(bot.id).routines.single()
             assertFalse(edited.enabled)
             assertEquals(schedule.triggers, edited.triggers)
-            compose.onNodeWithText("Resume routine").performClick()
+            toggle("Edited schedule").assertIsOff().performClick()
             compose.waitUntil(15_000) { store.state.value.routines.getValue(bot.id).routines.single().enabled && "routines:${bot.id}" !in store.state.value.busy }
             assertEquals(originalNext, store.state.value.routines.getValue(bot.id).routines.single().nextRunAt)
 
@@ -82,11 +82,9 @@ class LiveRoutinesTest {
                 put("botId", bot.id); put("name", "Preserve triggers"); put("instruction", "Keep the original filters")
                 put("triggers", triggers); put("enabled", false)
             }) }.jsonObject.getValue("routine").jsonObject
-            compose.runOnUiThread { store.loadRoutines(bot.id) }
             compose.waitUntil(15_000) { store.state.value.routines.getValue(bot.id).routines.size == 2 && "routines:${bot.id}" !in store.state.value.busy }
             compose.onNodeWithText("Preserve triggers").performClick()
-            field("Name").performTextReplacement("Preserved triggers")
-            field("Name").assert(hasText("Preserved triggers"))
+            field(Input.Name).performTextReplacement("Preserved triggers")
             waitEnabled("Save changes")
             compose.onNodeWithText("Save changes").performClick()
             try { compose.waitUntil(15_000) { store.state.value.routines.getValue(bot.id).routines.any { it.name == "Preserved triggers" } && "routines:${bot.id}" !in store.state.value.busy } }
@@ -95,47 +93,49 @@ class LiveRoutinesTest {
             assertEquals(original.getValue("triggers"), JsonArray(preserved.triggers))
             assertFalse(preserved.enabled)
 
-            compose.onControl("Set up a routine").performClick()
-            field("Name").performTextReplacement("Webhook acceptance")
-            field("Instruction").performTextReplacement("Report a fake webhook acceptance result")
-            compose.onNodeWithText("Webhook").performScrollTo().performClick()
+            // A new webhook routine stays open on its URL and key.
+            compose.onNodeWithContentDescription("Set up a routine").performClick()
+            field(Input.Name).performTextReplacement("Webhook acceptance")
+            field(Input.Instruction).performTextReplacement("Report a fake webhook acceptance result")
+            compose.onNodeWithContentDescription("When to run: Schedule").performScrollTo().performClick()
+            compose.onNodeWithText("Webhook").performClick()
             waitEnabled("Create routine")
             compose.onNodeWithText("Create routine").performClick()
-            compose.waitUntil(15_000) { compose.onAllNodesWithText("Replace key").fetchSemanticsNodes().isNotEmpty() }
+            compose.waitUntil(15_000) { compose.onAllNodesWithContentDescription("Replace key").fetchSemanticsNodes().isNotEmpty() }
             val webhookRoutine = store.state.value.routines.getValue(bot.id).routines.single { it.name == "Webhook acceptance" }
             val firstKey = runBlocking { channel.call("routineWebhook", body("botId" to bot.id, "id" to webhookRoutine.id)) }.jsonObject.getValue("key")
-            compose.onNodeWithText("Replace key").performScrollTo().performClick()
-            compose.onNodeWithText("Confirm replace key").performScrollTo().performClick()
-            compose.waitUntil(15_000) { compose.onAllNodesWithText("Hide key").fetchSemanticsNodes().isNotEmpty() }
+            compose.onNodeWithContentDescription("Replace key").performScrollTo().performClick()
+            compose.onNodeWithText("Replace the key?").assertIsDisplayed()
+            compose.onNodeWithText("Replace key").performClick()
+            compose.waitUntil(15_000) { compose.onAllNodesWithContentDescription("Hide key").fetchSemanticsNodes().isNotEmpty() }
             val nextKey = runBlocking { channel.call("routineWebhook", body("botId" to bot.id, "id" to webhookRoutine.id)) }.jsonObject.getValue("key")
             assertNotEquals(firstKey, nextKey)
-            compose.onNodeWithText("Test run").performScrollTo().performClick()
-            compose.waitUntil(30_000) { store.state.value.routines.getValue(bot.id).runs.any { it.routineId == webhookRoutine.id } }
-            compose.onNodeWithText("Cancel").performClick()
+            compose.onNodeWithContentDescription("Test run").performClick()
+            compose.waitUntil(15_000) { compose.onAllNodesWithContentDescription("Started").fetchSemanticsNodes().isNotEmpty() }
             compose.waitUntil(30_000) { store.state.value.routines.getValue(bot.id).runs.any { it.routineId == webhookRoutine.id && it.finishedAt != null } }
             val run = store.state.value.routines.getValue(bot.id).runs.first { it.routineId == webhookRoutine.id }
             assertEquals("succeeded", run.status)
             assertNotNull(run.rootId)
-            compose.onNodeWithText("View run results").performScrollTo().performClick()
-            compose.waitUntil(15_000) { store.state.value.thread == run.rootId }
-            compose.onNodeWithText("Replies").assertIsDisplayed()
-            compose.onControl("Back").performClick()
-            compose.chatAction("Routines")
-            compose.waitUntil(10_000) { compose.onAllNodesWithText("Webhook acceptance").fetchSemanticsNodes().size == 1 }
-            compose.onNodeWithText("Webhook acceptance").performClick()
-            compose.onNodeWithText("Delete routine").performScrollTo().performClick()
-            compose.onNodeWithText("Confirm delete routine").performScrollTo().performClick()
+            compose.onNodeWithContentDescription("Delete routine").performClick()
+            compose.onNodeWithText("Delete routine?").assertIsDisplayed()
+            compose.onNodeWithText("Delete routine").performClick()
             compose.waitUntil(15_000) { store.state.value.routines.getValue(bot.id).routines.none { it.id == webhookRoutine.id } }
+            compose.onNodeWithText("Webhook acceptance").assertDoesNotExist()
         } finally {
             clone?.let { bot -> runBlocking { channel.call("deleteBot", body("botId" to bot.id)) } }
             channel.close()
         }
     }
 
-    private fun field(label: String): SemanticsNodeInteraction {
-        compose.waitUntil(10_000) { compose.onAllNodes(hasSetTextAction() and hasText(label) and isEnabled()).fetchSemanticsNodes().size == 1 }
-        return compose.onNode(hasSetTextAction() and hasText(label)).performScrollTo()
+    private enum class Input { Name, Instruction, Cron, Zone }
+
+    /** The open editor's text fields, top to bottom: name, instruction, then a schedule's cron and time zone. */
+    private fun field(field: Input): SemanticsNodeInteraction {
+        val inEditor = hasSetTextAction() and hasAnyAncestor(hasScrollAction() and hasAnyDescendant(hasText("When to run")))
+        compose.waitUntil(10_000) { compose.onAllNodes(inEditor and isEnabled()).fetchSemanticsNodes().size > field.ordinal }
+        return compose.onAllNodes(inEditor)[field.ordinal].performScrollTo()
     }
+    private fun toggle(routine: String) = compose.onNode(hasContentDescription(routine) and isToggleable())
     private fun waitEnabled(label: String) {
         compose.waitUntil(10_000) { compose.onAllNodes(hasText(label) and isEnabled()).fetchSemanticsNodes().size == 1 }
     }

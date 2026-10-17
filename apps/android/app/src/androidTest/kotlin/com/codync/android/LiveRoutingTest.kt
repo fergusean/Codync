@@ -71,12 +71,14 @@ class LiveRoutingTest {
                         reject(link(id = "absent-" + UUID.randomUUID()), "bot is no longer available")
                         reject(Uri.parse(link().toString() + "&scope=local"), "invalid destination")
                         val parent = saved.getValue("parent").jsonPrimitive.content
-                        compose.computerAction("Usage")
-                        compose.waitUntil(10_000) { compose.onAllNodesWithContentDescription("Refresh usage").fetchSemanticsNodes().size == 1 }
-                        compose.onControl("Refresh usage").assertIsDisplayed()
+                        // Usage opens from the State tab.
+                        compose.onNode(hasText("State") and isSelectable()).performClick()
+                        compose.onNodeWithContentDescription("Usage limits").performClick()
+                        val usage = hasText("Usage") and isHeading()
+                        compose.waitUntil(10_000) { compose.onAllNodes(usage).fetchSemanticsNodes().size == 1 }
                         instrumentation.runOnMainSync { store.openLink(link(id = parent)) }
                         withTimeout(10_000) { store.state.first { it.selectedBot == parent && it.error == null } }
-                        compose.onNodeWithContentDescription("Conversation actions").assertIsDisplayed()
+                        compose.onNode(chatMenu).assertIsDisplayed()
                         // Recreating the Activity must retain the current navigation, not replay its original intent.
                         scenario.recreate()
                         scenario.onActivity { activity ->

@@ -47,7 +47,7 @@ class LiveVoiceSpeechTest {
             val store = ViewModelProvider(compose.activity)[AppStore::class.java]; model = store
             compose.waitUntil(30_000) { store.state.value.bots.any { it.id == id } && store.state.value.actualConnection is LinkState.Ready }
             compose.runOnUiThread { store.voiceSettings(VoiceSettings(2_500)); store.openBot(id) }
-            compose.onNodeWithContentDescription("Voice chat").performClick()
+            compose.onNodeWithContentDescription("Call").performClick()
             compose.waitUntil(45_000) { store.state.value.voice?.state?.phase == VoicePhase.Listening || store.state.value.error != null }
             assertNull(store.state.value.error)
             val callId = requireNotNull(store.state.value.voice).id
@@ -79,7 +79,7 @@ class LiveVoiceSpeechTest {
                 } }
             }
             compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
-            compose.onNodeWithText("End call").performClick()
+            compose.onNodeWithContentDescription("End call").performClick()
             compose.waitUntil(10_000) { store.state.value.voice == null }
         } finally {
             marker.delete(); observed.delete()

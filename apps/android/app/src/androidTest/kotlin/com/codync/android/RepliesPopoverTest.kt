@@ -2,18 +2,13 @@ package com.codync.android
 
 import android.graphics.Bitmap
 import android.os.Build
-import android.os.SystemClock
 import android.view.KeyEvent
-import android.view.MotionEvent
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.test.platform.app.InstrumentationRegistry
 import com.codync.android.core.*
-import com.codync.android.design.CodyncTheme
 import kotlinx.serialization.json.*
 import org.junit.Assert.*
 import org.junit.Assume.assumeTrue
@@ -87,31 +82,5 @@ class RepliesPopoverTest {
         compose.waitUntil(10_000) { composer.fetchSemanticsNode().layoutInfo.coordinates.localToScreen(Offset.Zero).y < before - 100f }
         compose.onNodeWithText("Thread").assertIsDisplayed()
         compose.onNodeWithContentDescription("Close thread").assertIsDisplayed()
-    }
-
-    @Test fun outsideTapAndGrabberSwipeDismissTheOverlay() {
-        val showing = mutableStateOf(true)
-        compose.setContent { CodyncTheme {
-            if (showing.value) RepliesPopover(close = { showing.value = false }, back = { it() }) { androidx.compose.material3.Text("Dismissal preview") }
-        } }
-        val panel = compose.onNode(SemanticsMatcher.expectValue(SemanticsProperties.PaneTitle, "Thread"))
-        panel.assertIsDisplayed()
-        val node = panel.fetchSemanticsNode()
-        val origin = node.layoutInfo.coordinates.localToScreen(Offset.Zero)
-        val time = SystemClock.uptimeMillis()
-        val down = MotionEvent.obtain(time, time, MotionEvent.ACTION_DOWN, origin.x + node.size.width / 2, origin.y - 8f, 0)
-        val up = MotionEvent.obtain(time, time + 50, MotionEvent.ACTION_UP, origin.x + node.size.width / 2, origin.y - 8f, 0)
-        try {
-            instrumentation.sendPointerSync(down)
-            instrumentation.sendPointerSync(up)
-        } finally { down.recycle(); up.recycle() }
-        compose.waitUntil(5_000) { compose.onAllNodes(isDialog()).fetchSemanticsNodes().isEmpty() }
-        assertFalse(showing.value)
-        compose.runOnUiThread { showing.value = true }
-        panel.assertIsDisplayed()
-        val density = instrumentation.targetContext.resources.displayMetrics.density
-        panel.performTouchInput { swipe(Offset(center.x, 11f * density), Offset(center.x, 131f * density), durationMillis = 250) }
-        compose.waitUntil(5_000) { compose.onAllNodes(isDialog()).fetchSemanticsNodes().isEmpty() }
-        assertFalse(showing.value)
     }
 }

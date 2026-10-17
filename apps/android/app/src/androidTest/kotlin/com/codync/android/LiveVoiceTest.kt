@@ -42,17 +42,22 @@ class LiveVoiceTest {
             val store = ViewModelProvider(compose.activity)[AppStore::class.java]; model = store
             compose.waitUntil(30_000) { store.state.value.bots.any { it.id == id } && store.state.value.actualConnection is LinkState.Ready }
             compose.runOnUiThread { store.openBot(id) }
-            compose.onNodeWithContentDescription("Voice chat").performClick()
+            compose.onNodeWithContentDescription("Call").performClick()
             compose.waitUntil(45_000) { store.state.value.voice?.state?.phase == VoicePhase.Listening || store.state.value.error != null }
             assertNull(store.state.value.error)
             val call = requireNotNull(store.state.value.voice)
             assertEquals("Offline English · Vosk", call.state.engine)
             compose.activityRule.scenario.recreate()
-            compose.waitUntil(10_000) { store.state.value.voice?.id == call.id && compose.onAllNodesWithText("End call").fetchSemanticsNodes().size == 1 }
-            compose.onNodeWithText("Voice settings").performClick()
-            compose.onNodeWithText("1 s").performClick(); compose.onNodeWithText("Faster").performClick()
+            compose.waitUntil(10_000) { store.state.value.voice?.id == call.id && compose.onAllNodesWithContentDescription("End call").fetchSemanticsNodes().size == 1 }
+            compose.onNodeWithContentDescription("Call settings").performClick()
+            compose.onNodeWithContentDescription("Send after a pause of:", substring = true).performClick()
+            compose.onNodeWithText("1 s").performClick()
+            compose.onNodeWithContentDescription("Reading speed:", substring = true).performClick()
+            compose.onNodeWithText("Faster").performClick()
             compose.waitUntil { store.state.value.voice?.state?.settings == VoiceSettings(1_000, 1.12f) }
-            compose.onNodeWithText("Mute").performClick()
+            InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(android.view.KeyEvent.KEYCODE_BACK)
+            compose.waitUntil(5_000) { compose.onAllNodesWithText("Voice chat").fetchSemanticsNodes().isEmpty() }
+            compose.onNodeWithContentDescription("Mute").performClick()
             compose.waitUntil { store.state.value.voice?.state?.muted == true }
             compose.activityRule.scenario.moveToState(Lifecycle.State.CREATED)
             runBlocking { delay(1_000); withTimeout(5_000) { store.installedConnectors() } }

@@ -3,6 +3,9 @@ package com.codync.android
 import android.graphics.Bitmap
 import android.os.Build
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -93,6 +96,17 @@ class BotEditorTest {
         compose.onNodeWithText("Connect to this computer to load its models. You can still enter a model ID.").performScrollTo().assertIsDisplayed()
         compose.onNode(hasSetTextAction() and hasText("old-model")).performTextReplacement("my-model")
         compose.onNode(hasSetTextAction() and hasText("my-model")).assertIsDisplayed()
+    }
+
+    @Test fun pluginTogglesKeepUnknownSavedIdsWhileSwitchingInstalledOnes() {
+        var selection by mutableStateOf(listOf("missing-skill"))
+        compose.setContent { Hosted { PluginToggles("Skills", "No skills yet.",
+            listOf(Triple("installed-skill", "Fixture skill", "From the fixture")), selection, { selection = it }) } }
+        toggle("Fixture skill").assertIsOff().performClick().assertIsOn()
+        assertEquals(listOf("missing-skill", "installed-skill"), selection)
+        toggle("Fixture skill").performClick().assertIsOff()
+        assertEquals(listOf("missing-skill"), selection)
+        compose.onNodeWithText("No skills yet.").assertDoesNotExist()
     }
 
     private fun render(draft: BotDraft, state: AppState = fixture(), close: () -> Unit = {}) {

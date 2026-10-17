@@ -32,37 +32,41 @@ class LivePluginsTest {
             val store = ViewModelProvider(compose.activity)[AppStore::class.java]
             compose.waitUntil(30_000) { !store.state.value.loading && store.state.value.actualConnection is LinkState.Ready }
             compose.runOnUiThread { store.openBot(null) }
-            compose.computerAction("Marketplace")
-            compose.onNodeWithText("Installed plugins").performScrollTo().performClick()
-            compose.onNodeWithText("Custom connector").performClick()
+            compose.openExtensions()
+            compose.onNodeWithText("Custom connector").performScrollTo().performClick()
             field("Name").performTextReplacement(name + " connector")
-            field("Command line").performTextReplacement("/usr/bin/false")
-            field("Environment JSON (optional)").performTextReplacement("{\"FIXTURE_ONLY\":\"fixture-value\"}")
-            compose.onNodeWithText("Save plugin").performScrollTo().assertIsEnabled().performClick()
-            compose.waitUntil(20_000) { store.state.value.plugins?.connectors?.any { it.name == name + " connector" } == true && "plugin" !in store.state.value.busy }
+            field("npx -y @scope/server").performTextReplacement("/usr/bin/false")
+            field("API_KEY=…").performTextReplacement("FIXTURE_ONLY=fixture-value")
+            compose.onNodeWithContentDescription("Add").assertIsEnabled().performClick()
+            compose.waitUntil(20_000) { runBlocking { channel.call("connectors") }.toString().contains(name + " connector") }
+            compose.onNodeWithText("Your own skill").performScrollTo().performClick()
+            field("Name").performTextReplacement(name + " skill")
+            field("When to use it").performTextReplacement("Disposable acceptance instructions")
+            field("Step by step, in plain words…").performTextReplacement("This skill belongs to the isolated Android acceptance fixture.")
+            compose.onNodeWithContentDescription("Save").assertIsEnabled().performClick()
+            compose.runOnUiThread { store.refreshPlugins() }
+            compose.waitUntil(20_000) { store.state.value.plugins?.let { plugins -> plugins.connectors.any { it.name == name + " connector" } &&
+                plugins.skills.any { it.name == name + " skill" } } == true && "plugins" !in store.state.value.busy }
             val connector = store.state.value.plugins!!.connectors.single { it.name == name + " connector" }
             connectorId = connector.id
             assertTrue(connector.keys.contains("FIXTURE_ONLY"))
             assertEquals("local", connector.kind)
             assertFalse(WireJson.encodeToJsonElement(connector).toString().contains("fixture-value"))
-            compose.onNodeWithText("Write a skill").performScrollTo().performClick()
-            field("Name").performTextReplacement(name + " skill")
-            field("Description").performTextReplacement("Disposable acceptance instructions")
-            field("Instructions").performTextReplacement("This skill belongs to the isolated Android acceptance fixture.")
-            compose.onNodeWithText("Save plugin").performScrollTo().assertIsEnabled().performClick()
-            compose.waitUntil(20_000) { store.state.value.plugins?.skills?.any { it.name == name + " skill" } == true && "plugin" !in store.state.value.busy }
             val skill = store.state.value.plugins!!.skills.single { it.name == name + " skill" }
             skillId = skill.id
-            compose.onNodeWithText("Remove " + skill.name).performScrollTo().performClick()
-            compose.onNodeWithText("Keep plugin").performScrollTo().performClick()
+            // Installed connectors and skills, each removable after a confirmation.
+            compose.onNodeWithText("Connectors & skills").performScrollTo().performClick()
+            compose.onNodeWithContentDescription("Remove " + skill.name).performScrollTo().performClick()
+            compose.onNodeWithText("Remove ${skill.name}?").assertIsDisplayed()
+            compose.onNodeWithText("Cancel").performClick()
             assertTrue(store.state.value.plugins!!.skills.any { it.id == skill.id })
-            compose.onNodeWithText("Remove " + skill.name).performScrollTo().performClick()
-            compose.onNodeWithText("Confirm remove plugin").performScrollTo().performClick()
-            compose.waitUntil(15_000) { store.state.value.plugins?.skills?.none { it.id == skill.id } == true && "plugin" !in store.state.value.busy }
+            compose.onNodeWithContentDescription("Remove " + skill.name).performScrollTo().performClick()
+            compose.onNodeWithText("Remove").performClick()
+            compose.waitUntil(15_000) { store.state.value.plugins?.skills?.none { it.id == skill.id } == true }
             skillId = null
-            compose.onNodeWithText("Remove " + connector.name).performScrollTo().performClick()
-            compose.onNodeWithText("Confirm remove plugin").performScrollTo().performClick()
-            compose.waitUntil(15_000) { store.state.value.plugins?.connectors?.none { it.id == connector.id } == true && "plugin" !in store.state.value.busy }
+            compose.onNodeWithContentDescription("Remove " + connector.name).performScrollTo().performClick()
+            compose.onNodeWithText("Remove").performClick()
+            compose.waitUntil(15_000) { store.state.value.plugins?.connectors?.none { it.id == connector.id } == true }
             connectorId = null
             assertNull(store.state.value.error)
         } finally {
@@ -84,5 +88,6 @@ class LivePluginsTest {
             channel.close()
         }
     }
-    private fun field(label: String): SemanticsNodeInteraction = compose.onNode(hasSetTextAction() and hasText(label)).performScrollTo()
+    /** Extensions fields are labeled by their prompt. */
+    private fun field(prompt: String): SemanticsNodeInteraction = compose.onNode(hasSetTextAction() and hasContentDescription(prompt)).performScrollTo()
 }
