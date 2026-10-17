@@ -24,14 +24,6 @@ data class CloudComputer(val computerId: String, val name: String, val signKey: 
     val version: String? = null, val online: Boolean? = null, val lastSeenAt: Long? = null,
     val claimedAt: Long? = null, val access: String? = null)
 
-@Serializable
-data class CloudDevice(val deviceId: String, val deviceKey: String, val name: String,
-    val platform: String? = null, val createdAt: Long? = null, val lastUsedAt: Long? = null, val revoked: Boolean? = null)
-
-@Serializable
-data class CloudGrant(val grantId: String, val deviceId: String, val deviceName: String? = null,
-    val platform: String? = null, val scopes: List<String>? = null, val createdAt: Long? = null)
-
 data class AccessTicket(val requestId: String, val expiresAt: Long, val code: String, val computerId: String, val signKey: String)
 
 @Serializable
@@ -72,21 +64,6 @@ class CloudClient private constructor(base: String, private val identity: Device
         val result = request("GET", listOf("v1", "computers"), signed = true)
         return json.decodeFromJsonElement(result.getValue("computers"))
     }
-
-    suspend fun devices(): List<CloudDevice> {
-        val result = request("GET", listOf("v1", "devices"))
-        return json.decodeFromJsonElement(result.getValue("devices"))
-    }
-
-    suspend fun grants(id: String): List<CloudGrant> {
-        val result = request("GET", listOf("v1", "computers", id, "grants"))
-        return json.decodeFromJsonElement(result.getValue("grants"))
-    }
-
-    suspend fun revokeDevice(id: String) { request("DELETE", listOf("v1", "devices", id)) }
-    suspend fun renameComputer(id: String, name: String) { request("PATCH", listOf("v1", "computers", id), buildJsonObject { put("name", name) }) }
-    suspend fun removeComputer(id: String) { request("DELETE", listOf("v1", "computers", id)) }
-    suspend fun revokeGrant(id: String, grantId: String) { request("DELETE", listOf("v1", "computers", id, "grants", grantId)) }
 
     suspend fun requestAccess(id: String, signKey: String): AccessTicket {
         val hostKey = signKey.decodeBase64Url(32)

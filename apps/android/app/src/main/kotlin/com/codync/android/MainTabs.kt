@@ -41,6 +41,13 @@ private enum class AppTab { Bots, State }
     val bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val barSpace = bottom + 62.dp + 24.dp
     GlassStage(Modifier.fillMaxSize(), chrome = {
+        // An account computer this phone asked on its own after sign-in: the code to check, until it answers.
+        val ticket = state.access
+        AnimatedVisibility(ticket != null && state.selectedBot == null, Modifier.align(Alignment.BottomCenter).padding(bottom = barSpace - 16.dp),
+            enter = fadeIn(Motion.fade()) + slideInVertically(Motion.layoutOffset) { it }, exit = fadeOut(Motion.fade()) + slideOutVertically(Motion.layoutOffset) { it }) {
+            if (ticket != null) AccessBanner(ticket, state.cloudComputers.firstOrNull { it.computerId == ticket.computerId }?.name ?: "Your computer",
+                store::cancelAccess)
+        }
         AnimatedVisibility(state.selectedBot == null, Modifier.align(Alignment.BottomCenter),
             enter = fadeIn(Motion.fade()) + slideInVertically(Motion.layoutOffset) { it / 2 },
             exit = fadeOut(Motion.fade()) + slideOutVertically(Motion.layoutOffset) { it / 2 }) {
@@ -55,7 +62,7 @@ private enum class AppTab { Bots, State }
                 else chat()
             }
         }
-        Box(Modifier.fillMaxSize().tabLayer(tab == AppTab.State)) { StateScreen(state, store, usage, barSpace) }
+        Box(Modifier.fillMaxSize().tabLayer(tab == AppTab.State)) { StateScreen(state, store, usage, barSpace, active = tab == AppTab.State) }
     }
 }
 

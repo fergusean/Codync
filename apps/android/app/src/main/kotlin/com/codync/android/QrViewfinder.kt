@@ -15,9 +15,12 @@ import androidx.camera.core.resolutionselector.ResolutionStrategy
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.*
+import androidx.compose.material3.Text
+import androidx.compose.foundation.background
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextAlign
+import com.codync.android.design.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -25,7 +28,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.Observer
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.codync.android.core.PairingQr
@@ -33,53 +35,30 @@ import com.codync.android.core.PairingScan
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 
-@Composable fun PairingScanner(found: (String) -> Unit, close: () -> Unit, inPopover: Boolean = false) {
+/**
+ * The camera, right on the pairing page (iOS `QRScanner` in its viewfinder): asks for the camera
+ * in place, then reads Codync pairing codes. Nothing is saved.
+ */
+@Composable fun QrViewfinder(found: (String) -> Unit, modifier: Modifier = Modifier, error: (String?) -> Unit = {}) {
     val context = LocalContext.current
-    val owner = LocalLifecycleOwner.current
     val hardware = remember { context.packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY) }
-    var permitted by remember { mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) }
-    var attempt by remember { mutableIntStateOf(0) }
-    var error by remember { mutableStateOf<String?>(null) }
-    val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { permitted = it }
-    CodyncSheetBackHandler(onBack = close)
-    DisposableEffect(owner) {
-        val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_RESUME) {
-            permitted = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
-        } }
-        owner.lifecycle.addObserver(observer)
-        onDispose { owner.lifecycle.removeObserver(observer) }
-    }
-    Surface(Modifier.fillMaxSize()) {
-        Column((if (inPopover) Modifier else Modifier.safeDrawingPadding()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                TextButton(onClick = close) { Text("Back") }
-                Text("Scan pairing code", style = MaterialTheme.typography.headlineMedium)
-            }
-            Column(Modifier.weight(1f).then(if (!hardware || !permitted) Modifier.verticalScroll(rememberScrollState()) else Modifier),
-                verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                when {
-                    !hardware || !permitted -> CameraPermissionContent(hardware,
-                        { permission.launch(Manifest.permission.CAMERA) },
-                        { context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}"))) })
-                    else -> key(attempt) {
-                        CameraPairingPreview(Modifier.weight(1f).fillMaxWidth(), found) { error = it }
-                        Text("Point the camera at your computer's Codync pairing code.")
-                    }
+    var asked by remember { mutableStateOf(false) }
+    var granted by remember { mutableStateOf(false) }
+    val permitted = rememberOnResume { ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED } || granted
+    val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted = it; asked = true }
+    Box(modifier.background(Palette.surface), contentAlignment = Alignment.Center) {
+        if (hardware && permitted) CameraPairingPreview(Modifier.fillMaxSize(), found, error)
+        else Column(Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Symbol("qrcode.viewfinder", size = 52.dp, tint = Palette.tertiary)
+            Text(if (!hardware) "Camera not available. Paste the link below." else "Allow the camera to scan the code on your computer.",
+                style = Type.footnote, color = Palette.tertiary, textAlign = TextAlign.Center)
+            if (hardware) {
+                if (!asked) SecondaryButton("Allow camera") { permission.launch(Manifest.permission.CAMERA) }
+                else SecondaryButton("Camera settings") {
+                    context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}")))
                 }
-                error?.let { Text(it, color = MaterialTheme.colorScheme.error)
-                    TextButton(onClick = { error = null; attempt++ }) { Text("Try camera again") } }
             }
-            TextButton(onClick = close) { Text("Use pairing link") }
         }
-    }
-}
-
-@Composable internal fun CameraPermissionContent(available: Boolean, request: () -> Unit, settings: () -> Unit) {
-    if (!available) Text("This device has no camera. Use your computer's pairing link instead.")
-    else {
-        Text("Allow camera access to scan the code on your computer. The camera is used only while this screen is open.")
-        Button(onClick = request) { Text("Allow camera") }
-        TextButton(onClick = settings) { Text("Camera settings") }
     }
 }
 
@@ -89,7 +68,7 @@ import java.util.concurrent.atomic.AtomicBoolean
     val owner = LocalLifecycleOwner.current
     val onFound by rememberUpdatedState(found)
     val onError by rememberUpdatedState(error)
-    val view = remember { PreviewView(context).apply { implementationMode = PreviewView.ImplementationMode.COMPATIBLE; scaleType = PreviewView.ScaleType.FIT_CENTER } }
+    val view = remember { PreviewView(context).apply { implementationMode = PreviewView.ImplementationMode.COMPATIBLE; scaleType = PreviewView.ScaleType.FILL_CENTER } }
     var camera by remember { mutableStateOf<Camera?>(null) }
     var torch by remember { mutableStateOf(false) }
     DisposableEffect(owner, view) {
@@ -148,14 +127,18 @@ import java.util.concurrent.atomic.AtomicBoolean
             executor.shutdownNow()
         }
     }
-    Box(modifier) { AndroidView(factory = { view }, modifier = Modifier.fillMaxSize()) }
-    if (camera?.cameraInfo?.hasFlashUnit() == true) TextButton(onClick = {
-        val active = camera ?: return@TextButton
-        val next = !torch
-        val result = active.cameraControl.enableTorch(next)
-        result.addListener({
-            if (camera === active) try { result.get(); torch = next }
-            catch (_: Exception) { onError("The flashlight is unavailable. Try again.") }
-        }, ContextCompat.getMainExecutor(context))
-    }) { Text(if (torch) "Turn flashlight off" else "Turn flashlight on") }
+    Box(modifier) {
+        AndroidView(factory = { view }, modifier = Modifier.fillMaxSize())
+        if (camera?.cameraInfo?.hasFlashUnit() == true) Box(Modifier.align(Alignment.BottomEnd).padding(12.dp)) {
+            IconButton(if (torch) "Turn flashlight off" else "Turn flashlight on", "bolt", tint = Color.White) {
+                val active = camera ?: return@IconButton
+                val next = !torch
+                val result = active.cameraControl.enableTorch(next)
+                result.addListener({
+                    if (camera === active) try { result.get(); torch = next }
+                    catch (_: Exception) { onError("The flashlight is unavailable. Try again.") }
+                }, ContextCompat.getMainExecutor(context))
+            }
+        }
+    }
 }

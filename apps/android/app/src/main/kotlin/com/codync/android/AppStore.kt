@@ -21,8 +21,6 @@ data class AppState(
     val generation: Int = 0,
     val account: AccountState = AccountState(),
     val cloudComputers: List<CloudComputer> = emptyList(),
-    val devices: List<CloudDevice> = emptyList(),
-    val grants: Map<String, List<CloudGrant>> = emptyMap(),
     val access: AccessTicket? = null,
     val notifications: Boolean = true,
     val tasks: Boolean = true,
@@ -269,19 +267,6 @@ class AppStore(application: Application) : AndroidViewModel(application) {
             if (ticket != null && client != null) client.cancelAccess(ticket.requestId)
         }
     }
-
-    fun refreshDevices() = action("devices") {
-        val client = cloud ?: return@action
-        val devices = client.devices()
-        mutableState.update { it.copy(devices = devices) }
-    }
-    fun loadGrants(id: String) = action("grants:$id") {
-        val grants = requireNotNull(cloud).grants(id)
-        mutableState.update { it.copy(grants = it.grants + (id to grants)) }
-    }
-    fun revokeCloudDevice(id: String) = action("revokeDevice") { requireNotNull(cloud).revokeDevice(id); refreshDevices(); refreshCloud() }
-    fun revokeGrant(id: String, grantId: String) = action("revokeGrant") { requireNotNull(cloud).revokeGrant(id, grantId); loadGrants(id) }
-    fun removeCloudComputer(id: String) = action("removeComputer") { requireNotNull(cloud).removeComputer(id); refreshCloud() }
 
     fun setRoute(route: ConnectionRoute) = action("route") {
         val computer = state.value.computers.firstOrNull() ?: return@action

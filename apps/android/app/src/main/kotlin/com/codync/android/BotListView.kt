@@ -179,7 +179,7 @@ internal fun messagePreview(text: String): String {
 }
 
 /** The account capsule: who's signed in, opening the account sheet. */
-@Composable private fun AccountSwitcherButton(state: AppState, open: () -> Unit) {
+@Composable internal fun AccountSwitcherButton(state: AppState, open: () -> Unit) {
     val (source, pressed) = rememberPress()
     val email = state.account.accounts.firstOrNull { it.userId == state.account.userId }?.email
     Row(Modifier.height(44.dp).glass(Capsule(), pressed = pressed)
@@ -188,15 +188,6 @@ internal fun messagePreview(text: String): String {
         .padding(start = 7.dp, end = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         AccountAvatar(state, 30.dp)
         Symbol("chevron.down", size = 21.dp, tint = Palette.secondary)
-    }
-}
-
-@Composable internal fun AccountAvatar(state: AppState, size: androidx.compose.ui.unit.Dp) {
-    val avatar = state.account.accounts.firstOrNull { it.userId == state.account.userId }?.avatar
-    Box(Modifier.size(size).clip(Capsule()).background(Palette.bubbleUser), contentAlignment = Alignment.Center) {
-        Symbol("person.fill", size = size * 0.6f, tint = Palette.secondary)
-        if (avatar != null) AsyncImage(avatar, null, imageLoader = LocalNetworkImages.current, contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize())
     }
 }
 

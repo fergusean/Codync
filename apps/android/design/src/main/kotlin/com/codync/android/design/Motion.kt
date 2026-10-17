@@ -28,6 +28,10 @@ object Motion {
     /** UIKit's push and sheet presentation: a 0.5 s critically damped spring. */
     fun <T> present(): FiniteAnimationSpec<T> = spring(Spring.DampingRatioNoBouncy, stiffness = 158f)
 
+    /** SwiftUI's `.spring(duration:bounce:)`. */
+    fun <T> spring(duration: Float, bounce: Float = 0f): FiniteAnimationSpec<T> =
+        androidx.compose.animation.core.spring(1f - bounce, (2 * Math.PI / duration).let { (it * it).toFloat() })
+
     val layoutOffset = spring(Spring.DampingRatioNoBouncy, stiffness = 440f, visibilityThreshold = IntOffset(1, 1))
     val layoutSize = spring(Spring.DampingRatioNoBouncy, stiffness = 440f, visibilityThreshold = IntSize(1, 1))
 

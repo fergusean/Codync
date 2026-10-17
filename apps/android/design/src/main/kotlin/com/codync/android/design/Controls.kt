@@ -40,6 +40,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.LocalContentColor
@@ -97,18 +98,25 @@ import com.kyant.shapes.RoundedRectangle
 
 /** A filled capsule button: `.buttonStyle(.primary)` (accent) or `.secondary`. */
 @Composable fun PrimaryButton(title: String, modifier: Modifier = Modifier, enabled: Boolean = true, action: () -> Unit) =
-    StyledButton(title, Palette.accentFill, Palette.onAccent, modifier, enabled, action)
+    PrimaryButton(action, modifier, enabled) { Text(title, maxLines = 1) }
 
 @Composable fun SecondaryButton(title: String, modifier: Modifier = Modifier, enabled: Boolean = true, action: () -> Unit) =
-    StyledButton(title, Palette.bubbleUser, Palette.text, modifier, enabled, action)
+    SecondaryButton(action, modifier, enabled) { Text(title, maxLines = 1) }
 
-@Composable private fun StyledButton(title: String, fill: Color, ink: Color, modifier: Modifier, enabled: Boolean, action: () -> Unit) {
+/** `.buttonStyle(.primary)` around any label (the label sets its own font and frame). */
+@Composable fun PrimaryButton(action: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true, label: @Composable () -> Unit) =
+    StyledButton(Palette.accentFill, Palette.onAccent, modifier, enabled, action, label)
+
+@Composable fun SecondaryButton(action: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true, label: @Composable () -> Unit) =
+    StyledButton(Palette.bubbleUser, Palette.text, modifier, enabled, action, label)
+
+@Composable private fun StyledButton(fill: Color, ink: Color, modifier: Modifier, enabled: Boolean, action: () -> Unit, label: @Composable () -> Unit) {
     val (source, pressed) = rememberPress()
     Box(modifier.pressScale(pressed).graphicsLayer { alpha = if (enabled) (if (pressed) 0.85f else 1f) else 0.4f }
         .clip(Capsule()).background(fill)
         .clickable(source, null, enabled = enabled, role = Role.Button, onClick = action)
         .padding(horizontal = 18.dp, vertical = 11.dp), contentAlignment = Alignment.Center) {
-        Text(title, style = Type.body.medium, color = ink, maxLines = 1)
+        CompositionLocalProvider(LocalTextStyle provides Type.body.medium, LocalContentColor provides ink) { label() }
     }
 }
 
@@ -226,7 +234,7 @@ class CardRows internal constructor() {
         }
         if (list.isNotEmpty()) Column(Modifier.fillMaxWidth().clip(RoundedRectangle(16.dp)).background(Palette.surface)) {
             for ((index, row) in list.withIndex()) {
-                Box(Modifier.fillMaxWidth().heightIn(min = 32.dp).padding(horizontal = 16.dp, vertical = 14.dp),
+                Box(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp).heightIn(min = 32.dp),
                     contentAlignment = Alignment.CenterStart) {
                     CompositionLocalProvider(LocalTextStyle provides Type.body, LocalContentColor provides Palette.text) { row() }
                 }
@@ -273,9 +281,10 @@ class CardRows internal constructor() {
 /** `TextField(...).textFieldStyle(.plain)`: no chrome, a placeholder in the secondary ink. */
 @Composable fun PlainTextField(text: String, onChange: (String) -> Unit, modifier: Modifier = Modifier, prompt: String = "",
     singleLine: Boolean = false, style: TextStyle = Type.body, minLines: Int = 1, maxLines: Int = if (singleLine) 1 else Int.MAX_VALUE,
-    imeAction: ImeAction = ImeAction.Default, enabled: Boolean = true, keyboard: KeyboardOptions = KeyboardOptions(imeAction = imeAction)) {
+    imeAction: ImeAction = ImeAction.Default, enabled: Boolean = true, keyboard: KeyboardOptions = KeyboardOptions(imeAction = imeAction),
+    actions: KeyboardActions = KeyboardActions.Default) {
     BasicTextField(text, onChange, modifier, enabled = enabled, singleLine = singleLine, minLines = minLines, maxLines = maxLines,
-        textStyle = style.copy(color = Palette.text), cursorBrush = SolidColor(Palette.accent), keyboardOptions = keyboard,
+        textStyle = style.copy(color = Palette.text), cursorBrush = SolidColor(Palette.accent), keyboardOptions = keyboard, keyboardActions = actions,
         decorationBox = { field ->
             Box(contentAlignment = Alignment.CenterStart) {
                 if (text.isEmpty()) Text(prompt, style = style, color = Palette.tertiary, maxLines = if (singleLine) 1 else Int.MAX_VALUE)

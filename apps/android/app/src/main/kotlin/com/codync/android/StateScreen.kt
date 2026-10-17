@@ -68,7 +68,7 @@ private enum class Surface { Widget, LiveUpdate, StatusBar }
  * widgets, Live updates (Android's Live Activity) and the status bar chip (its Dynamic Island).
  * Usage limits open from the header.
  */
-@Composable internal fun StateScreen(state: AppState, store: AppStore?, usage: () -> Unit, bottomInset: Dp) {
+@Composable internal fun StateScreen(state: AppState, store: AppStore?, usage: () -> Unit, bottomInset: Dp, active: Boolean = true) {
     var surface by rememberSaveable { mutableStateOf(Surface.Widget) }
     Column(Modifier.fillMaxSize().background(Palette.background).statusBarsPadding()) {
         ScreenHeader(title = { Text("State", style = Type.body.semibold, color = Palette.text) },
@@ -80,7 +80,7 @@ private enum class Surface { Widget, LiveUpdate, StatusBar }
             Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(start = 18.dp, end = 18.dp, top = 18.dp, bottom = bottomInset),
                 verticalArrangement = Arrangement.spacedBy(24.dp)) {
                 when (shown) {
-                    Surface.Widget -> WidgetGallery(state, store) { surface = Surface.LiveUpdate }
+                    Surface.Widget -> WidgetGallery(state, store, active) { surface = Surface.LiveUpdate }
                     Surface.LiveUpdate -> LiveUpdateGallery(state, store, chip = false)
                     Surface.StatusBar -> LiveUpdateGallery(state, store, chip = true)
                 }
@@ -107,7 +107,7 @@ internal fun openNotificationSettings(context: Context) = context.startActivity(
     .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
 
 /** The State tab's Widget page: the installed widgets and these previews share their layouts. */
-@Composable private fun WidgetGallery(state: AppState, store: AppStore?, keepInView: () -> Unit) {
+@Composable private fun WidgetGallery(state: AppState, store: AppStore?, active: Boolean, keepInView: () -> Unit) {
     val context = LocalContext.current
     val installed = rememberOnResume { runCatching { CodyncWidgets.installed(context) }.getOrNull() }
     var asked by remember { mutableIntStateOf(0) }
@@ -201,18 +201,7 @@ internal fun openNotificationSettings(context: Context) = context.startActivity(
         if (AppWidgetManager.getInstance(context).isRequestPinAppWidgetSupported)
             PrimaryButton("Add to Home Screen") { pinFailed = !CodyncWidgets.pin(context, kindToPin) }
         if (pinFailed) Text("Your launcher couldn't add it. Add it from the Home Screen instead.", style = Type.footnote, color = Palette.danger)
-        Column(Modifier.fillMaxWidth().clip(RoundedRectangle(18.dp)).background(Palette.surface).padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            for ((index, step) in listOf("Touch and hold an empty spot on your Home Screen.", "Tap Widgets, then Codync.",
-                "Drag the widget you like onto your Home Screen.").withIndex()) {
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Box(Modifier.size(20.dp).clip(RoundedRectangle(10.dp)).background(Palette.bubbleUser), contentAlignment = Alignment.Center) {
-                        Text("${index + 1}", style = Type.caption2.semibold, color = Palette.text)
-                    }
-                    Text(step, style = Type.footnote, color = Palette.text)
-                }
-            }
-        }
+        WidgetSetupDemo(active)
     }
     Text("Widgets show the latest report. Open Codync for live updates and approvals.", style = Type.caption2, color = Palette.tertiary)
 }
