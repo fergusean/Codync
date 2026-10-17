@@ -14,7 +14,7 @@ import android.widget.TextView
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasText
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.lifecycle.ViewModelProvider
 import androidx.core.view.drawToBitmap
@@ -61,7 +61,7 @@ class WidgetSystemTest {
                 host.startListening()
             }
             for ((receiver, expected) in listOf(BotsWidgetReceiver::class.java to "Widget bot 6",
-                UsageWidgetReceiver::class.java to "Claude", ProviderWidgetReceiver::class.java to "Session")) {
+                TeamWidgetReceiver::class.java to "Widget bot 1", ProviderWidgetReceiver::class.java to "Session")) {
                 val id = host.allocateAppWidgetId(); ids.add(id)
                 instrumentation.uiAutomation.adoptShellPermissionIdentity(android.Manifest.permission.BIND_APPWIDGET)
                 try { assertTrue("Widget binding was refused", manager.bindAppWidgetIdIfAllowed(id, ComponentName(context, receiver))) }
@@ -79,7 +79,7 @@ class WidgetSystemTest {
                 }
                 val glance = GlanceAppWidgetManager(context).getGlanceIdBy(id)
                 runBlocking { when (receiver) { BotsWidgetReceiver::class.java -> BotsWidget().update(context, glance)
-                    UsageWidgetReceiver::class.java -> UsageWidget().update(context, glance); else -> ProviderWidget().update(context, glance) } }
+                    TeamWidgetReceiver::class.java -> TeamWidget().update(context, glance); else -> ProviderWidget().update(context, glance) } }
                 waitFor(container!!, expected)
                 assertTrue(CodyncWidgets.installed(context) >= ids.size)
                 if (receiver == ProviderWidgetReceiver::class.java) {
@@ -131,7 +131,8 @@ class WidgetSystemTest {
         val link = requireNotNull(widgetIntent(context, feed, usage = true).data)
         compose.runOnUiThread { store.openLink(link) }
         compose.waitUntil(10_000) { store.state.value.navigationUsage && store.state.value.selectedBot == null }
-        val refresh = hasContentDescription("Refresh usage") or hasContentDescription("Refreshing…")
+        // The usage sheet's title (it refreshes on its own and on pull).
+        val refresh = hasText("Usage")
         compose.waitUntil(10_000) { compose.onAllNodes(refresh).fetchSemanticsNodes().size == 1 }
         compose.onNode(refresh).assertIsDisplayed()
         compose.activityRule.scenario.recreate()

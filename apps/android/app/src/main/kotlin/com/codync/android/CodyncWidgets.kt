@@ -61,6 +61,7 @@ import com.codync.android.core.UsageWindow
 import com.codync.android.core.WidgetBot
 import com.codync.android.core.WidgetFeed
 import com.codync.android.core.WidgetKind
+import com.codync.android.core.teamSlots
 import com.codync.android.design.characterAvatarBitmap
 import kotlin.math.roundToInt
 
@@ -80,11 +81,12 @@ abstract class CodyncWidget(private val kind: WidgetKind) : GlanceAppWidget() {
             val revision by WidgetStore.changes.collectAsState()
             val feed = remember(revision) { WidgetStore.feed(context) }
             val provider = remember(revision) { WidgetStore.provider(context, widget) }
-            WidgetCard(feed, kind, provider, sample = false)
+            val team = remember(revision) { WidgetStore.team(context, widget) }
+            WidgetCard(feed, kind, provider, team, sample = false)
         }
     }
     override suspend fun providePreview(context: Context, widgetCategory: Int) {
-        provideContent { WidgetCard(sampleFeed(), kind, "claude", sample = true) }
+        provideContent { WidgetCard(sampleFeed(), kind, "claude", emptyList(), sample = true) }
     }
 
     private companion object {
@@ -104,7 +106,7 @@ private val ground = ColorProvider(day = Color(0xFFFFFFFF), night = Color(0xFF14
 
 private fun style(size: Float, color: Ink, weight: FontWeight = FontWeight.Normal) = TextStyle(color, size.sp, weight)
 
-@Composable private fun WidgetCard(feed: WidgetFeed, kind: WidgetKind, providerId: String, sample: Boolean) {
+@Composable private fun WidgetCard(feed: WidgetFeed, kind: WidgetKind, providerId: String, team: List<String?>, sample: Boolean) {
     val context = LocalContext.current
     val size = LocalSize.current
     val layout = if (size.height >= 230.dp) ProviderLayout.Large else if (size.width >= 230.dp) ProviderLayout.Medium else ProviderLayout.Small
@@ -118,7 +120,7 @@ private fun style(size: Float, color: Ink, weight: FontWeight = FontWeight.Norma
                 if (provider == null) Empty(providerName(providerId), "No usage yet. Open Codync to refresh.")
                 else ProviderCard(context, provider, layout)
             }
-            kind == WidgetKind.Team -> TeamCard(context, feed, sample)
+            kind == WidgetKind.Team -> TeamCard(context, feed, team, sample)
             else -> BotsCard(context, feed, layout, sample)
         }
     }
@@ -298,8 +300,8 @@ private fun stateWord(bot: WidgetBot): Pair<String, Ink> = when (bot.status) {
 }
 
 /** Four bots in a 2×2 grid, each in its mood with a dot for its state; empty spots sleep. */
-@Composable private fun TeamCard(context: Context, feed: WidgetFeed, sample: Boolean) {
-    val slots = feed.bots.sortedBy(::rank).take(4).let { it + List(4 - it.size) { null } }
+@Composable private fun TeamCard(context: Context, feed: WidgetFeed, picks: List<String?>, sample: Boolean) {
+    val slots = teamSlots(feed.bots, picks)
     Column(GlanceModifier.fillMaxSize()) {
         for ((index, row) in slots.chunked(2).withIndex()) {
             if (index > 0) Spacer(GlanceModifier.height(8.dp))

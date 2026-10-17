@@ -4,4 +4,5 @@
     android:targetCellWidth="2" android:targetCellHeight="2" android:resizeMode="horizontal|vertical"
     android:updatePeriodMillis="1800000" android:initialLayout="@layout/widget_loading"
     android:description="@string/widget_team_description" android:previewLayout="@layout/widget_loading"
+    android:configure="com.codync.android.WidgetConfigurationActivity" android:widgetFeatures="reconfigurable|configuration_optional"
     android:widgetCategory="home_screen" />

@@ -12,6 +12,13 @@ import kotlinx.serialization.Serializable
 
 enum class WidgetKind { Provider, Bots, Team }
 
+/** The Team widget's four spots: the picked bots first (a deleted pick falls back), then the feed's order (who needs you). */
+fun teamSlots(bots: List<WidgetBot>, picks: List<String?>): List<WidgetBot?> {
+    val picked = List(4) { i -> picks.getOrNull(i)?.let { id -> bots.firstOrNull { it.id == id } } }
+    val queue = ArrayDeque(bots.filter { bot -> picked.none { it?.id == bot.id } })
+    return picked.map { it ?: queue.removeFirstOrNull() }
+}
+
 fun widgetBots(bots: List<Bot>): List<WidgetBot> = bots.filter { !it.hidden && !it.deleted }
     .sortedWith(compareBy<Bot> { when (it.status) { "needsInput" -> 0; "working" -> 1; "error" -> 2; else -> 3 } }
         .thenByDescending { it.pinned }.thenByDescending { it.lastAt }.thenBy { it.name })

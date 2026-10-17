@@ -60,15 +60,15 @@ class MarketBrowserTest {
         compose.waitUntil(10_000) { returned.get() && compose.onAllNodesWithText("new result").fetchSemanticsNodes().size == 1 }
         compose.onNodeWithText("old result").assertDoesNotExist()
     }
-    @Test fun connectorSelectionRetainsUnknownSavedIdsAndNewBotsBeginWithHostDefaults() {
-        var draft by mutableStateOf(BotDraft(connectors = null, skills = listOf("missing-skill")))
-        val plugins = PluginListing(listOf(InstalledConnector("installed", "Fixture connector", kind = "remote", auth = "signedOut")),
-            listOf(InstalledSkill("installed-skill", "Fixture skill", source = "fixture", path = "/fixture")))
-        compose.setContent { CodyncTheme { PluginChoices(AppState(plugins = plugins), draft) { draft = it } } }
-        compose.onNodeWithText("✓ Fixture connector").performClick()
-        assertEquals(emptyList<String>(), draft.connectors)
-        compose.onNodeWithText("Fixture skill").performClick()
-        assertEquals(listOf("missing-skill", "installed-skill"), draft.skills)
-        compose.onNodeWithText("Sign-in needed").assertIsDisplayed()
+    @Test fun pluginTogglesKeepUnknownSavedIdsWhileSwitchingInstalledOnes() {
+        var selection by mutableStateOf(listOf("missing-skill"))
+        compose.setContent { CodyncTheme { PluginToggles("Skills", "No skills yet.",
+            listOf(Triple("installed-skill", "Fixture skill", "From the fixture")), selection, { selection = it }) } }
+        compose.onNode(hasText("Fixture skill") and isToggleable()).assertIsOff().performClick().assertIsOn()
+        assertEquals(listOf("missing-skill", "installed-skill"), selection)
+        compose.onNode(hasText("Fixture skill") and isToggleable()).performClick().assertIsOff()
+        assertEquals(listOf("missing-skill"), selection)
+        compose.onNodeWithText("From the fixture").assertIsDisplayed()
+        compose.onNodeWithText("No skills yet.").assertDoesNotExist()
     }
 }

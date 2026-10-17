@@ -57,6 +57,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.codync.android.core.UsageReport
 import com.codync.android.core.WidgetKind
+import com.codync.android.core.teamSlots
 import com.codync.android.design.*
 import com.kyant.shapes.RoundedRectangle
 
@@ -172,7 +173,7 @@ internal fun openNotificationSettings(context: Context) = context.startActivity(
                     "usage" -> providers.firstOrNull { it.id == provider }?.let {
                         ProviderWidgetCard(it, if (size == "large") ProviderLayout.Large else if (size == "medium") ProviderLayout.Medium else ProviderLayout.Small)
                     }
-                    "team" -> BotsTeamCard(WidgetPreview.bots)
+                    "team" -> BotsTeamCard(teamSlots(WidgetPreview.bots, emptyList()))
                     else -> BotsWidgetCard(WidgetPreview.bots, WidgetPreview.activities, wide = size != "small", large = size == "large")
                 }
             }

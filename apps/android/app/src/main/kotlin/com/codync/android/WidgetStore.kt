@@ -59,9 +59,18 @@ internal object WidgetStore {
     }
     fun provider(context: Context, widget: Int): String = context.getSharedPreferences("codync-widgets", Context.MODE_PRIVATE)
         .getString("provider:$widget", "claude") ?: "claude"
+    /** The Team widget's chosen bot per spot; empty spots fill themselves. */
+    @Synchronized fun selectTeam(context: Context, widget: Int, picks: List<String?>) {
+        require(picks.size == 4 && picks.all { it == null || it.length <= 128 && it.none(Char::isISOControl) })
+        check(context.getSharedPreferences("codync-widgets", Context.MODE_PRIVATE).edit()
+            .putString("team:$widget", picks.joinToString("\n") { it.orEmpty() }).commit())
+        changed()
+    }
+    fun team(context: Context, widget: Int): List<String?> = context.getSharedPreferences("codync-widgets", Context.MODE_PRIVATE)
+        .getString("team:$widget", null)?.split("\n")?.map { it.ifEmpty { null } }?.takeIf { it.size == 4 } ?: List(4) { null }
     @Synchronized fun remove(context: Context, ids: IntArray) {
         val editor = context.getSharedPreferences("codync-widgets", Context.MODE_PRIVATE).edit()
-        ids.forEach { editor.remove("provider:$it") }; check(editor.commit()); changed()
+        ids.forEach { editor.remove("provider:$it"); editor.remove("team:$it") }; check(editor.commit()); changed()
     }
     @Synchronized fun reset(context: Context) {
         activeFile(context).delete()

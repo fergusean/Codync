@@ -1,62 +1,54 @@
 package com.codync.android
 
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performScrollTo
-import androidx.compose.ui.test.assertIsNotEnabled
-import com.codync.android.design.CodyncTheme
+import androidx.lifecycle.viewmodel.compose.viewModel
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
+/** Read-only: the store only receives taps that never pair, skip or sign in. */
 class OnboardingTest {
     @get:Rule val compose = createComposeRule()
 
-    @Test fun skippingSetupLeavesAUsableEmptyRoster() {
-        val state = mutableStateOf(AppState(loading = false))
-        compose.setContent {
-            CodyncTheme { CodyncApp(state.value, {}, { state.value = state.value.copy(setupComplete = true) }, {}, {}, {}) }
-        }
+    @Test fun welcomeLeadsToInstallAndBackReturnsToWelcome() {
+        compose.setContent { Hosted { CodyncApp(AppState(loading = false), viewModel()) } }
+        compose.onNodeWithText("Your coding agents", substring = true).assertIsDisplayed()
         compose.onNodeWithText("Get started").performClick()
-        compose.onNodeWithText("Skip for now").performClick()
-        compose.onNodeWithText("No computer yet").assertIsDisplayed()
-        compose.onNodeWithText("Bots").assertIsDisplayed()
+        compose.onNodeWithText("Install Codync", substring = true).assertIsDisplayed()
+        compose.onNodeWithContentDescription("Step 1 of 2").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Back").performClick()
+        compose.onNodeWithText("Get started").assertIsDisplayed()
     }
 
-    @Test fun installationGuidanceRetainsTheComputerChoiceAndAllowsPairingLater() {
-        compose.setContent { CodyncTheme { PairingSetup("", {}, false, false, {}, {}, {}) } }
-        compose.onNodeWithText("Linux").performClick()
-        compose.onNodeWithText("codync-host install").performScrollTo().assertIsDisplayed()
+    @Test fun installStepsFollowTheComputerAndScanKeepsTheChoice() {
+        var skipped = false
+        compose.setContent { Hosted { PairingView(AppState(loading = false), viewModel(), onSkip = { skipped = true }) } }
+        compose.onNodeWithText("Mac").assertIsSelected()
+        compose.onNodeWithText("brew install --cask leepokai/codync/codync").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Linux").performClick().assertIsSelected()
+        compose.onNodeWithText("codync-host install keeps it running in the background.").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("brew install --cask leepokai/codync/codync").assertDoesNotExist()
+        compose.onNodeWithText("Skip").assertDoesNotExist()
         compose.onNodeWithText("Continue").performClick()
-        compose.onNodeWithText("codync-host pair").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("Pair").assertIsNotEnabled()
-        compose.onNodeWithText("Scan pairing code").assertIsDisplayed()
-        compose.onNodeWithText("Installation steps").performClick()
-        compose.onNodeWithText("codync-host install").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("Skip for now").assertIsDisplayed()
+        compose.onNodeWithText("Scan the pairing code").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Step 2 of 2").assertIsDisplayed()
+        compose.onNodeWithText("codync-host pair").assertIsDisplayed()
+        compose.onNodeWithText("Or paste a ${BuildConfig.URL_SCHEME}://pair link").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithContentDescription("Pair").assertIsNotEnabled()
+        compose.onNode(hasSetTextAction()).performTextInput("draft-link")
+        compose.onNodeWithContentDescription("Pair").assertIsEnabled()
+        compose.onNodeWithContentDescription("Back").performClick()
+        compose.onNodeWithText("Linux").assertIsSelected()
+        compose.onNodeWithText("Continue").performClick()
+        compose.onNodeWithText("Skip").performClick()
+        assertTrue(skipped)
     }
 
-    @Test fun returningFromTheScannerKeepsThePairingStepAndComputerChoice() {
-        val state = AppState(loading = false)
-        compose.setContent { CodyncTheme { CodyncApp(state, {}, {}, {}, {}, {}) } }
-        compose.onNodeWithText("Get started").performClick()
-        compose.onNodeWithText("Linux").performClick()
+    @Test fun macPairingPointsToTheMenuBarApp() {
+        compose.setContent { Hosted { PairingView(AppState(loading = false), viewModel()) } }
         compose.onNodeWithText("Continue").performClick()
-        compose.onNodeWithText("Scan pairing code").performScrollTo().performClick()
-        compose.onNodeWithText("Use pairing link").performClick()
-        compose.onNodeWithText("codync-host pair").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("Pairing link").performScrollTo().assertIsDisplayed()
-    }
-
-    @Test fun windowsSetupExplainsTheTrayPairingPath() {
-        compose.setContent { CodyncTheme { PairingSetup("", {}, false, false, {}, {}, {}) } }
-        compose.onNodeWithText("Windows").performClick()
-        compose.onNodeWithText("Install and open the Codync desktop app on your Windows PC. It runs the host in the background.").assertIsDisplayed()
-        compose.onNodeWithText("Continue").performClick()
-        compose.onNodeWithText("On your Windows PC, open Codync’s system tray menu and choose Pair iPhone. Its code also pairs this Android phone.").assertIsDisplayed()
-        compose.onNodeWithText("Installation steps").performClick()
-        compose.onNodeWithText("✓ Windows").assertIsDisplayed()
+        compose.onNodeWithText("On your Mac, click Codync in the menu bar, then Pair iPhone. The same code pairs this phone.").assertIsDisplayed()
+        compose.onNodeWithText("codync-host pair").assertDoesNotExist()
     }
 }

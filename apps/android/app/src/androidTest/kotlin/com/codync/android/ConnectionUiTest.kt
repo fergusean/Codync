@@ -3,35 +3,41 @@ package com.codync.android
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.codync.android.core.*
-import com.codync.android.design.CodyncTheme
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
 class ConnectionUiTest {
     @get:Rule val compose = createComposeRule()
-    private fun fixture(link: LinkState) = AppState(loading = false, setupComplete = true,
-        computers = listOf(Computer("fixture", "Computer", "fixture")), connection = link, actualConnection = link)
+    private fun fixture(link: LinkState) = AppState(loading = false, setupComplete = true, rosterLoaded = true,
+        computers = listOf(Computer("fixture", "Fixture computer", "fixture")), connection = link, actualConnection = link)
 
-    @Test fun aFailedInitialConnectionShowsTheHostErrorAndNeverOffersAnEmptyBotList() {
+    @Test fun theComputerRowNamesTheActualConnectionState() {
         val state = mutableStateOf(fixture(LinkState.Failed("Your access was revoked.", 403)))
-        compose.setContent { CodyncTheme { BotHomeScreen(state.value, null, {}, {}, {}, {}, {}, {}, {}, {}, {}) } }
+        compose.setContent { Hosted { SettingsView(state.value, viewModel(), null, {}, {}, {}) } }
         compose.onNodeWithText("Access denied").assertIsDisplayed()
-        compose.onNodeWithText("Your access was revoked.").assertIsDisplayed()
-        compose.onNodeWithText("No bots yet").assertDoesNotExist()
-        compose.onNodeWithText("Create your first bot").assertDoesNotExist()
-        compose.onNodeWithContentDescription("New").assertIsNotEnabled()
-        state.value = fixture(LinkState.Ready(HostRoute.Direct)).copy(rosterLoaded = true)
-        compose.onNodeWithText("No bots yet").assertIsDisplayed()
-        compose.onNodeWithText("Create your first bot").assertIsDisplayed()
-        compose.onNodeWithContentDescription("New").assertIsEnabled()
+        compose.onNodeWithContentDescription("Extensions").assertDoesNotExist()
+        compose.runOnUiThread { state.value = fixture(LinkState.ComputerOffline(null)) }
+        compose.onNodeWithText("Computer offline").assertIsDisplayed()
+        compose.runOnUiThread { state.value = fixture(LinkState.Ready(HostRoute.Direct)).copy(bots = listOf(Bot("bot", "Saved bot"))) }
+        compose.onNodeWithText("1 bot · Wi-Fi/Tailscale").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Extensions").assertIsDisplayed()
     }
 
-    @Test fun cachedBotsRemainVisibleAndAreLabeledAsSavedWhileOffline() {
-        val state = fixture(LinkState.ComputerOffline(null)).copy(bots = listOf(Bot("bot", "Saved bot")))
-        compose.setContent { CodyncTheme { BotHomeScreen(state, null, {}, {}, {}, {}, {}, {}, {}, {}, {}) } }
+    @Test fun cachedBotsStayListedWhileOfflineAndAnEmptyRosterOffersTheFirstBot() {
+        val state = mutableStateOf(fixture(LinkState.ComputerOffline(null)).copy(bots = listOf(Bot("bot", "Saved bot"))))
+        var created = false
+        compose.setContent { Hosted { BotListView(state.value, viewModel(), {}, {}, { created = true }, {}, {}, 0.dp) } }
         compose.onNodeWithText("Saved bot").assertIsDisplayed()
-        compose.onNodeWithText("Computer offline · Showing saved bots").assertIsDisplayed()
-        compose.onNodeWithContentDescription("New").assertIsNotEnabled()
+        compose.onNodeWithText("Offline").assertIsDisplayed()
+        compose.onNodeWithText("No bots yet").assertDoesNotExist()
+        compose.runOnUiThread { state.value = fixture(LinkState.Ready(HostRoute.Direct)) }
+        compose.onNodeWithText("1 connected").assertIsDisplayed()
+        compose.onNodeWithText("No bots yet").assertIsDisplayed()
+        compose.onNodeWithText("Create your first bot").performClick()
+        assertTrue(created)
     }
 }

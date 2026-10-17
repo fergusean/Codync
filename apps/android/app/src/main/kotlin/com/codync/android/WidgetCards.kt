@@ -217,8 +217,7 @@ private fun rank(bot: WidgetBot) = when (bot.status) { "needsInput" -> 0; "worki
 }
 
 /** Four bots in a 2×2 grid, each in its mood with a dot for its state; empty spots sleep. */
-@Composable internal fun BotsTeamCard(bots: List<WidgetBot>) {
-    val slots = bots.sortedBy(::rank).take(4).let { it + List(4 - it.size) { null } }
+@Composable internal fun BotsTeamCard(slots: List<WidgetBot?>) {
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         for (row in slots.chunked(2)) Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             for (bot in row) Box(Modifier.weight(1f).fillMaxHeight().clip(RoundedRectangle(16.dp))

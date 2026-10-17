@@ -29,18 +29,28 @@ class LiveMemoryTest {
             compose.waitUntil(30_000) { store.state.value.bots.any { it.id == botId } }
             assertTrue(store.state.value.bots.single { it.id == botId }.name.startsWith("Android memory acceptance"))
             compose.runOnUiThread { store.openBot(botId) }
-            compose.waitUntil(10_000) { compose.onAllNodesWithContentDescription("Conversation actions").fetchSemanticsNodes().size == 1 }
-            compose.chatAction("Edit")
-            compose.waitUntil(30_000) { store.state.value.memories[botId]?.facts?.size == 2 }
-            compose.onNodeWithText("Android memory profile acceptance").performScrollTo().assertIsDisplayed()
-            compose.onNodeWithContentDescription("Forget Android memory profile acceptance").performScrollTo().performClick()
-            compose.waitUntil(30_000) { store.state.value.memories[botId]?.facts?.size == 1 }
-            assertEquals("Android memory history acceptance", store.state.value.memories[botId]?.facts?.single()?.content)
-            compose.onNodeWithText("Forget everything").performScrollTo().performClick()
-            compose.waitUntil(10_000) { compose.onAllNodesWithText("Forget everything").fetchSemanticsNodes().size == 2 }
-            compose.onAllNodesWithText("Forget everything").onLast().performScrollTo().performClick()
-            compose.waitUntil(30_000) { store.state.value.memories[botId]?.facts?.isEmpty() == true }
-            compose.onNodeWithText("Nothing yet. The bot remembers who you are and what you work on as you chat.").performScrollTo().assertIsDisplayed()
+            compose.chatAction("Edit profile")
+            val profile = "Android memory profile acceptance"
+            compose.waitUntil(30_000) { compose.onAllNodesWithText(profile).fetchSemanticsNodes().size == 1 }
+            compose.onNodeWithText("Android memory history acceptance").performScrollTo().assertIsDisplayed()
+            // Searching leaves one fact, so its menu is the only one.
+            val search = hasSetTextAction() and hasText("Search memories")
+            compose.onNode(search).performScrollTo().performTextInput("profile")
+            compose.waitUntil(30_000) { compose.onAllNodesWithContentDescription("Memory actions").fetchSemanticsNodes().size == 1 }
+            compose.onNodeWithContentDescription("Memory actions").performScrollTo().performClick()
+            compose.onNodeWithText("Forget").performClick()
+            compose.waitUntil(30_000) { compose.onAllNodesWithText(profile).fetchSemanticsNodes().isEmpty() }
+            compose.onNode(hasSetTextAction() and hasText("profile")).performTextReplacement("")
+            compose.waitUntil(30_000) { compose.onAllNodesWithText("Android memory history acceptance").fetchSemanticsNodes().size == 1 }
+            val left = MemoryListing.decode(runBlocking { channel.call("memory", body("botId" to botId)) }).facts
+            assertEquals("Android memory history acceptance", left.single().content)
+            compose.onNodeWithContentDescription("More").performScrollTo().performClick()
+            compose.onNodeWithText("Forget everything").performClick()
+            compose.onNodeWithText("Forget everything this bot remembers?").assertIsDisplayed()
+            compose.onNodeWithText("Forget everything").performClick()
+            compose.waitUntil(30_000) {
+                compose.onAllNodesWithText("Nothing yet. Important details are remembered as you chat.").fetchSemanticsNodes().size == 1
+            }
             val after = runBlocking { channel.call("history", body("botId" to botId)) }
             assertEquals(before.jsonObject.getValue("entries"), after.jsonObject.getValue("entries"))
             val memory = runBlocking { channel.call("memory", body("botId" to botId)) }
