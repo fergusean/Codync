@@ -42,7 +42,7 @@ class MainActivity : ComponentActivity() {
             DisposableEffect(images) { onDispose { AccountImages.close(images) } }
             CompositionLocalProvider(LocalNetworkImages provides images) {
                 key(state.contextId, state.generation) {
-                    CodyncTheme { OverlayRoot { CodyncApp(state, store::pair, store::skipSetup, store::connect, store::clearError, store::startOver, store) } }
+                    CodyncTheme { OverlayRoot { CodyncApp(state, store::pair, store::skipSetup, store::connect, store::clearError, store::startOver, store); LaunchLayer(state.loading) } }
                 }
             }
         }

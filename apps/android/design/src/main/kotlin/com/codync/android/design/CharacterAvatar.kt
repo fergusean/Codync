@@ -64,7 +64,8 @@ fun characterAvatarBitmap(shape: String, color: String, pixels: Int, ink: Int): 
 }
 
 /** Port of CodyncKit's dotted character; the accompanying name/status supplies accessibility text. */
-@Composable fun CharacterAvatar(shape: String, color: String, size: Dp = 40.dp, status: String = "idle") {
+@Composable fun CharacterAvatar(shape: String, color: String, size: Dp = 40.dp, status: String = "idle", monochrome: Color? = null,
+    highlight: Color? = null) {
     val owner = LocalLifecycleOwner.current
     var active by remember(owner) { mutableStateOf(owner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) }
     DisposableEffect(owner) {
@@ -79,8 +80,8 @@ fun characterAvatarBitmap(shape: String, color: String, pixels: Int, ink: Int): 
     } else 0.0
     val cells = if (size < 18.dp) 7 else if (size < 28.dp) 9 else 13
     val dots = remember(shape, cells) { avatarDots(shape, cells) }
-    val ink = MaterialTheme.colorScheme.onSurface
-    val tint = AvatarPalette.tint(color)
+    val ink = monochrome ?: MaterialTheme.colorScheme.onSurface
+    val tint = monochrome ?: highlight ?: AvatarPalette.tint(color)
     Canvas(Modifier.size(size).clearAndSetSemantics { }) {
         val step = this.size.width / cells
         val half = this.size.width / 2

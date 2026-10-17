@@ -73,11 +73,7 @@ fun CodyncApp(state: AppState, pair: (String) -> Unit, skip: () -> Unit, retry: 
         MarketplaceScreen(state, store) { showMarketplace = false }
         return
     }
-    if (store != null && showUsage && !state.loading) {
-        LaunchedEffect(state.computers.firstOrNull()?.id) { if (state.actualConnection is LinkState.Ready) store.refreshUsage(false) }
-        UsageScreen(state, { store.refreshUsage() }) { showUsage = false }
-        return
-    }
+    if (store != null) CodyncSheet(showUsage && !state.loading, { showUsage = false }) { UsageScreen(state) { store.refreshUsage(it) } }
     if (store != null && groupEditor != null && !state.loading) {
         GroupEditor(state, requireNotNull(groupEditor), store) { groupEditor = null }
         return

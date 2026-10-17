@@ -19,6 +19,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.dp
@@ -53,11 +55,13 @@ private enum class AppTab { Bots, State }
                 else chat()
             }
         }
-        Box(Modifier.fillMaxSize().tabLayer(tab == AppTab.State)) { StateScreen(state, store, usage) }
+        Box(Modifier.fillMaxSize().tabLayer(tab == AppTab.State)) { StateScreen(state, store, usage, barSpace) }
     }
 }
 
-/** One tab's content: visible and interactive only while selected (on top, the other under it). */
+/** One tab's content: visible and interactive only while selected; the other sits under it, deaf to touches. */
 private fun Modifier.tabLayer(selected: Boolean): Modifier = zIndex(if (selected) 1f else 0f)
     .graphicsLayer { alpha = if (selected) 1f else 0f }
-    .then(if (selected) Modifier else Modifier.clearAndSetSemantics {})
+    .then(if (selected) Modifier else Modifier.clearAndSetSemantics {}.pointerInput(Unit) {
+        awaitPointerEventScope { while (true) awaitPointerEvent(PointerEventPass.Initial).changes.forEach { it.consume() } }
+    })
