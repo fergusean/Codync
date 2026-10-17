@@ -78,6 +78,8 @@ import kotlinx.coroutines.launch
     var confirmNewSession by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
     var routines by remember { mutableStateOf(false) }
+    // The bot whose conversation with this one is open.
+    var peer by remember(bot.id) { mutableStateOf<String?>(null) }
     var micDenied by remember { mutableStateOf(false) }
     var setupEntry by rememberSaveable { mutableStateOf<String?>(null) }
     var app by remember { mutableStateOf<ComposioApp?>(null) }
@@ -105,7 +107,7 @@ import kotlinx.coroutines.launch
         }
     }) {
         Transcript(bot, chatState, store, connect, PaddingValues(start = 16.dp, end = 16.dp, top = top + 60.dp,
-            bottom = with(density) { composerHeight.toDp() } + 8.dp))
+            bottom = with(density) { composerHeight.toDp() } + 8.dp)) { peer = it }
     }
     CodyncDialog("Start a new session?", confirmNewSession, { confirmNewSession = false },
         message = "The conversation stays here, but the agent starts with a fresh context.") {
@@ -125,6 +127,7 @@ import kotlinx.coroutines.launch
     CodyncSheet(state.thread, { store.openBot(bot.id) }) { root -> RepliesView(bot, root, state, store, connect) }
     CodyncSheet(state.trace, { store.showTrace(false) }) { TraceView(bot, state.thread, state) }
     CodyncSheet(routines, { routines = false }) { RoutinesScreen(bot, state, store) }
+    CodyncSheet(peer, { peer = null }) { BotConversationView(bot, it, state, store) }
     CodyncSheet(app, { app = null; setupEntry = null }) { ComposioConnectSheet(it, state, store, setupEntry) { store.refreshPlugins() } }
     CodyncSheet(connector, { connector = null; setupEntry = null }) { InstallConnectorSheet(it, state, store, setupEntry) }
 }
@@ -185,7 +188,8 @@ import kotlinx.coroutines.launch
 }
 
 /** The messages: all this phone has, earlier ones from the computer near the top, following the newest. */
-@Composable private fun Transcript(bot: Bot, state: AppState, store: AppStore, connect: ConnectionRequestActions, padding: PaddingValues) {
+@Composable private fun Transcript(bot: Bot, state: AppState, store: AppStore, connect: ConnectionRequestActions, padding: PaddingValues,
+    openPeer: (String) -> Unit) {
     val entries = state.entries.filter { it.botId == bot.id && it.threadId == null && it.isChat }
     val pending = state.pending.filter { it.botId == bot.id && it.threadId == null }
     val items = chatItems(entries, pending)
@@ -206,6 +210,7 @@ import kotlinx.coroutines.launch
                 is ChatItem.Message -> ChatRow(item.entry, item.groupStart, bot, state, store, openTrace = { store.showTrace(true) },
                     reply = { store.openBot(bot.id, item.entry.id) }, connect = connect)
                 is ChatItem.Pending -> PendingBubble(item.send, item.groupStart, state, store)
+                is ChatItem.Exchanges -> BotMessageRow(item.group, state) { openPeer(item.group.peerId) }
             }
         }
         if (working) item("working") { WorkingIndicator(bot, currentThinking(state.entries, bot.id, null)) }
@@ -275,7 +280,7 @@ import kotlinx.coroutines.launch
                     when (item) {
                         is ChatItem.Message -> ChatRow(item.entry, item.groupStart, bot, state, store, openTrace = { store.showTrace(true) }, reply = null, connect = connect)
                         is ChatItem.Pending -> PendingBubble(item.send, item.groupStart, state, store)
-                        is ChatItem.Separator -> {}
+                        is ChatItem.Separator, is ChatItem.Exchanges -> {}
                     }
                 }
                 if (working) item("working") { WorkingIndicator(bot, currentThinking(state.entries, bot.id, rootId)) }

@@ -64,6 +64,8 @@ internal sealed interface ChatItem {
     data class Separator(override val id: String, val at: Long) : ChatItem
     data class Message(override val id: String, val entry: Entry, val groupStart: Boolean) : ChatItem
     data class Pending(override val id: String, val send: PendingSend, val groupStart: Boolean) : ChatItem
+    /** Consecutive bot-to-bot exchanges with one peer, as one line. */
+    data class Exchanges(override val id: String, val group: BotExchangeGroup) : ChatItem
 }
 
 /** Chat-visible entries plus time separators (gaps over an hour) and author grouping. */
@@ -71,10 +73,21 @@ internal fun chatItems(entries: List<Entry>, pending: List<PendingSend>): List<C
     val out = mutableListOf<ChatItem>()
     var last: Long? = null
     var author: String? = null
-    val slots = entries.map { it.createdAt to it } + pending.filter { send -> entries.none { it.clientNonce == send.nonce } }
-        .map { it.createdAt to it }
+    // Exchanges with the same peer in a row collapse into one line; anything shown in between ends the run.
+    val units = mutableListOf<Pair<Long, Any>>()
+    var run = mutableListOf<BotExchange>()
+    fun flush() { if (run.isNotEmpty()) { units += run.first().createdAt to BotExchangeGroup(run); run = mutableListOf() } }
+    for (entry in entries) {
+        val exchange = BotExchange.of(entry)
+        if (exchange == null) { flush(); units += entry.createdAt to entry; continue }
+        if (run.isNotEmpty() && run.last().peerId != exchange.peerId) flush()
+        run += exchange
+    }
+    flush()
+    val slots = units + pending.filter { send -> entries.none { it.clientNonce == send.nonce } }.map { it.createdAt to it }
     for ((at, slot) in slots.sortedBy { it.first }) {
         val id = when (slot) { is Entry -> slot.clientNonce?.takeIf { slot.kind == "user" && it.isNotEmpty() }?.let { "user-$it" } ?: slot.id
+            is BotExchangeGroup -> "x-" + slot.id
             else -> "user-" + (slot as PendingSend).nonce }
         if (last == null || at - last > 3_600_000) { out += ChatItem.Separator("sep-$id", at); author = null }
         last = at
@@ -85,6 +98,7 @@ internal fun chatItems(entries: List<Entry>, pending: List<PendingSend>): List<C
                 author = if (who == "user" || slot.kind == "agent") who else null
             }
             is PendingSend -> { out += ChatItem.Pending(id, slot, author != "user"); author = "user" }
+            is BotExchangeGroup -> { out += ChatItem.Exchanges(id, slot); author = null }
         }
     }
     return out
@@ -132,7 +146,7 @@ internal fun chatItems(entries: List<Entry>, pending: List<PendingSend>): List<C
 internal class ConnectionRequestActions(val openApp: (String, ComposioApp) -> Unit, val install: (String, MarketConnector) -> Unit)
 
 /** Who wrote a message in a group: their avatar and name in their color. */
-@Composable private fun AuthorLabel(botId: String?, state: AppState) {
+@Composable internal fun AuthorLabel(botId: String?, state: AppState) {
     val bot = state.bots.firstOrNull { it.id == botId }
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         if (bot != null) CharacterAvatar(bot.avatarShape, bot.avatarColor, 26.dp)
@@ -218,11 +232,9 @@ internal val Entry.reactions: List<String> get() = (data["reactions"] as? JsonAr
 @Composable private fun AgentBubble(entry: Entry, state: AppState, store: AppStore, openTrace: () -> Unit, reply: (() -> Unit)?) {
     val context = LocalContext.current
     val attachments = entry.data["attachments"]?.jsonArray?.map { WireJson.decodeFromJsonElement<Attachment>(it) }.orEmpty()
-    val message = entry.botMessage
     Column(Modifier.fillMaxWidth().padding(end = 40.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         for (file in attachments) AttachmentRow(entry.botId, file, state, store)
-        if (message != null) BotMessageCard(message)
-        else if (entry.text.isNotEmpty()) Box(Modifier.clip(RoundedRectangle(18.dp)).background(Palette.bubbleAgent)
+        if (entry.text.isNotEmpty()) Box(Modifier.clip(RoundedRectangle(18.dp)).background(Palette.bubbleAgent)
             .contextActions(reactions = reactionPick(entry, store), preview = { AgentText(entry.text) }) {
                 messageMenu(context, entry, reply, openTrace)
             }) { AgentText(entry.text) }
@@ -231,17 +243,6 @@ internal val Entry.reactions: List<String> get() = (data["reactions"] as? JsonAr
 
 @Composable private fun AgentText(text: String) {
     Box(Modifier.background(Palette.bubbleAgent).padding(horizontal = 16.dp, vertical = 10.dp)) { MarkdownText(text, selectable = false) }
-}
-
-/** A message one bot sent another: who to, and what it said. */
-@Composable private fun BotMessageCard(message: BotMessage) {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(message.label, Modifier.padding(start = 4.dp), style = Type.footnote, color = Palette.secondary)
-        Box(Modifier.clip(RoundedRectangle(18.dp)).background(Palette.bubbleAgent).padding(horizontal = 16.dp, vertical = 10.dp)) {
-            MarkdownText(message.body)
-        }
-        if (message.detail.isNotEmpty()) Text(message.detail, Modifier.padding(start = 4.dp), style = Type.footnote, color = Palette.secondary)
-    }
 }
 
 /** Under a message with a thread (Slack's): how many replied, how recently. */
