@@ -25,8 +25,8 @@ Android's `versionCode` is independent. Feature PRs do not bump product versions
 
 ## Account and push configuration
 
-A clean checkout builds `com.codync.android.dev` (Codync Dev) or
-`com.codync.android` (Codync). Debug/release read their account configuration from
+A clean checkout builds `com.pokai.Codync.android.dev` (Codync Dev) or
+`com.pokai.Codync.android` (Codync). Debug/release read their account configuration from
 `apps/shared/Config/dev.plist` and `main.plist`. The default push relay comes from
 `CodyncKit/Client/SharedStore.swift`.
 

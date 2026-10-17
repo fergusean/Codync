@@ -86,7 +86,7 @@ android {
     namespace = "com.codync.android"
     compileSdk = 36
     defaultConfig {
-        applicationId = deploymentValue("codyncApplicationId") ?: "com.codync.android"
+        applicationId = deploymentValue("codyncApplicationId") ?: "com.pokai.Codync.android"
         minSdk = 29
         targetSdk = 36
         versionCode = 1
