@@ -197,7 +197,7 @@ internal fun openNotificationSettings(context: Context) = context.startActivity(
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         SectionLabel("Add a widget")
-        val kindToPin = when (kind) { "usage" -> WidgetKind.Provider; "team" -> WidgetKind.Bots; else -> WidgetKind.Bots }
+        val kindToPin = when (kind) { "usage" -> WidgetKind.Provider; "team" -> WidgetKind.Team; else -> WidgetKind.Bots }
         if (AppWidgetManager.getInstance(context).isRequestPinAppWidgetSupported)
             PrimaryButton("Add to Home Screen") { pinFailed = !CodyncWidgets.pin(context, kindToPin) }
         if (pinFailed) Text("Your launcher couldn't add it. Add it from the Home Screen instead.", style = Type.footnote, color = Palette.danger)

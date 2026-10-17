@@ -40,9 +40,9 @@
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_bots" />
         </receiver>
-        <receiver android:name=".UsageWidgetReceiver" android:exported="true" android:label="Usage limits">
+        <receiver android:name=".TeamWidgetReceiver" android:exported="true" android:label="Team">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
-            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_usage" />
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_team" />
         </receiver>
         <receiver android:name=".ProviderWidgetReceiver" android:exported="true" android:label="Provider usage">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>

@@ -35,7 +35,7 @@ object AvatarPalette {
 data class AvatarFace(val shape: String, val color: String, val status: String = "idle")
 
 /** Static system-widget drawing uses the same mask, palette and eyes as the app. */
-fun characterAvatarBitmap(shape: String, color: String, pixels: Int, ink: Int): android.graphics.Bitmap {
+fun characterAvatarBitmap(shape: String, color: String, pixels: Int, ink: Int, highlight: Int? = null): android.graphics.Bitmap {
     require(pixels in 1..256)
     val bitmap = android.graphics.Bitmap.createBitmap(pixels, pixels, android.graphics.Bitmap.Config.ARGB_8888)
     val canvas = android.graphics.Canvas(bitmap)
@@ -55,7 +55,7 @@ fun characterAvatarBitmap(shape: String, color: String, pixels: Int, ink: Int): 
         paint.color = ink; paint.alpha = ((.4 + .4 * shade) * 255).roundToInt().coerceIn(0, 255)
         canvas.drawCircle(x, y, radius, paint)
         if (shade > .6) {
-            paint.color = (AvatarPalette.colors[color] ?: AvatarPalette.colors.getValue("blue")).toInt()
+            paint.color = highlight ?: (AvatarPalette.colors[color] ?: AvatarPalette.colors.getValue("blue")).toInt()
             paint.alpha = (((shade - .6) / .4) * 255).roundToInt().coerceIn(0, 255)
             canvas.drawCircle(x, y, radius, paint)
         }
