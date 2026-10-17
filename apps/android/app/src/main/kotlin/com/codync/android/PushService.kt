@@ -230,8 +230,10 @@ internal object NotificationDisplay {
         val tag = "$scope/$computer/${watch.botId}"
         val manager = context.getSystemService(NotificationManager::class.java)
         if (Build.VERSION.SDK_INT >= 36) {
-            try { manager.notify(tag, 2, liveUpdate(context, scope, computer, watch, text)) } catch (_: SecurityException) { }
-            return
+            try { manager.notify(tag, 2, liveUpdate(context, scope, computer, watch, text)); return }
+            catch (_: SecurityException) { return }
+            // A system that rejects the Live update still gets the plain ongoing notification below.
+            catch (error: IllegalArgumentException) { android.util.Log.w("Codync", "Live update rejected", error) }
         }
         val notification = builder(context, scope, computer, watch.botId, TASKS).setContentTitle(watch.name).setContentText(text)
             .setOngoing(!watch.finished).setOnlyAlertOnce(true).setAutoCancel(watch.finished)
@@ -243,23 +245,26 @@ internal object NotificationDisplay {
     @androidx.annotation.RequiresApi(36)
     private fun liveUpdate(context: Context, scope: String, computer: String, watch: TaskWatch, text: String): Notification {
         val needs = watch.status == "needsInput"
-        val tint = when (watch.status) { "needsInput" -> 0xFFECAF52.toInt(); "error" -> 0xFFF0A7A7.toInt(); "idle" -> 0xFF8FD18B.toInt()
-            else -> 0xFF8A8A8A.toInt() }
+        // The phase's color, as the iOS Live Activity tints it: ink while working, amber, red, green.
+        val tint = when (watch.status) { "needsInput" -> 0xFFE0A030.toInt(); "error" -> 0xFFD0453A.toInt(); "idle" -> 0xFF3E9B45.toInt()
+            else -> 0xFF5F6368.toInt() }
         val filled = when (watch.status) { "working" -> 2; "needsInput" -> 3; else -> 4 }
-        val style = Notification.ProgressStyle().setStyledByProgress(false)
-            .setProgressSegments((0 until 4).map { Notification.ProgressStyle.Segment(25).setColor(if (it < filled) tint else (tint and 0x00FFFFFF) or (0x40 shl 24)) })
+        // Styled by progress: segments past the point fade on their own, in every theme.
+        val style = Notification.ProgressStyle().setStyledByProgress(true)
+            .setProgressSegments(List(4) { Notification.ProgressStyle.Segment(25).setColor(tint) })
             .setProgress(filled * 25)
         val face = com.codync.android.design.characterAvatarBitmap(watch.avatarShape, watch.avatarColor, 128, 0xFF141414.toInt())
         val open = builder(context, scope, computer, watch.botId, TASKS).build().contentIntent
-        return Notification.Builder(context, TASKS).setSmallIcon(R.drawable.ic_notification).setContentTitle(watch.name).setContentText(text)
+        val notification = Notification.Builder(context, TASKS).setSmallIcon(R.drawable.ic_notification).setContentTitle(watch.name).setContentText(text)
             .setLargeIcon(android.graphics.drawable.Icon.createWithBitmap(face)).setContentIntent(open).setStyle(style)
             .setOngoing(!watch.finished).setOnlyAlertOnce(true).setAutoCancel(watch.finished).setCategory(Notification.CATEGORY_PROGRESS)
             .setWhen(watch.startedAt).setShowWhen(true).setUsesChronometer(!watch.finished)
-            .setShortCriticalText(when (watch.status) { "needsInput" -> "Needs you"; "error" -> "Failed"; "idle" -> "Done"; else -> null })
-            .setRequestPromotedOngoing(!watch.finished)
             .setTimeoutAfter(if (watch.finished) 60_000 else maxOf(1, watch.deadline - System.currentTimeMillis()))
             .apply { if (needs) addAction(Notification.Action.Builder(null, "Review", open).build()) }
-            .build()
+        // Promotion (the Lock Screen Live update and the status bar chip) arrived in Android 16 QPR1.
+        if (LiveUpdates.supported) notification.setRequestPromotedOngoing(!watch.finished)
+            .setShortCriticalText(when (watch.status) { "needsInput" -> "Needs you"; "error" -> "Failed"; "idle" -> "Done"; else -> null })
+        return notification.build()
     }
 
     fun cancel(context: Context, id: Int) {

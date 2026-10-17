@@ -79,8 +79,7 @@ fun CodyncApp(state: AppState, pair: (String) -> Unit, skip: () -> Unit, retry: 
         return
     }
     val accountOpen = store != null && showAccount
-    val editorOpen = store != null && editor != null && !state.loading
-    Box(if (accountOpen || editorOpen) Modifier.clearAndSetSemantics {} else Modifier) {
+    Box(if (accountOpen) Modifier.clearAndSetSemantics {} else Modifier) {
         LaunchedEffect(state.pairing) {
             if (!state.pairing && state.error == null && state.computers.isNotEmpty()) {
                 showPairing = false
@@ -181,10 +180,7 @@ fun CodyncApp(state: AppState, pair: (String) -> Unit, skip: () -> Unit, retry: 
             PairingScanner({ link -> showScanner = false; pair(link) }, close, inPopover = true)
         }
     }
-    if (editorOpen) key(state.contextId, state.generation, editor?.id) {
-        val draft = requireNotNull(editor)
-        CodyncSheet(if (draft.id == null) "New bot" else "Settings", close = { editor = null }) { close ->
-            BotEditor(state, draft, store, close, modal = true)
-        }
+    if (store != null) CodyncSheet(editor.takeIf { !state.loading }, { editor = null }) { draft ->
+        key(state.contextId, state.generation, draft.id) { BotEditor(state, draft, store) }
     }
 }

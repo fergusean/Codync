@@ -1,75 +1,94 @@
 package com.codync.android
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.codync.android.core.DirListing
-import com.codync.android.design.CodyncField
+import com.codync.android.design.*
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.ensureActive
 
-/** Lists directories on the selected host. It never browses the phone's filesystem. */
-@Composable internal fun FolderPicker(computerId: String?, name: String, initial: String?, online: Boolean,
-    load: suspend (String?) -> DirListing, choose: (String) -> Unit, close: () -> Unit) {
-    var path by remember(computerId) { mutableStateOf(initial?.takeIf(String::isNotBlank)) }
-    var typed by remember(computerId) { mutableStateOf(path.orEmpty()) }
-    var filter by remember(computerId) { mutableStateOf("") }
-    var listing by remember(computerId) { mutableStateOf<DirListing?>(null) }
-    var loading by remember(computerId) { mutableStateOf(false) }
-    var failure by remember(computerId) { mutableStateOf<String?>(null) }
-    var retry by remember { mutableIntStateOf(0) }
-    LaunchedEffect(computerId, path, online, retry) {
-        listing = null; failure = null; loading = false
-        if (!online) { failure = "Connect to this computer to browse its folders."; return@LaunchedEffect }
-        loading = true
-        try {
-            val response = load(path)
-            val task = currentCoroutineContext()
-            task.ensureActive()
-            listing = response; typed = response.path
-        } catch (cancelled: CancellationException) { throw cancelled }
-        catch (error: Exception) { failure = error.message ?: "Couldn't open this folder." }
-        finally { loading = false }
+/** Browses folders on the computer, drilling down in place (iOS `FolderPicker`). */
+@Composable internal fun FolderPicker(start: String?, online: Boolean, load: suspend (String?) -> DirListing, pick: (String) -> Unit) {
+    var stack by remember { mutableStateOf(listOf(start)) }
+    var forward by remember { mutableStateOf(true) }
+    BackHandler(stack.size > 1) { forward = false; stack = stack.dropLast(1) }
+    Column(Modifier.fillMaxSize()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (stack.size > 1) Box(Modifier.padding(start = 12.dp)) { BackButton { forward = false; stack = stack.dropLast(1) } }
+            Box(Modifier.weight(1f)) { ModalHeader(stack.last()?.trimEnd('/')?.substringAfterLast('/')?.ifEmpty { "/" } ?: "Folders") }
+        }
+        AnimatedContent(stack, transitionSpec = {
+            val sign = if (forward) 1 else -1
+            slideInHorizontally(Motion.layoutOffset) { it * sign } togetherWith slideOutHorizontally(Motion.layoutOffset) { -it * sign }
+        }, label = "Folder") { shown ->
+            FolderLevel(shown.last(), online, load, pick) { forward = true; stack = stack + it }
+        }
     }
-    BackHandler(onBack = close)
-    Surface(Modifier.fillMaxSize()) {
-        Column(Modifier.safeDrawingPadding().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                TextButton(onClick = close) { Text("Cancel") }
-                Text("Working folder", style = MaterialTheme.typography.titleLarge)
-            }
-            Text("Folders on $name", style = MaterialTheme.typography.bodySmall)
-            CodyncField(typed, { typed = it }, label = { Text("Computer folder path") }, modifier = Modifier.fillMaxWidth())
-            FlowRow {
-                TextButton(enabled = online && !loading, onClick = { path = typed.takeIf(String::isNotBlank); retry++ }) { Text("Open folder") }
-                TextButton(onClick = { choose("") }) { Text("Use personal workspace") }
-            }
-            failure?.let {
-                Text(it, color = MaterialTheme.colorScheme.error)
-                TextButton(enabled = online && !loading, onClick = { retry++ }) { Text("Retry folder list") }
-            }
-            if (loading) Text("Loading folders…")
-            listing?.let { current ->
-                Text(current.path)
-                FlowRow {
-                    TextButton(onClick = { choose(current.path) }) { Text("Use this folder") }
-                    if (current.parent != null) TextButton(onClick = { path = current.parent; filter = "" }) { Text("Parent folder") }
+}
+
+/** One folder's subfolders, filterable, with "Use" on top. */
+@Composable private fun FolderLevel(path: String?, online: Boolean, load: suspend (String?) -> DirListing, pick: (String) -> Unit, open: (String) -> Unit) {
+    var listing by remember { mutableStateOf<DirListing?>(null) }
+    var error by remember { mutableStateOf<String?>(null) }
+    var filter by remember { mutableStateOf("") }
+    LaunchedEffect(path, online) {
+        if (!online) { error = "Connect to this computer to browse its folders."; return@LaunchedEffect }
+        try { listing = load(path); error = null }
+        catch (cancelled: CancellationException) { throw cancelled }
+        catch (failure: Exception) { error = failure.message ?: "Couldn't open this folder." }
+    }
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(22.dp)) {
+        SearchField(filter, { filter = it })
+        val current = listing
+        when {
+            current != null -> {
+                CardSection(footer = current.path) {
+                    row {
+                        Row(Modifier.fillMaxWidth().plainButton { pick(current.path) }, verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Symbol("checkmark.circle.fill", size = 20.dp, tint = Palette.accent)
+                            Text("Use “${current.path.trimEnd('/').substringAfterLast('/').ifEmpty { "/" }}”", style = Type.headline, color = Palette.accent)
+                        }
+                    }
                 }
-                CodyncField(filter, { filter = it }, label = { Text("Filter folders") }, modifier = Modifier.fillMaxWidth())
-                val dirs = current.dirs.filter { it.name.contains(filter.trim(), ignoreCase = true) }
-                if (dirs.isEmpty()) Text(if (filter.isBlank()) "No subfolders." else "No matching folders.")
-                LazyColumn(Modifier.weight(1f)) {
-                    items(dirs, key = { it.path }) { dir -> TextButton(onClick = { path = dir.path; filter = "" }) {
-                        Text(dir.name + if (dir.isGit) " · Git repository" else "", Modifier.fillMaxWidth())
-                    } }
+                val dirs = current.dirs.filter { filter.isBlank() || it.name.contains(filter.trim(), ignoreCase = true) }
+                if (dirs.isNotEmpty()) CardSection {
+                    for (dir in dirs) row {
+                        Row(Modifier.fillMaxWidth().plainButton { open(dir.path) }, verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Box(Modifier.width(20.dp), contentAlignment = Alignment.Center) {
+                                Symbol(if (dir.isGit) "arrow.triangle.branch" else "folder", size = 18.dp, tint = if (dir.isGit) Palette.accent else Palette.secondary)
+                            }
+                            Text(dir.name, Modifier.weight(1f), style = Type.body, color = Palette.text, maxLines = 1)
+                            Symbol("chevron.right", size = 13.dp, tint = Palette.tertiary)
+                        }
+                    }
                 }
             }
+            error != null -> Text(error.orEmpty(), style = Type.body, color = Palette.danger)
+            else -> Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { Spinner(20.dp) }
         }
     }
 }

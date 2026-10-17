@@ -2,8 +2,12 @@ package com.codync.android.core
 
 import kotlinx.serialization.Serializable
 
-@Serializable data class AgentModel(val id: String, val name: String, val description: String? = null)
-@Serializable data class AgentModels(val models: List<AgentModel>, val currentModelId: String? = null) {
+/** A model setting (effort, fast…) and the values the agent accepts. */
+@Serializable data class ModelOption(val id: String, val name: String, val values: List<ModelOptionValue> = emptyList(), val default: String? = null)
+@Serializable data class ModelOptionValue(val id: String, val name: String)
+@Serializable data class AgentModel(val id: String, val name: String, val description: String? = null, val options: List<ModelOption>? = null)
+/** `fastMode`: the agent offers Fast mode (absent on older hosts). */
+@Serializable data class AgentModels(val models: List<AgentModel>, val currentModelId: String? = null, val fastMode: Boolean? = null) {
     val agentDefault: AgentModel? get() = models.firstOrNull { it.name.lowercase().startsWith("default") }
     fun options(selected: String?): List<ModelChoice> {
         val default = agentDefault

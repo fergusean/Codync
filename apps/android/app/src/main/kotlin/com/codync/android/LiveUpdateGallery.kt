@@ -67,12 +67,15 @@ internal enum class TaskPhase(val title: String) {
 
 /** Live updates (on Android 16, promoted ongoing notifications) are what iOS calls Live Activities. */
 internal object LiveUpdates {
-    /** Android lets the user turn promotion off per app; older versions have no Live updates. */
-    fun promoted(context: Context): Boolean = Build.VERSION.SDK_INT >= 36 &&
+    /** Promoted notifications (Live updates, the status bar chip) need Android 16 QPR1. */
+    val supported: Boolean get() = Build.VERSION.SDK_INT >= 36 && Build.VERSION.SDK_INT_FULL >= Build.VERSION_CODES_FULL.BAKLAVA_1
+
+    /** Android lets the user turn promotion off per app. */
+    fun promoted(context: Context): Boolean = supported &&
         context.getSystemService(NotificationManager::class.java).canPostPromotedNotifications()
 
     fun openSettings(context: Context) {
-        val action = if (Build.VERSION.SDK_INT >= 36) Settings.ACTION_APP_NOTIFICATION_PROMOTION_SETTINGS else Settings.ACTION_APP_NOTIFICATION_SETTINGS
+        val action = if (supported) Settings.ACTION_APP_NOTIFICATION_PROMOTION_SETTINGS else Settings.ACTION_APP_NOTIFICATION_SETTINGS
         context.startActivity(Intent(action).putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     }
 }
@@ -97,7 +100,7 @@ internal object LiveUpdates {
             style = Type.footnote, color = Palette.secondary)
         when {
             !notifications -> SettingsNote("Notifications are turned off in Android settings.") { openNotificationSettings(context) }
-            Build.VERSION.SDK_INT < 36 -> Text("On this Android version a task shows as an ongoing notification. Live updates and the status bar chip need Android 16.",
+            !LiveUpdates.supported -> Text("On this Android version a task shows as an ongoing notification. Live updates and the status bar chip need Android 16 QPR1.",
                 style = Type.footnote, color = Palette.secondary)
             !promoted -> SettingsNote("Live updates are turned off for Codync in Android settings.") { LiveUpdates.openSettings(context) }
         }

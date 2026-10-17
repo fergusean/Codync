@@ -23,6 +23,13 @@ data class Bot(
     val managedWorkspace: Boolean = false,
     val permission: String = "ask",
     val model: String? = null,
+    /** The model's own settings (effort, fast…): agent option id → value. */
+    val modelOptions: Map<String, String> = emptyMap(),
+    /** The agent's Fast mode: faster replies for more usage. */
+    val fastMode: Boolean = false,
+    /** `unknown` (no session yet), `offered`, `unsupported` or `refused` (`fastModeIssue` says why). */
+    val fastModeSupport: String = "unknown",
+    val fastModeIssue: String? = null,
     val notify: Boolean? = null,
     val connectors: List<String> = emptyList(),
     val skills: List<String> = emptyList(),
@@ -44,7 +51,14 @@ data class Bot(
     val unread: Int = 0,
     val rev: Long = 0,
     val deleted: Boolean = false,
-)
+) {
+    /** An agent bot unless its agent said it has no Fast mode, or one that has it on (so it can be turned off). */
+    val fastModeShown: Boolean get() = kind != "group" && (fastMode || fastModeSupport != "unsupported")
+
+    /** Why Fast mode isn't in effect, when the agent turned it off itself. */
+    val fastModeRefusal: String? get() = if (fastMode && fastModeSupport == "refused")
+        "The agent turned it off: ${fastModeIssue ?: "not available"}. Switch it off and on to try again." else null
+}
 
 object HostClient {
     private val json = Json { ignoreUnknownKeys = true }
