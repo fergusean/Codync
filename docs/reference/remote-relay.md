@@ -359,7 +359,7 @@ Device 准入（DO）：
 - `ws.serializeAttachment`：host `{role:"host", kid, ready: boolean}`；device `{role:"device", dk, link, pair: boolean, offer?: string}`。
 - **「host 在線」的唯一定義**：存在一條 host socket 且其 attachment `ready == true`。presence、mailbox 接受與否（§7.7）、`data` 轉送全部用這一個定義。
 - `ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair('{"t":"ping"}', '{"t":"pong"}'))`：client 必須送**完全相同**的字串 `{"t":"ping"}`。
-- 新的 host 連線到來時，舊 host socket 以 `4009 replaced` 關閉；所有 device socket 收到 `presence online:false`（新 host socket 的 `ready` 之後再送 `online:true`）。
+- 新的 host 連線到來時，舊 host socket 立即退役（見 §7.6），之後以 `4009 replaced` 關閉；所有 device socket 收到 `presence online:false`（新 host socket 的 `ready` 之後再送 `online:true`）。
 - host 端：relay socket 每次重新連線，都丟棄全部 link 狀態（channel、訂閱、進行中的 request）。
 - device 端：每次收到 `presence online:true` 都丟棄舊 channel 金鑰、重新送 `hello`。
 
@@ -425,7 +425,7 @@ Channel 訊息與 DO 訊息的 `t` 值不重疊：channel 只有 `hello`/`welcom
 ### 7.6 心跳、重連、限流
 
 - 心跳：host 與 device 每 30 秒送 `{"t":"ping"}`（中繼）；直連時 host 每 15 秒送 WebSocket Ping frame，client 45 秒沒收到任何資料視為斷線。
-- DO alarm：只要有 socket 或 mailbox 項目就每 60 秒一次：host socket 的 `ctx.getWebSocketAutoResponseTimestamp()` 超過 90 秒 → 以 `1011` 關閉並標記離線；清除過期 mailbox（通知 `mbox.expired`）與過期 nonces。
+- DO alarm：只要有 socket 或 mailbox 項目就每 60 秒一次：任何 socket（host 與 device）的 `ctx.getWebSocketAutoResponseTimestamp()` 超過 90 秒 → **退役**：attachment 記 `retired`，之後 DO 不再送任何東西給它；host 標記離線，device 通知 host `close` 該 link。退役的 socket 不立刻關：對已經連不到的 peer 呼叫 `close()` 會讓 DO 一直醒著（計 duration）到 TCP 放棄為止，放著不動則不會。它之後再說話（收到訊息、或 ping 時間晚於退役時間）就以記下的 code 關閉；若 DO 從退役起一直沒睡過（同一個 instance 還記得它），下一次 alarm 也關它，因為卡在它佇列裡的資料可能正是 DO 睡不著的原因，只有關掉才會釋放。清除過期 mailbox（通知 `mbox.expired`）與過期 nonces。
 - 重連退避：host 1 s 起倍增至 60 s、device 1 s 起倍增至 30 s，皆 full jitter；穩定 60 秒後重置。
 - `4100 paired` → 立即以一般模式重連（§4.1）。
 - 不重試的 close code：`4001 unauthorized`、`4003 revoked`、`4410 pairingExpired`（device 顯示需重新授權）；`4009 replaced` → host 等 5 分鐘再試並記錄 `error`（可能有人複製了 `identity.json`）；`4400 unsupportedVersion` → 顯示需要更新。
