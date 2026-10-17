@@ -4,6 +4,12 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateDpAsState
@@ -70,7 +76,18 @@ private enum class Trailing { Stop, Call, Send }
     val files = draft?.files.orEmpty()
     val queuing = "draft-send:" + lane in state.busy
     val importing = "attachments" in state.busy
-    LaunchedEffect(text, bot.id, thread) { snapshotFlow { text.text.toString() }.collect { store.editDraft(bot.id, thread, it) } }
+    // What this box sent to the store, so a draft set elsewhere (a routine request) can be told from our own echo.
+    val echoes = remember(lane) { ArrayDeque<String>() }
+    LaunchedEffect(text, bot.id, thread) {
+        snapshotFlow { text.text.toString() }.collect {
+            echoes.addLast(it); while (echoes.size > 32) echoes.removeFirst()
+            store.editDraft(bot.id, thread, it)
+        }
+    }
+    LaunchedEffect(draft?.text) {
+        val external = draft?.text.orEmpty()
+        if (external != text.text.toString() && external !in echoes) text.setTextAndPlaceCursorAtEnd(external)
+    }
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
     val photos = rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia(10)) { uris ->
@@ -103,6 +120,28 @@ private enum class Trailing { Stop, Call, Send }
         working -> "Queue a message for ${bot.name}"
         else -> "Ask ${bot.name}"
     }
+    val typed = text.text.toString()
+    val commands = SlashCommands.query(typed)?.let { SlashCommands.list(bot, it, state.plugins?.skills.orEmpty(), state.hello?.text("version")) }.orEmpty()
+    val mentions = if (bot.kind != "group") emptyList() else mentionQuery(typed)?.let { query ->
+        bot.members.mapNotNull { id -> state.bots.firstOrNull { it.id == id } }.filter { query.isEmpty() || it.name.contains(query, true) }
+    }.orEmpty()
+    fun clear() = text.edit { replace(0, length, "") }
+    fun run(command: SlashCommand) {
+        val skill = command.skill
+        when {
+            skill != null -> text.setTextAndPlaceCursorAtEnd("/$skill ")
+            command.name == "fast" -> { store.command("updateBot", buildJsonObject { put("id", bot.id); put("fastMode", !bot.fastMode) }, "roster:" + bot.id); clear() }
+            else -> { store.command("newSession", body("botId" to bot.id)); clear() }
+        }
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    AnimatedVisibility(commands.isNotEmpty(), enter = fadeIn(Motion.fade()) + expandVertically(Motion.layoutSize),
+        exit = fadeOut(Motion.fade()) + shrinkVertically(Motion.layoutSize)) {
+        CommandList(commands, ::run, Modifier.padding(horizontal = 16.dp))
+    }
+    AnimatedVisibility(mentions.isNotEmpty(), enter = fadeIn(Motion.fade()), exit = fadeOut(Motion.fade())) {
+        MentionChips(mentions, state.bots) { member -> text.setTextAndPlaceCursorAtEnd(typed.substring(0, typed.lastIndexOf('@')) + "@${member.name} ") }
+    }
     Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 16.dp), verticalAlignment = Alignment.Bottom,
         horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         if (bot.kind != "group") {
@@ -134,11 +173,15 @@ private enum class Trailing { Stop, Call, Send }
                     when (trailing) {
                         Trailing.Stop -> store.command("stop", body("botId" to bot.id))
                         Trailing.Call -> onCall?.invoke()
-                        Trailing.Send -> store.sendDraft(bot.id, thread, text.text.toString()) { text.edit { replace(0, length, "") } }
+                        Trailing.Send -> {
+                            val command = if (files.isEmpty()) SlashCommands.builtIn(bot, typed) else null
+                            if (command != null) run(command) else store.sendDraft(bot.id, thread, typed) { clear() }
+                        }
                     }
                 }
             }
         }
+    }
     }
 }
 

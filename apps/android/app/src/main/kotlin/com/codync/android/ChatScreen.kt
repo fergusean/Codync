@@ -56,6 +56,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.codync.android.core.*
 import com.codync.android.design.*
@@ -97,8 +98,9 @@ import kotlinx.coroutines.launch
             enter = fadeIn(Motion.fade()) + slideInVertically(Motion.layoutOffset) { -it }, exit = fadeOut(Motion.fade()) + slideOutVertically(Motion.layoutOffset) { -it }) {
             state.voice?.let { CallBar(it, state, store) }
         }
-        Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().imePadding().navigationBarsPadding()
-            .onSizeChanged { composerHeight = it.height }) {
+        // Measured with the keyboard and navigation bar under it, so the last message clears them too.
+        Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().onSizeChanged { composerHeight = it.height }
+            .imePadding().navigationBarsPadding()) {
             MessageComposer(bot, null, chatState, store, onCall = if (state.voice == null && state.actualConnection is LinkState.Ready) startCall else null)
         }
     }) {
@@ -190,7 +192,7 @@ import kotlinx.coroutines.launch
     val working = bot.status in listOf("working", "needsInput") && bot.workingThread == null && state.connection is LinkState.Ready
     val list = rememberLazyListState()
     val more = bot.id !in state.historyComplete
-    Follow(list, items.lastOrNull()?.id, entries.lastOrNull()?.rev, working)
+    Follow(list, items.lastOrNull()?.id, entries.lastOrNull()?.rev, working, padding.calculateBottomPadding())
     LazyColumn(Modifier.fillMaxSize(), state = list, contentPadding = padding) {
         if (more) item("earlier") {
             Box(Modifier.fillMaxWidth().padding(vertical = 14.dp), contentAlignment = Alignment.Center) { Spinner(14.dp) }
@@ -211,7 +213,7 @@ import kotlinx.coroutines.launch
 }
 
 /** Stays on the newest message until the reader scrolls away; scrolling back down follows again. */
-@Composable private fun Follow(list: LazyListState, last: String?, rev: Long?, working: Boolean) {
+@Composable private fun Follow(list: LazyListState, last: String?, rev: Long?, working: Boolean, bottom: Dp = 0.dp) {
     var following by remember { mutableStateOf(true) }
     LaunchedEffect(list) {
         // Only the reader's own scroll decides: new content arriving (even while Codync is in the background) keeps the follow.
@@ -225,7 +227,8 @@ import kotlinx.coroutines.launch
         val count = snapshotFlow { list.layoutInfo.totalItemsCount }.first { it > 0 }
         list.scrollToItem(count - 1, Int.MAX_VALUE)
     }
-    LaunchedEffect(last, rev, working) {
+    // A new message, or the box growing (keyboard, more lines): stay on the newest.
+    LaunchedEffect(last, rev, working, bottom) {
         val count = list.layoutInfo.totalItemsCount
         if (!following || count == 0) return@LaunchedEffect
         list.animateScrollToItem(count - 1)
