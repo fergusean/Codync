@@ -21,6 +21,8 @@ class AgentSettingsTest {
         assertTrue(draft.isValid)
         assertEquals(JsonNull, draft.body()["connectors"])
         assertEquals(JsonNull, draft.body()["command"])
+        // An unset switch is left out: the host's booleans don't take null.
+        assertFalse("fastMode" in draft.body() || "notify" in draft.body())
         assertFalse(draft.toggleNotifications().notify!!)
         assertTrue(draft.toggleNotifications().toggleNotifications().notify!!)
         assertFalse(draft.copy(id = "existing", name = "  ").isValid)

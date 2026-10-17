@@ -9,6 +9,12 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.awaitLongPressOrCancellation
+import androidx.compose.foundation.gestures.drag
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -38,6 +44,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.onLongClick
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.input.pointer.changedToUp
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
@@ -58,6 +68,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.kyant.shapes.RoundedRectangle
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 import kotlin.math.roundToInt
 
 /** One row in a menu: an action, a choice when `selected` is set, or a submenu with `children`. */
@@ -87,19 +98,53 @@ class ReactionPick(val emoji: List<String>, val chosen: List<String>, val toggle
     MenuOverlay(open, { open = false }, anchor, items, cover = true)
 }
 
-/** Long-press opens the menu under a lifted copy of the content; `reactions` adds the emoji row. */
+/** Long-press then move: the row leaves its menu and follows the finger, as iOS list rows reorder. */
+class ContextDrag(val start: () -> Unit, val move: (Float) -> Unit, val end: () -> Unit)
+
+/**
+ * Long-press opens the menu under a lifted copy of the content; `reactions` adds the emoji row.
+ * With `reorder`, moving the finger after the long press closes the menu and drags the content instead.
+ */
 @Composable fun Modifier.contextActions(reactions: ReactionPick? = null, enabled: Boolean = true, onClick: (() -> Unit)? = null,
-    preview: (@Composable () -> Unit)? = null, items: () -> List<MenuItem>): Modifier {
+    preview: (@Composable () -> Unit)? = null, reorder: ContextDrag? = null, items: () -> List<MenuItem>): Modifier {
     var anchor by remember { mutableStateOf(Rect.Zero) }
     var open by remember { mutableStateOf(false) }
     val haptics = LocalHapticFeedback.current
     if (preview != null) ContextOverlay(open, { open = false }, anchor, reactions, items, preview)
     else MenuOverlay(open, { open = false }, anchor, items, cover = false, reactions = reactions)
-    return onGloballyPositioned { anchor = it.boundsInRoot() }
-        .combinedClickable(enabled = enabled, onClick = { onClick?.invoke() }, onLongClickLabel = "Actions", onLongClick = {
-            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-            open = true
-        })
+    val tap by rememberUpdatedState(onClick)
+    val hold = {
+        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+        open = true
+    }
+    val gestures = if (reorder == null) Modifier.combinedClickable(enabled = enabled, onClick = { tap?.invoke() },
+        onLongClickLabel = "Actions", onLongClick = hold)
+    // One gesture for tap, hold and drag: a click detector would swallow the move after the hold.
+    else Modifier.semantics {
+        if (enabled) { onClick { tap?.invoke(); true }; onLongClick("Actions") { hold(); true } }
+    }.pointerInput(reorder, enabled) {
+        if (!enabled) return@pointerInput
+        awaitEachGesture {
+            val down = awaitFirstDown()
+            val held = awaitLongPressOrCancellation(down.id)
+            if (held == null) {
+                val up = currentEvent.changes.firstOrNull { it.id == down.id }
+                if (up != null && up.changedToUp() && !up.isConsumed) { up.consume(); tap?.invoke() }
+                return@awaitEachGesture
+            }
+            hold()
+            var moved = 0f
+            var started = false
+            drag(held.id) { change ->
+                val step = change.positionChange().y
+                moved += step
+                if (!started && abs(moved) > viewConfiguration.touchSlop) { started = true; open = false; reorder.start() }
+                if (started) { reorder.move(step); change.consume() }
+            }
+            if (started) reorder.end()
+        }
+    }
+    return onGloballyPositioned { anchor = it.boundsInRoot() }.then(gestures)
 }
 
 /** The menu panel and its placement around `anchor`. `cover`: grow over the anchor (pull-down menus). */

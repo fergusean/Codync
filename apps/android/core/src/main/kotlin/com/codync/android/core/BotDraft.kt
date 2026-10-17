@@ -1,6 +1,7 @@
 package com.codync.android.core
 
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.jsonObject
@@ -30,14 +31,16 @@ data class BotDraft(
     fun toggleNotifications(): BotDraft = copy(notify = !(notify ?: true))
     fun body(): JsonObject {
         val normalized = if (backend == "custom") this else copy(command = null)
-        val encoded = WireJson.encodeToJsonElement(normalized)
-        return encoded.jsonObject
+        // updateBot merges a patch: null clears model, command or the connector choice, but an unset
+        // switch must stay out (the host's booleans don't take null).
+        return JsonObject(WireJson.encodeToJsonElement(normalized).jsonObject.filterNot { (key, value) -> value == JsonNull && key in SWITCHES })
     }
     fun template(): String = JsonObject(body().filterKeys { it !in setOf("id", "pinned", "hidden") }).toString()
 
     companion object {
         /** A new bot starts with a random face, like iOS. */
         val AVATAR_COLORS = listOf("black", "brown", "red", "orange", "yellow", "green", "cyan", "blue", "violet", "magenta", "gray")
+        private val SWITCHES = setOf("fastMode", "notify")
         val AVATAR_SHAPES = listOf("blob", "pebble", "squircle", "tablet", "wedge", "hex", "cloud", "teardrop")
 
         fun from(bot: Bot): BotDraft = BotDraft(bot.id, bot.name, bot.description, bot.avatarColor, bot.avatarShape,

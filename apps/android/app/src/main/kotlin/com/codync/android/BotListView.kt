@@ -29,6 +29,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.zIndex
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -55,6 +59,8 @@ import kotlinx.serialization.json.putJsonArray
     newBot: () -> Unit, newGroup: () -> Unit, edit: (Bot) -> Unit, bottomInset: androidx.compose.ui.unit.Dp) {
     var confirmDelete by remember { mutableStateOf<Bot?>(null) }
     val roster = roster(state.bots)
+    val reorder = remember { RosterReorder() }
+    reorder.roster = roster.map(Bot::id)
     val online = state.actualConnection is LinkState.Ready
     val top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     GlassStage(Modifier.fillMaxSize().background(Palette.background), chrome = {
@@ -72,8 +78,13 @@ import kotlinx.serialization.json.putJsonArray
             if (roster.isEmpty()) item {
                 EmptyRoster(canCreate = state.computers.isNotEmpty(), hasComputer = state.computers.isNotEmpty(), create = newBot, showComputers = manage)
             }
-            items(roster, key = Bot::id) { bot ->
-                BotRowItem(bot, state, store, edit = { edit(bot) }, delete = { confirmDelete = bot })
+            items(reorder.shown(roster), key = Bot::id) { bot ->
+                val lifted = reorder.dragged == bot.id
+                Box(Modifier.onSizeChanged { reorder.heights[bot.id] = it.height }
+                    .then(if (lifted) Modifier.zIndex(1f).graphicsLayer { translationY = reorder.offset; scaleX = 1.02f; scaleY = 1.02f }
+                        else Modifier.animateItem())) {
+                    BotRowItem(bot, state, store, reorder.handle(bot.id) { store.reorder(it) }, edit = { edit(bot) }, delete = { confirmDelete = bot })
+                }
             }
         }
     }
@@ -86,12 +97,51 @@ import kotlinx.serialization.json.putJsonArray
     }
 }
 
+/**
+ * Drag-to-reorder for the roster (iOS `List.onMove`): long-press a row, then move it. The order
+ * shown follows the finger until the host's synced order catches up.
+ */
+private class RosterReorder {
+    var roster: List<String> = emptyList()
+    var order by mutableStateOf<List<String>?>(null)
+    var dragged by mutableStateOf<String?>(null)
+    var offset by mutableFloatStateOf(0f)
+    val heights = mutableMapOf<String, Int>()
+    private val handles = mutableMapOf<String, ContextDrag>()
+
+    fun shown(bots: List<Bot>): List<Bot> {
+        val ids = order ?: return bots
+        // Dropped and synced: the host's order is the one to show again.
+        if (dragged == null && ids == roster) { order = null; return bots }
+        return ids.mapNotNull { id -> bots.firstOrNull { it.id == id } } + bots.filter { it.id !in ids }
+    }
+
+    fun handle(id: String, save: (List<String>) -> Unit): ContextDrag = handles.getOrPut(id) {
+        ContextDrag(start = { order = order ?: roster; dragged = id; offset = 0f }, move = { step -> offset += step; swap(id) }, end = {
+            val dropped = order
+            dragged = null; offset = 0f
+            if (dropped != null && dropped != roster) save(dropped) else order = null
+        })
+    }
+
+    /** Past half the neighbor's height, the row takes the neighbor's place. */
+    private fun swap(id: String) {
+        val list = order ?: return
+        val at = list.indexOf(id)
+        val next = if (offset > 0) at + 1 else at - 1
+        val height = list.getOrNull(next)?.let(heights::get) ?: return
+        if (kotlin.math.abs(offset) < height / 2f) return
+        order = list.toMutableList().apply { add(next, removeAt(at)) }
+        offset -= if (offset > 0) height else -height
+    }
+}
+
 /** Roster order: pinned first, then where the user dragged them, then most recent activity. */
 internal fun roster(bots: List<Bot>): List<Bot> = bots.filter { !it.deleted && !it.hidden }
     .sortedWith(compareByDescending<Bot> { it.pinned }.thenBy { it.position }.thenByDescending { it.lastAt })
 
-@Composable private fun BotRowItem(bot: Bot, state: AppState, store: AppStore, edit: () -> Unit, delete: () -> Unit) {
-    Box(Modifier.fillMaxWidth().contextActions(onClick = { store.openBot(bot.id) }, preview = {
+@Composable private fun BotRowItem(bot: Bot, state: AppState, store: AppStore, drag: ContextDrag, edit: () -> Unit, delete: () -> Unit) {
+    Box(Modifier.fillMaxWidth().contextActions(onClick = { store.openBot(bot.id) }, reorder = drag, preview = {
         Box(Modifier.padding(horizontal = 8.dp)) { BotRow(bot, state) }
     }) {
         listOf(
