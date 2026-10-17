@@ -14,7 +14,7 @@ always equal). There is no separate protocol number.
 | Floor | Lives in | Meaning |
 |---|---|---|
 | `minApp` | `host/src/compat.rs` `MIN_APP`, sent in `hello` | The oldest client this host serves correctly. |
-| `minHost` | `apps/ios/Kit/.../Models/Compatibility.swift` `VersionMismatch.minHost`, `apps/desktop/src/shared/compat.ts` `MIN_HOST`, `host/src/compat.rs` `MIN_HOST` (terminal client) | The oldest host this client works with. |
+| `minHost` | `apps/ios/Kit/.../Models/Compatibility.swift` `VersionMismatch.minHost`, `apps/desktop/src/shared/compat.ts` `MIN_HOST`, `apps/android/core/.../Compatibility.kt` `VersionMismatch.MIN_HOST`, `host/src/compat.rs` `MIN_HOST` (terminal client) | The oldest host this client works with. |
 
 On every (re)connect the client reads `hello` and decides, in this order:
 
@@ -28,12 +28,12 @@ reason to lock someone out.
 
 ## What each client does
 
-| | iPhone and desktop (`BotStore.mismatch`) | Terminal client |
+| | iPhone and desktop (`BotStore.mismatch`); Android (`AppState.mismatch`) | Terminal client |
 |---|---|---|
 | Notice | `UpdateNeededCard` above the computer's bots and in place of the composer; status reads *Needs update* | *needs update* in the status line, with the reason |
-| Update this app | iPhone: App Store page. Desktop: electron-updater check (`apps/desktop/src/main/updates.ts`) | Text only |
-| Update the host | Desktop: its own host is reinstalled (**Restart host**). iPhone: instructions for that computer | `^k` → Check for updates |
-| Sync while mismatched | Stopped; `hello` is asked again every 30 s and on every reconnect | Continues; sending is blocked |
+| Update this app | iPhone: App Store page. Desktop: electron-updater check (`apps/desktop/src/main/updates.ts`). Android: text only | Text only |
+| Update the host | Desktop: its own host is reinstalled (**Restart host**). iPhone and Android: instructions for that computer | `^k` → Check for updates |
+| Sync while mismatched | Stopped; `hello` is asked again every 30 s and on every reconnect. Android: continues; sending is blocked | Continues; sending is blocked |
 
 Drafts are kept while sending is blocked. A host update restarts the host, so the reconnect
 reads the new `hello` and the notice goes away on its own.

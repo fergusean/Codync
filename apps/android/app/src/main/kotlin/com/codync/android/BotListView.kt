@@ -75,7 +75,9 @@ import kotlinx.serialization.json.putJsonArray
         }
     }) {
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = top + 56.dp, bottom = bottomInset)) {
-            if (roster.isEmpty()) item {
+            // A computer waiting for an update has its card instead; its bots may not be readable yet.
+            state.mismatch?.let { mismatch -> item("update") { UpdateNeededCard(state, mismatch, Modifier.padding(vertical = 8.dp)) } }
+            if (roster.isEmpty() && state.mismatch == null) item {
                 EmptyRoster(canCreate = state.computers.isNotEmpty(), hasComputer = state.computers.isNotEmpty(), create = newBot, showComputers = manage)
             }
             items(reorder.shown(roster), key = Bot::id) { bot ->

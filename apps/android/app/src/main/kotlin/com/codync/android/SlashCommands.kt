@@ -21,6 +21,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.codync.android.core.AppVersion
 import com.codync.android.core.Bot
 import com.codync.android.core.InstalledSkill
 import com.codync.android.design.*
@@ -45,7 +46,7 @@ internal object SlashCommands {
     /** Built-in commands, then the bot's skills, whose name or title holds `query` (none in a group). */
     fun list(bot: Bot, query: String, skills: List<InstalledSkill>, hostVersion: String?): List<SlashCommand> {
         if (bot.kind == "group") return emptyList()
-        val own = if (olderThan(hostVersion, MIN_SKILLS_HOST)) emptyList()
+        val own = if (hostVersion != null && AppVersion.isBelow(hostVersion, MIN_SKILLS_HOST)) emptyList()
             else skills.filter { it.id in bot.skills }.map { SlashCommand(it.id, "book.pages", it.name, it.description, false, it.id) }
         return (builtIn(bot) + own).filter { query.isEmpty() || it.name.contains(query, true) || it.title.contains(query, true) }
     }
@@ -57,17 +58,6 @@ internal object SlashCommands {
         if (bot.fastModeShown) add(SlashCommand("fast", "bolt", "Fast mode", bot.fastModeRefusal
             ?: if (bot.fastMode) "Turn off and return to standard speed" else "Turn on for faster replies and more usage", bot.fastModeRefusal != null))
         add(SlashCommand("new", "arrow.counterclockwise", "New session", "Start over with a fresh context; the transcript stays", false))
-    }
-
-    /** `2.9.0` < `2.14.1`, numerically; an unknown version counts as new enough. */
-    internal fun olderThan(version: String?, minimum: String): Boolean {
-        val have = version?.substringBefore('-')?.split('.')?.map { it.toIntOrNull() ?: 0 } ?: return false
-        val need = minimum.split('.').map { it.toInt() }
-        for (i in 0 until maxOf(have.size, need.size)) {
-            val a = have.getOrElse(i) { 0 }; val b = need.getOrElse(i) { 0 }
-            if (a != b) return a < b
-        }
-        return false
     }
 }
 
