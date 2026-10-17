@@ -90,7 +90,6 @@ private enum class Root { Loading, Welcome, Pairing, Tabs }
             }
         }
         if (root == Root.Tabs) {
-            groupEditor?.let { draft -> GroupEditor(state, draft, store) { groupEditor = null } }
             if (showMarketplace) MarketplaceScreen(state, store) { showMarketplace = false }
         }
     }
@@ -107,6 +106,9 @@ private enum class Root { Loading, Welcome, Pairing, Tabs }
     CodyncSheet(access, { access = null }) { AccessRequestView(state, store, it) }
     CodyncSheet(showPairing && !state.loading, { showPairing = false }) { PairingView(state, store, inModal = true) }
     CodyncSheet(showUsage && !state.loading, { showUsage = false }) { UsageScreen(state) { store.refreshUsage(it) } }
+    CodyncSheet(groupEditor.takeIf { !state.loading }, { groupEditor = null }) { draft ->
+        key(state.contextId, state.generation, draft.id) { GroupEditor(state, draft, store) }
+    }
     CodyncSheet(editor.takeIf { !state.loading }, { editor = null }) { draft ->
         key(state.contextId, state.generation, draft.id) { BotEditor(state, draft, store) }
     }

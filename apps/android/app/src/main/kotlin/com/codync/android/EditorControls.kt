@@ -12,7 +12,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -46,11 +48,12 @@ import com.kyant.shapes.RoundedRectangle
 
 /** A rounded input box (`fieldBox`): a plain field on the ground color. */
 @Composable internal fun FieldBox(text: String, onChange: (String) -> Unit, prompt: String, minLines: Int = 1, maxLines: Int = 1,
-    style: TextStyle = Type.body, fill: Color = Palette.background, capitalize: Boolean = true) {
+    style: TextStyle = Type.body, fill: Color = Palette.background, capitalize: Boolean = true, imeAction: ImeAction = ImeAction.Default,
+    actions: KeyboardActions = KeyboardActions.Default) {
     Box(Modifier.fillMaxWidth().clip(RoundedRectangle(12.dp)).background(fill).padding(horizontal = 14.dp, vertical = 11.dp)) {
         PlainTextField(text, onChange, Modifier.fillMaxWidth(), prompt, singleLine = maxLines == 1, style = style, minLines = minLines,
             maxLines = maxLines, keyboard = KeyboardOptions(capitalization = if (capitalize) KeyboardCapitalization.Sentences else KeyboardCapitalization.None,
-                autoCorrectEnabled = capitalize))
+                autoCorrectEnabled = capitalize, imeAction = imeAction), actions = actions)
     }
 }
 

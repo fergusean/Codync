@@ -9,7 +9,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -80,7 +80,7 @@ fun characterAvatarBitmap(shape: String, color: String, pixels: Int, ink: Int, h
     } else 0.0
     val cells = if (size < 18.dp) 7 else if (size < 28.dp) 9 else 13
     val dots = remember(shape, cells) { avatarDots(shape, cells) }
-    val ink = monochrome ?: MaterialTheme.colorScheme.onSurface
+    val ink = monochrome ?: Palette.text
     val tint = monochrome ?: highlight ?: AvatarPalette.tint(color)
     Canvas(Modifier.size(size).clearAndSetSemantics { }) {
         val step = this.size.width / cells
@@ -116,7 +116,7 @@ fun characterAvatarBitmap(shape: String, color: String, pixels: Int, ink: Int, h
             Box(Modifier.align(align)) { CharacterAvatar(face.shape, face.color, side(fraction), face.status) }
         }
         when (faces.size) {
-            0 -> Text("◦◦", Modifier.align(Alignment.Center), color = MaterialTheme.colorScheme.onSurfaceVariant)
+            0 -> Symbol("person.2", Modifier.align(Alignment.Center), size = size * 0.4f, tint = Palette.secondary)
             1 -> place(0, 1f, Alignment.Center)
             2 -> { place(1, .66f, Alignment.TopEnd); place(0, .66f, Alignment.BottomStart) }
             3 -> { place(0, .55f, Alignment.TopCenter); place(1, .55f, Alignment.BottomStart); place(2, .55f, Alignment.BottomEnd) }
@@ -124,7 +124,7 @@ fun characterAvatarBitmap(shape: String, color: String, pixels: Int, ink: Int, h
                 place(0, .5f, Alignment.TopStart); place(1, .5f, Alignment.TopEnd); place(2, .5f, Alignment.BottomStart)
                 if (faces.size == 4) place(3, .5f, Alignment.BottomEnd)
                 else Box(Modifier.size(size * .5f).align(Alignment.BottomEnd), contentAlignment = Alignment.Center) {
-                    Text("+${faces.size - 3}", style = MaterialTheme.typography.labelSmall)
+                    Text("+${faces.size - 3}", style = Type.system(size.value * 0.24f, FontWeight.Bold), color = Palette.secondary)
                 }
             }
         }

@@ -92,9 +92,13 @@ import kotlinx.coroutines.launch
         Box(Modifier.fillMaxWidth().height(top + 64.dp).background(Brush.verticalGradient(
             0f to Palette.background, 0.55f to Palette.background.copy(alpha = 0.85f), 1f to Color.Transparent)))
         ThreadHeader(bot, state, store, edit, { store.showTrace(true) }, { routines = true }, { confirmNewSession = true }, { confirmDelete = true })
+        // The call floats over the chat under the header, as on iOS; the chat stays readable and usable.
+        AnimatedVisibility(state.voice != null, Modifier.padding(top = top + 54.dp),
+            enter = fadeIn(Motion.fade()) + slideInVertically(Motion.layoutOffset) { -it }, exit = fadeOut(Motion.fade()) + slideOutVertically(Motion.layoutOffset) { -it }) {
+            state.voice?.let { CallBar(it, state, store) }
+        }
         Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().imePadding().navigationBarsPadding()
             .onSizeChanged { composerHeight = it.height }) {
-            state.voice?.let { call -> Box(Modifier.padding(horizontal = 16.dp)) { VoiceControls(call, state, store) } }
             MessageComposer(bot, null, chatState, store, onCall = if (state.voice == null && state.actualConnection is LinkState.Ready) startCall else null)
         }
     }) {

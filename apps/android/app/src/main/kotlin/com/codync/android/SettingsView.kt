@@ -48,6 +48,7 @@ import kotlinx.serialization.json.put
     val paired = state.computers.firstOrNull()
     var confirmForget by remember { mutableStateOf(false) }
     var confirmStartOver by remember { mutableStateOf(false) }
+    var voice by remember { mutableStateOf(false) }
     LaunchedEffect(state.contextId) { store.refreshCloud() }
     Column(Modifier.fillMaxSize().background(Palette.background)) {
         PageHeader("Computers & settings", pop)
@@ -65,6 +66,16 @@ import kotlinx.serialization.json.put
                         horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         Symbol("qrcode.viewfinder", size = 20.dp, tint = Palette.text)
                         Text("Pair a computer", style = Type.body, color = Palette.text)
+                    }
+                }
+            }
+            if (state.actualConnection is LinkState.Ready) CardSection("Voice chat", "Android speech on this phone; only the text reaches the computer.") {
+                row {
+                    Row(Modifier.fillMaxWidth().plainButton { voice = true }, verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Symbol("waveform", size = 20.dp, tint = Palette.text)
+                        Text("Voice chat", Modifier.weight(1f), style = Type.body, color = Palette.text)
+                        Symbol("chevron.right", size = 13.dp, tint = Palette.tertiary)
                     }
                 }
             }
@@ -88,6 +99,7 @@ import kotlinx.serialization.json.put
             }
         }
     }
+    CodyncSheet(voice, { voice = false }) { VoiceChatSettings(store) }
     CodyncDialog("Start over?", confirmStartOver, { confirmStartOver = false },
         "Signs out of every account and forgets every computer on this phone, then shows the welcome again. Your computers keep their bots and chats; pair again to use them.") {
         listOf(DialogAction("Start over", destructive = true, action = store::startOver))
