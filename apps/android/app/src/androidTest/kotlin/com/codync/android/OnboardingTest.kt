@@ -30,7 +30,7 @@ class OnboardingTest {
         compose.onNodeWithText("Linux").performClick()
         compose.onNodeWithText("codync-host install").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Continue").performClick()
-        compose.onNodeWithText("codync-host pair").assertIsDisplayed()
+        compose.onNodeWithText("codync-host pair").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Pair").assertIsNotEnabled()
         compose.onNodeWithText("Scan pairing code").assertIsDisplayed()
         compose.onNodeWithText("Installation steps").performClick()
@@ -44,10 +44,10 @@ class OnboardingTest {
         compose.onNodeWithText("Get started").performClick()
         compose.onNodeWithText("Linux").performClick()
         compose.onNodeWithText("Continue").performClick()
-        compose.onNodeWithText("Scan pairing code").performClick()
+        compose.onNodeWithText("Scan pairing code").performScrollTo().performClick()
         compose.onNodeWithText("Use pairing link").performClick()
-        compose.onNodeWithText("codync-host pair").assertIsDisplayed()
-        compose.onNodeWithText("Pairing link").assertIsDisplayed()
+        compose.onNodeWithText("codync-host pair").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Pairing link").performScrollTo().assertIsDisplayed()
     }
 
     @Test fun windowsSetupExplainsTheTrayPairingPath() {
