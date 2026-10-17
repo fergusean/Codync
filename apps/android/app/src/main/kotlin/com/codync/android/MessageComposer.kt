@@ -4,98 +4,185 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.content.ReceiveContentListener
-import androidx.compose.foundation.content.contentReceiver
 import androidx.compose.foundation.content.consume
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.content.contentReceiver
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.text.input.TextFieldLineLimits
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import com.codync.android.design.*
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalClipboard
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.codync.android.core.*
+import com.codync.android.design.*
+import com.kyant.shapes.Capsule
+import com.kyant.shapes.RoundedRectangle
 import kotlinx.coroutines.launch
 
+/** What the composer's one trailing button does now; it morphs between them. */
+private enum class Trailing { Stop, Call, Send }
+
+/**
+ * The message box under a chat or a thread, as iOS `Composer`: a glass + for files, a glass
+ * field whose trailing button morphs between call, send and stop.
+ */
 @OptIn(ExperimentalFoundationApi::class)
-@Composable fun MessageComposer(bot: Bot, state: AppState, store: AppStore) {
-    val lane = ComposerDraft.lane(bot.id, state.thread)
+@Composable fun MessageComposer(bot: Bot, thread: String?, state: AppState, store: AppStore, onCall: (() -> Unit)?) {
+    val lane = ComposerDraft.lane(bot.id, thread)
     val draft = state.drafts[lane]
     val text = rememberTextFieldState(initialText = draft?.text.orEmpty())
     val files = draft?.files.orEmpty()
     val queuing = "draft-send:" + lane in state.busy
-    LaunchedEffect(text, bot.id, state.thread) {
-        snapshotFlow { text.text.toString() }.collect { store.editDraft(bot.id, state.thread, it) }
-    }
-    var picker by remember { mutableStateOf(false) }
+    val importing = "attachments" in state.busy
+    LaunchedEffect(text, bot.id, thread) { snapshotFlow { text.text.toString() }.collect { store.editDraft(bot.id, thread, it) } }
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
-    val importing = "attachments" in state.busy
-    val photos = rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia(20)) { uris ->
-        if (uris.isNotEmpty()) store.importFiles(uris) { store.addDraftFiles(bot.id, state.thread, it) }
+    val photos = rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia(10)) { uris ->
+        if (uris.isNotEmpty()) store.importFiles(uris) { store.addDraftFiles(bot.id, thread, it) }
     }
     val documents = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
-        if (uris.isNotEmpty()) store.importFiles(uris) { store.addDraftFiles(bot.id, state.thread, it) }
+        if (uris.isNotEmpty()) store.importFiles(uris) { store.addDraftFiles(bot.id, thread, it) }
     }
     val receiver = remember(bot.id, importing, queuing) { ReceiveContentListener { content ->
         if (bot.kind == "group" || importing || queuing) content else {
             val uris = mutableListOf<android.net.Uri>()
             val remaining = content.consume { item -> item.uri?.takeIf { it.scheme == "content" }?.let { uris.add(it); true } ?: false }
-            if (uris.isNotEmpty()) store.importFiles(uris) { store.addDraftFiles(bot.id, state.thread, it) }
+            if (uris.isNotEmpty()) store.importFiles(uris) { store.addDraftFiles(bot.id, thread, it) }
             remaining
         }
     } }
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        for (file in files) Row {
-            Text(file.name + " · " + formatBytes(file.size), Modifier.weight(1f).semantics { contentDescription = "Draft attachment: ${file.name}" })
-            TextButton(enabled = !queuing, onClick = { store.removeDraftFile(bot.id, state.thread, file) }) { Text("Remove") }
-        }
-        if (importing) Text("Preparing files…", style = MaterialTheme.typography.bodySmall)
-        AnimatedContent(picker, label = "attachment choices") { open -> if (open) Row {
-            TextButton(enabled = !importing && !queuing, onClick = { picker = false; photos.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }) { Text("Photos") }
-            TextButton(enabled = !importing && !queuing, onClick = { picker = false; documents.launch(arrayOf("*/*")) }) { Text("Files") }
-            TextButton(enabled = !importing && !queuing, onClick = { scope.launch {
-                val clip = clipboard.getClipEntry()
-                val data = clip?.clipData
-                val uris = if (data == null) emptyList() else (0 until data.itemCount).mapNotNull { data.getItemAt(it).uri }
-                if (uris.isNotEmpty()) store.importFiles(uris) { store.addDraftFiles(bot.id, state.thread, it) }
-                picker = false
-            } }) { Text("Paste image") }
-        } }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Bottom) {
-            if (bot.kind != "group") CodyncIconButton("Attachments", Glyph.Plus, { picker = !picker }, enabled = !queuing)
-            Row(Modifier.weight(1f).clip(RoundedCornerShape(26.dp)).background(MaterialTheme.colorScheme.surfaceContainer)
-                .padding(start = 16.dp, end = 3.dp, top = 2.dp, bottom = 2.dp), verticalAlignment = Alignment.Bottom) {
-                BasicTextField(state = text, enabled = !queuing, modifier = Modifier.weight(1f).contentReceiver(receiver)
-                    .padding(vertical = 12.dp).heightIn(min = 24.dp),
-                    textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
-                    lineLimits = TextFieldLineLimits.MultiLine(maxHeightInLines = 6),
-                    decorator = { input -> Box { if (text.text.isEmpty()) Text(if (state.thread != null) "Reply…" else "Ask " + bot.name,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant); input() } })
-                if (text.text.isBlank() && files.isEmpty() && bot.kind != "group" && state.thread == null)
-                    StartVoiceButton(bot.id, state, store, compact = true)
-                else CodyncIconButton("Send", Glyph.Send, {
-                    store.sendDraft(bot.id, state.thread, text.text.toString()) { text.edit { replace(0, length, "") } }
-                }, enabled = !importing && !queuing && (text.text.isNotBlank() || files.isNotEmpty()) &&
-                    (files.isEmpty() || state.actualConnection is LinkState.Ready), filled = true)
+    val online = state.actualConnection is LinkState.Ready
+    val empty = text.text.isBlank() && files.isEmpty()
+    // Offline computers still take text when the relay can hold it; files need the computer.
+    val canSend = !empty && !importing && !queuing && (online || files.isEmpty())
+    val working = bot.status in listOf("working", "needsInput") && (thread == null || bot.workingThread == thread)
+    val trailing = when {
+        working && empty -> Trailing.Stop
+        onCall != null && empty && thread == null && bot.kind != "group" -> Trailing.Call
+        else -> Trailing.Send
+    }
+    val placeholder = when {
+        thread != null -> "Reply…"
+        bot.kind == "group" -> "Message everyone · @ to ask one bot"
+        working -> "Queue a message for ${bot.name}"
+        else -> "Ask ${bot.name}"
+    }
+    Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 16.dp), verticalAlignment = Alignment.Bottom,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (bot.kind != "group") {
+            val (source, pressed) = rememberPress()
+            DropdownMenu({ listOf(
+                MenuItem("Photos", icon = "photo.on.rectangle") { photos.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+                MenuItem("Files", icon = "folder") { documents.launch(arrayOf("*/*")) },
+                MenuItem("Paste", icon = "doc.on.clipboard") { scope.launch {
+                    val data = clipboard.getClipEntry()?.clipData
+                    val uris = if (data == null) emptyList() else (0 until data.itemCount).mapNotNull { data.getItemAt(it).uri }
+                    if (uris.isNotEmpty()) store.importFiles(uris) { store.addDraftFiles(bot.id, thread, it) }
+                } },
+            ) }, Modifier.size(FIELD_HEIGHT).glass(Capsule(), pressed = pressed), enabled = !queuing, label = "Add files") {
+                Symbol("plus", size = 26.dp, tint = Palette.text)
             }
         }
-        if (files.isNotEmpty() && state.actualConnection !is LinkState.Ready) Text("Connect to the computer to send files.", style = MaterialTheme.typography.bodySmall)
+        Column(Modifier.weight(1f).glass(RoundedRectangle(24.dp)).animateContentSize(Motion.layoutSize)) {
+            if (files.isNotEmpty()) Row(Modifier.horizontalScroll(rememberScrollState()).padding(start = 10.dp, end = 10.dp, top = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                for (file in files) ComposerAttachment(file) { store.removeDraftFile(bot.id, thread, file) }
+            }
+            Row(Modifier.padding(start = 18.dp, end = 6.dp, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.Bottom,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                BasicTextField(state = text, enabled = !queuing, modifier = Modifier.weight(1f).contentReceiver(receiver).padding(vertical = 10.dp),
+                    textStyle = Type.body.copy(color = Palette.text), cursorBrush = SolidColor(Palette.accent),
+                    lineLimits = TextFieldLineLimits.MultiLine(maxHeightInLines = 8),
+                    decorator = { input -> Box { if (text.text.isEmpty()) Text(placeholder, style = Type.body, color = Palette.tertiary, maxLines = 1); input() } })
+                TrailingButton(trailing, canSend, Modifier.padding(bottom = 4.dp)) {
+                    when (trailing) {
+                        Trailing.Stop -> store.command("stop", body("botId" to bot.id))
+                        Trailing.Call -> onCall?.invoke()
+                        Trailing.Send -> store.sendDraft(bot.id, thread, text.text.toString()) { text.edit { replace(0, length, "") } }
+                    }
+                }
+            }
+        }
+    }
+}
+
+private val FIELD_HEIGHT = 54.dp
+
+/** One button that morphs between call, send and stop: its symbol swaps, its fill crossfades and the capsule narrows. */
+@Composable private fun TrailingButton(state: Trailing, canSend: Boolean, modifier: Modifier, action: () -> Unit) {
+    val enabled = state != Trailing.Send || canSend
+    val fill by animateColorAsState(if (state == Trailing.Send && !canSend) Palette.accentDim else Palette.accentFill, Motion.morph(), label = "Fill")
+    val ink = if (state == Trailing.Send && !canSend) Palette.tertiary else Palette.onAccent
+    val width by animateDpAsState(if (state == Trailing.Call) 46.dp else 34.dp, Motion.morph(), label = "Width")
+    val (source, pressed) = rememberPress()
+    Box(modifier.pressScale(pressed).size(width, 34.dp).clip(Capsule()).background(fill)
+        .clickable(source, null, enabled = enabled, role = Role.Button, onClick = action)
+        .semantics { contentDescription = when (state) { Trailing.Stop -> "Stop"; Trailing.Call -> "Call"; Trailing.Send -> "Send" } },
+        contentAlignment = Alignment.Center) {
+        AnimatedContent(state, transitionSpec = { (fadeIn(Motion.morph()) + scaleIn(Motion.morph(), 0.6f)) togetherWith
+            (fadeOut(Motion.morph()) + scaleOut(Motion.morph(), 0.6f)) }, label = "Symbol") { shown ->
+            when (shown) {
+                Trailing.Stop -> Symbol("stop.fill", size = 16.dp, tint = ink)
+                Trailing.Call -> Symbol("waveform", size = 20.dp, tint = ink)
+                Trailing.Send -> Symbol("arrow.up", size = 19.dp, tint = ink)
+            }
+        }
+    }
+}
+
+/** A file going out with the next message, removable before it's sent. */
+@Composable private fun ComposerAttachment(file: OutgoingFile, remove: () -> Unit) {
+    Row(Modifier.clip(RoundedRectangle(12.dp)).background(Palette.surface).padding(start = 10.dp, end = 4.dp, top = 6.dp, bottom = 6.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Symbol(if (file.name.substringAfterLast('.', "").lowercase() in listOf("png", "jpg", "jpeg", "heic", "gif", "webp")) "photo" else "doc",
+            size = 16.dp, tint = Palette.secondary)
+        Column {
+            Text(file.name, Modifier.width(120.dp), style = Type.footnote, color = Palette.text, maxLines = 1)
+            Text(formatBytes(file.size), style = Type.caption2, color = Palette.tertiary)
+        }
+        Box(Modifier.size(28.dp).clickable(role = Role.Button, onClick = remove).semantics { contentDescription = "Remove ${file.name}" },
+            contentAlignment = Alignment.Center) { Symbol("xmark.circle.fill", size = 18.dp, tint = Palette.tertiary) }
     }
 }
 
 fun formatBytes(size: Long): String = when {
-    size >= 1024 * 1024 -> "%.1f MiB".format(size / (1024.0 * 1024))
-    size >= 1024 -> "%.1f KiB".format(size / 1024.0)
-    else -> "$size B"
+    size >= 1024 * 1024 -> "%.1f MB".format(size / (1024.0 * 1024))
+    size >= 1024 -> "%.0f KB".format(size / 1024.0)
+    else -> "$size bytes"
 }

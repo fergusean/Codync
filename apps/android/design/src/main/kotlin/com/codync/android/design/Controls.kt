@@ -292,8 +292,7 @@ class CardRows internal constructor() {
         Row(Modifier.fillMaxWidth().clickable(role = Role.Button, onClick = toggle)
             .semantics { stateDescription = if (expanded) "Expanded" else "Collapsed" },
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            label()
-            Spacer(Modifier.weight(1f))
+            Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, content = label)
             Symbol("chevron.right", Modifier.rotate(turn), size = 13.dp, tint = Palette.secondary)
         }
         AnimatedVisibility(expanded, enter = fadeIn(Motion.fade()) + expandVertically(Motion.layoutSize),

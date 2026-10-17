@@ -18,34 +18,25 @@ import androidx.core.content.ContextCompat
 import com.codync.android.core.*
 import com.codync.android.design.*
 
-@Composable internal fun StartVoiceButton(botId: String, state: AppState, store: AppStore, compact: Boolean = false) {
+/** Starts a call with `botId`, asking for the microphone first; `denied` reports a refusal. */
+@Composable internal fun rememberStartVoice(botId: String, state: AppState, store: AppStore, denied: () -> Unit): () -> Unit {
     val context = LocalContext.current
-    var denied by remember { mutableStateOf(false) }
     var requested by remember { mutableStateOf<Pair<String, Int>?>(null) }
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         val owner = requested; requested = null
         if (owner != null && store.state.value.generation == owner.second && store.state.value.selectedBot == owner.first) {
-            denied = !granted
-            if (granted) store.startVoice(owner.first, owner.second)
+            if (granted) store.startVoice(owner.first, owner.second) else denied()
         }
     }
-    val start = {
-        denied = false
+    return {
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) store.startVoice(botId, state.generation)
         else { requested = botId to state.generation; permission.launch(Manifest.permission.RECORD_AUDIO) }
     }
-    if (compact) Box {
-        CodyncIconButton("Voice chat", Glyph.Microphone, start,
-            enabled = state.voice == null && state.actualConnection is LinkState.Ready)
-        CodyncPopupMenu(denied, { denied = false }) {
-        Text("Allow microphone access in Android settings to talk to your bot.")
-        TextButton(onClick = { context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}"))) }) { Text("Microphone settings") }
-        }
-    } else {
-        TextButton(enabled = state.voice == null && state.actualConnection is LinkState.Ready, onClick = start) { Text("Voice chat") }
-        AnimatedVisibility(denied) { Text("Allow microphone access in Android settings to talk to your bot.") }
-    }
 }
+
+/** Opens this app's settings, where the microphone can be allowed. */
+internal fun openAppSettings(context: android.content.Context) =
+    context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}")))
 
 @Composable internal fun VoiceControls(call: VoiceCallViewState, state: AppState, store: AppStore) {
     var settings by remember(call.id) { mutableStateOf(false) }

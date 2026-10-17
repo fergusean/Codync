@@ -1,360 +1,280 @@
 package com.codync.android
 
-import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.text.selection.SelectionContainer
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.ui.layout.boundsInWindow
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.font.FontWeight
-import com.codync.android.design.*
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import com.codync.android.core.*
-import kotlinx.serialization.json.*
+import com.codync.android.design.*
+import com.kyant.shapes.Capsule
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import java.text.DateFormat
-import java.time.Instant
-import java.time.LocalDate
-import java.time.ZoneId
-import java.util.Date
 
+/**
+ * One endless conversation with a bot or a group, as iOS `ThreadView`: only deliberate messages
+ * show; tool calls and thinking live in "Full conversation". A thread opens over it as a sheet.
+ */
 @Composable fun ChatScreen(state: AppState, store: AppStore, edit: (Bot) -> Unit) {
-    key(state.contextId, state.generation, state.selectedBot) {
-        Box(if (state.thread != null) Modifier.clearAndSetSemantics {} else Modifier) {
-            ConversationScreen(if (state.thread == null) state else state.copy(thread = null, trace = false), store, edit)
-        }
-        if (state.thread != null) key(state.thread) {
-            RepliesPopover(close = { store.openBot(state.selectedBot) }, back = {
-                if (state.trace) store.showTrace(false) else it()
-            }) { close ->
-                Box(if (state.trace) Modifier.clearAndSetSemantics {} else Modifier) {
-                    ConversationScreen(state.copy(trace = false), store, edit, close)
-                }
-            }
-            if (state.trace) RepliesPopover(title = "Full conversation", close = { store.showTrace(false) }, back = { it() }) {
-                close -> ConversationScreen(state, store, edit, close)
-            }
-        }
-    }
-}
-
-@Composable internal fun ConversationScreen(state: AppState, store: AppStore, edit: (Bot) -> Unit,
-    closeThread: (() -> Unit)? = null) {
     val bot = state.bots.firstOrNull { it.id == state.selectedBot } ?: return
-    val thread = state.thread
-    val root = state.entries.firstOrNull { it.botId == bot.id && it.id == thread }
-    var showRoutines by remember(bot.id) { mutableStateOf(false) }
-    if (showRoutines) { RoutinesScreen(bot, state, store) { showRoutines = false }; return }
-    var setupEntry by rememberSaveable(bot.id) { mutableStateOf<String?>(null) }
-    var appSlug by rememberSaveable(bot.id) { mutableStateOf<String?>(null) }
-    var appName by rememberSaveable(bot.id) { mutableStateOf("") }
-    var connectorItem by remember(bot.id) { mutableStateOf<MarketConnector?>(null) }
-    if (appSlug != null) { AppConnectScreen(ComposioApp(requireNotNull(appSlug), appName), state, store,
-        { appSlug = null; setupEntry = null }, setupEntry); return }
-    if (connectorItem != null) { ConnectorInstaller(requireNotNull(connectorItem), state, store, requestId = setupEntry) {
-        connectorItem = null; setupEntry = null
-    }; return }
-    var menu by remember { mutableStateOf(false) }
-    var confirm by remember { mutableStateOf<String?>(null) }
-    val entries = state.entries.filter { it.botId == bot.id &&
-        (if (thread != null) it.threadId == thread && (state.trace || it.isChat) else state.trace || it.threadId == null && it.isChat) }
-    val pending = state.pending.filter { it.botId == bot.id && it.threadId == state.thread }
-    val list = rememberLazyListState()
-    var messageViewport by remember { mutableStateOf(Rect.Zero) }
-    val scope = rememberCoroutineScope()
-    var atBottom by remember(bot.id, state.thread) { mutableStateOf(true) }
-    var following by remember(bot.id, state.thread, state.trace) { mutableStateOf(true) }
-    var userScroll by remember(bot.id, state.thread, state.trace) { mutableIntStateOf(0) }
-    val scrolling = remember(bot.id, state.thread, state.trace) { object : NestedScrollConnection {
-        override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-            if (source == NestedScrollSource.UserInput) { following = false; userScroll++ }
-            return Offset.Zero
-        }
-    } }
-    LaunchedEffect(userScroll) {
-        if (userScroll > 0) {
-            withFrameNanos { }
-            snapshotFlow { list.isScrollInProgress }.first { !it }
-            withFrameNanos { }
-            following = atBottom
-        }
-    }
-    LaunchedEffect(list, bot.id, state.thread) {
-        snapshotFlow { list.layoutInfo.visibleItemsInfo.lastOrNull()?.index?.let { it >= list.layoutInfo.totalItemsCount - 2 } ?: true }
-            .distinctUntilChanged().collect { atBottom = it }
-    }
-    fun back() { if (closeThread != null) closeThread() else if (state.trace) store.showTrace(false) else store.openBot(null) }
-    BackHandler(onBack = ::back)
-    LaunchedEffect(bot.id, state.thread, state.trace) {
-        if (entries.isNotEmpty() || pending.isNotEmpty()) list.scrollToItem(maxOf(0, entries.size + pending.size))
-    }
-    LaunchedEffect(entries.lastOrNull()?.id, entries.lastOrNull()?.rev, pending.lastOrNull()?.nonce) {
-        if (following && (entries.isNotEmpty() || pending.isNotEmpty())) list.animateScrollToItem(entries.size + pending.size)
-    }
-    Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-        Column(if (closeThread == null) Modifier.safeDrawingPadding().imePadding() else Modifier) {
-            if (thread != null) {
-                Row(Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(start = 20.dp, end = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text(if (state.trace) "Full conversation" else "Thread", style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.SemiBold)
-                        Text(bot.name, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    }
-                    CodyncIconButton(if (state.trace) "Close full conversation" else "Close thread", Glyph.Close, ::back)
-                }
-                HorizontalDivider(thickness = .5.dp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = .08f))
-            } else {
-                CodyncTopBar(title = {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        BotAvatar(bot, state.bots, 32.dp)
-                        Column {
-                            Text(if (state.trace) "Full conversation" else bot.name,
-                                style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(if (state.connection is LinkState.Ready) bot.activity.ifBlank { "Connected" } else connectionLabel(state.connection),
-                                style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        }
-                    }
-                }, leading = {
-                    CodyncIconButton("Back", Glyph.Back, ::back)
-                }, trailing = {
-                    Row {
-                        if (bot.status in listOf("working", "needsInput")) CodyncIconButton("Stop", Glyph.Stop,
-                            { store.command("stop", body("botId" to bot.id)) }, enabled = "stop" !in state.busy)
-                        Box {
-                            CodyncIconButton("Conversation actions", Glyph.More, { menu = !menu })
-                            CodyncPopupMenu(menu, { menu = false }) {
-                                MenuAction("Edit") { menu = false; edit(bot) }
-                                MenuAction(if (state.trace) "Chat" else "Full conversation") { menu = false; store.showTrace(!state.trace) }
-                                if (bot.kind != "group") {
-                                    MenuAction("Routines") { menu = false; showRoutines = true }
-                                    MenuAction("New session") { menu = false; confirm = "New session" }
-                                }
-                            }
-                        }
-                    }
-                })
-            }
-            if (state.connection !is LinkState.Ready) Text(when (val link = state.connection) {
-                LinkState.Connecting -> "Connecting…"
-                is LinkState.ComputerOffline -> "Computer offline · text can wait in the relay"
-                is LinkState.Failed -> link.message
-            }, Modifier.padding(horizontal = 16.dp, vertical = 4.dp), style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
-            state.error?.let { InlineError(it, store::clearError) }
-            if (thread == null) state.voice?.let { VoiceControls(it, state, store) }
-            AnimatedContent(confirm, label = "confirmation") { action ->
-                if (action != null) Column {
-                    Text("Start a new agent session? Your conversation history is kept.")
-                    Row { TextButton(onClick = { confirm = null; store.command("newSession", body("botId" to bot.id)) }) { Text("New session") }
-                        TextButton(onClick = { confirm = null }) { Text("Cancel") } }
-                }
-            }
-            LazyColumn(Modifier.fillMaxWidth().weight(1f).nestedScroll(scrolling)
-                .onGloballyPositioned { messageViewport = it.boundsInWindow() }, state = list,
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp, if (thread == null) Alignment.Bottom else Alignment.Top)) {
-                item {
-                    if (thread != null && !state.trace) Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        if (root != null) EntryRow(root, state, store, messageViewport,
-                            { id, app -> setupEntry = id; appName = app.name; appSlug = app.slug },
-                            { id, item -> setupEntry = id; connectorItem = item })
-                        else Text("The original message is not available in the saved history.",
-                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Text(if ("thread:$thread" in state.busy && entries.isEmpty()) "Loading replies…"
-                                else if (entries.isEmpty()) "No replies yet" else if (entries.size == 1) "1 reply" else "${entries.size} replies",
-                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            HorizontalDivider(Modifier.weight(1f), color = MaterialTheme.colorScheme.onSurface.copy(alpha = .08f))
-                        }
-                    }
-                    if (bot.id !in state.historyComplete && (thread == null || root == null)) TextButton(
-                    enabled = "history" !in state.busy, onClick = store::loadHistory) { Text(if ("history" in state.busy) "Loading…" else "Older messages") } }
-                itemsIndexed(entries, key = { _, entry -> entry.id }) { index, entry ->
-                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        if (thread == null && entry.createdAt > 0 && (index == 0 || entry.createdAt - entries[index - 1].createdAt > 3_600_000))
-                            Text(conversationDate(entry.createdAt), Modifier.fillMaxWidth().padding(top = 18.dp, bottom = 6.dp),
-                                textAlign = androidx.compose.ui.text.style.TextAlign.Center, style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = .7f))
-                        EntryRow(entry, state, store, messageViewport,
-                            { id, app -> setupEntry = id; appName = app.name; appSlug = app.slug },
-                            { id, item -> setupEntry = id; connectorItem = item })
-                    }
-                }
-                items(pending, key = { "local-" + it.nonce }) { send -> PendingRow(send, state, store) }
-                item { if (thread == null && entries.isEmpty() && pending.isEmpty()) Text("Start a conversation", color = MaterialTheme.colorScheme.onSurfaceVariant) }
-            }
-            if (!following && !atBottom) TextButton(onClick = { following = true; scope.launch { list.animateScrollToItem(entries.size + pending.size) } }) { Text("Latest messages") }
-            if (!state.trace) key(bot.id, state.thread) { Box(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) { MessageComposer(bot, state, store) } }
-        }
-    }
+    key(state.contextId, state.generation, bot.id) { ThreadView(bot, state, store, edit) }
 }
 
-@Composable private fun EntryRow(entry: Entry, state: AppState, store: AppStore, viewport: Rect,
-    openApp: (String, ComposioApp) -> Unit, install: (String, MarketConnector) -> Unit) {
-    entry.botMessage?.let { message ->
-        BotMessageRow(entry, message, showReply = !entry.hasRecipientReply(state.entries))
-        return
-    }
-    val user = entry.kind == "user"
-    val notice = entry.kind == "notice"
-    val botReply = entry.isRecipientReply(state.entries)
-    val actionable = entry.isChat && entry.kind != "permission"
+@Composable private fun ThreadView(bot: Bot, state: AppState, store: AppStore, edit: (Bot) -> Unit) {
     val context = LocalContext.current
-    val reactions = entry.data["reactions"]?.jsonArray?.map { it.jsonPrimitive.content }.orEmpty()
-    Box(Modifier.fillMaxWidth().padding(start = if (user) 48.dp else 0.dp, end = if (user || notice) 0.dp else 24.dp),
-        contentAlignment = if (user) Alignment.CenterEnd else if (notice) Alignment.Center else Alignment.CenterStart) {
-        key(state.contextId, state.generation, state.thread, state.trace, entry.id) {
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            if (botReply) Text("Reply from " + (state.bots.firstOrNull { it.id == entry.botId }?.name ?: "Bot"),
-                Modifier.padding(start = 14.dp), style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
-            MessageActionBubble(viewport, enabled = actionable, reactions = reactions, reacting = "react:" + entry.id in state.busy,
-                react = { emoji -> store.command("react", body("entryId" to entry.id, "emoji" to emoji), "react:" + entry.id) },
-                reply = if (state.thread == null && entry.threadId == null) ({ store.openBot(entry.botId, entry.id) }) else null,
-                trace = if (entry.kind == "agent") ({ store.showTrace(true) }) else null,
-                copy = { context.getSystemService(android.content.ClipboardManager::class.java)
-                    .setPrimaryClip(android.content.ClipData.newPlainText("Message", entry.text)) },
-                modifier = Modifier.widthIn(max = 680.dp)
-                .background(if (notice) androidx.compose.ui.graphics.Color.Transparent else if (user) MaterialTheme.colorScheme.surfaceContainerHighest
-                    else if (botReply) botMessageBackground else MaterialTheme.colorScheme.surfaceContainer,
-                    androidx.compose.foundation.shape.RoundedCornerShape(18.dp)),
-                padding = if (notice) 6.dp else 14.dp) {
-                val author = entry.data["author"]?.jsonPrimitive?.contentOrNull
-                val group = state.bots.firstOrNull { it.id == entry.botId }?.kind == "group"
-                val label = if (user) null else if (group) author?.let { id -> state.bots.firstOrNull { it.id == id }?.name ?: "A deleted bot" }
-                    else if (state.trace) entry.kind else null
-                label?.let { Text(it, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-                if (entry.data["connectionRequest"] is JsonObject) ConnectionRequestCard(entry, state, store, openApp, install)
-                else if (entry.kind == "permission") PermissionRow(entry, state, store)
-                else if (entry.kind == "notice" && entry.data["callSeconds"]?.jsonPrimitive?.longOrNull != null)
-                    Text("Voice chat · " + callDuration(requireNotNull(entry.data["callSeconds"]?.jsonPrimitive?.longOrNull)))
-                else if (entry.kind in listOf("user", "agent", "notice")) MarkdownText(entry.text, selectable = !actionable)
-                else {
-                    Text(entry.data["title"]?.jsonPrimitive?.contentOrNull ?: entry.kind)
-                    if (entry.text.isNotBlank()) MarkdownText(entry.text)
-                    entry.data["output"]?.jsonPrimitive?.contentOrNull?.let { CodeText(it) }
-                    if (entry.text.isBlank() && entry.data["output"] == null) CodeText(entry.data.toString())
+    var confirmNewSession by remember { mutableStateOf(false) }
+    var confirmDelete by remember { mutableStateOf(false) }
+    var routines by remember { mutableStateOf(false) }
+    var micDenied by remember { mutableStateOf(false) }
+    var setupEntry by rememberSaveable { mutableStateOf<String?>(null) }
+    var app by remember { mutableStateOf<ComposioApp?>(null) }
+    var connector by remember { mutableStateOf<MarketConnector?>(null) }
+    val connect = ConnectionRequestActions({ id, item -> setupEntry = id; app = item }, { id, item -> setupEntry = id; connector = item })
+    val startCall = rememberStartVoice(bot.id, state, store) { micDenied = true }
+    val top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    var composerHeight by remember { mutableIntStateOf(0) }
+    val density = LocalDensity.current
+    // The main chat ignores an open thread: it stays put underneath.
+    val chatState = state.copy(thread = null, trace = false)
+    GlassStage(Modifier.fillMaxSize().background(Palette.background), chrome = {
+        Box(Modifier.fillMaxWidth().height(top + 64.dp).background(Brush.verticalGradient(
+            0f to Palette.background, 0.55f to Palette.background.copy(alpha = 0.85f), 1f to Color.Transparent)))
+        ThreadHeader(bot, state, store, edit, { store.showTrace(true) }, { routines = true }, { confirmNewSession = true }, { confirmDelete = true })
+        Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().imePadding().navigationBarsPadding()
+            .onSizeChanged { composerHeight = it.height }) {
+            state.voice?.let { call -> Box(Modifier.padding(horizontal = 16.dp)) { VoiceControls(call, state, store) } }
+            MessageComposer(bot, null, chatState, store, onCall = if (state.voice == null && state.actualConnection is LinkState.Ready) startCall else null)
+        }
+    }) {
+        Transcript(bot, chatState, store, connect, PaddingValues(start = 16.dp, end = 16.dp, top = top + 60.dp,
+            bottom = with(density) { composerHeight.toDp() } + 8.dp))
+    }
+    CodyncDialog("Start a new session?", confirmNewSession, { confirmNewSession = false },
+        message = "The conversation stays here, but the agent starts with a fresh context.") {
+        listOf(DialogAction("New session") { store.command("newSession", body("botId" to bot.id)) })
+    }
+    CodyncDialog("Delete ${bot.name}?", confirmDelete, { confirmDelete = false },
+        message = if (bot.kind == "group") "Its bots and their own chats stay." else "Files it changed on your computer stay as they are.") {
+        listOf(DialogAction(if (bot.kind == "group") "Delete group chat" else "Delete bot and its conversation", destructive = true) {
+            store.deleteBot(bot) { store.openBot(null) }
+        })
+    }
+    CodyncDialog("Microphone access is off", micDenied, { micDenied = false },
+        message = "Allow the microphone in Android settings to talk to your bot.") {
+        listOf(DialogAction("Open settings") { openAppSettings(context) })
+    }
+    // A thread over the chat, and "Full conversation" over either.
+    CodyncSheet(state.thread, { store.openBot(bot.id) }) { root -> RepliesView(bot, root, state, store, connect) }
+    CodyncSheet(state.trace, { store.showTrace(false) }) { TraceView(bot, state.thread, state) }
+    CodyncSheet(routines, { routines = false }) { RoutinesScreen(bot, state, store) { routines = false } }
+    CodyncSheet(app, { app = null; setupEntry = null }) { AppConnectScreen(it, state, store, { app = null; setupEntry = null }, setupEntry) }
+    CodyncSheet(connector, { connector = null; setupEntry = null }) {
+        ConnectorInstaller(it, state, store, requestId = setupEntry) { connector = null; setupEntry = null }
+    }
+}
+
+/** The glass back button, the title (its menu holds the bot's actions) and the connection under it. */
+@Composable private fun ThreadHeader(bot: Bot, state: AppState, store: AppStore, edit: (Bot) -> Unit, trace: () -> Unit,
+    routines: () -> Unit, newSession: () -> Unit, delete: () -> Unit) {
+    Box(Modifier.fillMaxWidth().statusBarsPadding().padding(top = 6.dp).padding(horizontal = 16.dp).height(44.dp)) {
+        val (source, pressed) = rememberPress()
+        Box(Modifier.align(Alignment.CenterStart).size(44.dp).glass(Capsule(), pressed = pressed)
+            .then(Modifier.plainButton { store.openBot(null) }).semantics { contentDescription = "Back" }, contentAlignment = Alignment.Center) {
+            Symbol("chevron.left", size = 32.dp, tint = Palette.text)
+        }
+        val host = state.computers.firstOrNull()?.name.orEmpty()
+        DropdownMenu({ buildList {
+            add(MenuItem("$host · ${connectionLabel(state)}", enabled = false))
+            add(MenuItem("Reconnect", icon = "arrow.clockwise") { store.connect() })
+            add(MenuItem("Details", icon = "info.circle", divider = true) { edit(bot) })
+            add(MenuItem("Full conversation", icon = "list.bullet.rectangle", action = trace))
+            val pin = MenuItem(if (bot.pinned) "Unpin" else "Pin", icon = "pin") {
+                store.command("updateBot", kotlinx.serialization.json.buildJsonObject {
+                    put("id", kotlinx.serialization.json.JsonPrimitive(bot.id)); put("pinned", kotlinx.serialization.json.JsonPrimitive(!bot.pinned))
+                }, "roster:" + bot.id)
+            }
+            if (bot.kind == "group") {
+                add(MenuItem("Edit group", icon = "person.2") { edit(bot) }); add(pin)
+                add(MenuItem("Delete group", icon = "trash", destructive = true, divider = true, action = delete))
+            } else {
+                add(MenuItem("Edit profile", icon = "pencil") { edit(bot) }); add(pin)
+                add(MenuItem("Routines", icon = "clock.arrow.circlepath", action = routines))
+                add(MenuItem("New session", icon = "arrow.counterclockwise", action = newSession))
+                add(MenuItem("Delete bot", icon = "trash", destructive = true, divider = true, action = delete))
+            }
+        } }, Modifier.align(Alignment.Center), label = "${bot.name} actions") {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                    BotAvatar(bot, state.bots, 22.dp)
+                    Text(bot.name, style = Type.system(13f).semibold, color = Palette.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
-                val attachments = entry.data["attachments"]?.jsonArray?.map { WireJson.decodeFromJsonElement<Attachment>(it) }.orEmpty()
-                for (file in attachments) AttachmentRow(entry.botId, file, state, store)
-                if (entry.isChat && entry.kind != "permission") {
-                    if (reactions.isNotEmpty()) Text(reactions.joinToString(" "))
-                    if (state.thread == null && entry.threadId == null) {
-                        val count = entry.data["thread"]?.jsonObject?.get("count")?.jsonPrimitive?.intOrNull ?: 0
-                        if (count > 0) TextButton(onClick = { store.openBot(entry.botId, entry.id) }) { Text("$count replies") }
+                ConnectionSubtitle(state)
+            }
+        }
+    }
+}
+
+/** The link to the computer: route icon (or a spinner) and a word. */
+@Composable private fun ConnectionSubtitle(state: AppState) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Box(Modifier.width(12.dp), contentAlignment = Alignment.Center) {
+            when (val link = state.connection) {
+                LinkState.Connecting -> Spinner(8.dp)
+                is LinkState.Ready -> Symbol(if (link.route == HostRoute.Relay) "cloud" else "wifi", size = 11.dp, tint = Palette.secondary)
+                else -> Symbol("wifi.slash", size = 11.dp, tint = Palette.secondary)
+            }
+        }
+        Text(connectionLabel(state), style = Type.system(10f).medium, color = Palette.secondary, maxLines = 1)
+    }
+}
+
+/** The messages: all this phone has, earlier ones from the computer near the top, following the newest. */
+@Composable private fun Transcript(bot: Bot, state: AppState, store: AppStore, connect: ConnectionRequestActions, padding: PaddingValues) {
+    val entries = state.entries.filter { it.botId == bot.id && it.threadId == null && it.isChat }
+    val pending = state.pending.filter { it.botId == bot.id && it.threadId == null }
+    val items = chatItems(entries, pending)
+    val working = bot.status in listOf("working", "needsInput") && bot.workingThread == null && state.connection is LinkState.Ready
+    val list = rememberLazyListState()
+    val more = bot.id !in state.historyComplete
+    Follow(list, items.lastOrNull()?.id, entries.lastOrNull()?.rev, working)
+    LazyColumn(Modifier.fillMaxSize(), state = list, contentPadding = padding) {
+        if (more) item("earlier") {
+            Box(Modifier.fillMaxWidth().padding(vertical = 14.dp), contentAlignment = Alignment.Center) { Spinner(14.dp) }
+            // A chat shorter than the screen never scrolls, so showing the row is the trigger.
+            LaunchedEffect(Unit) { if ("history" !in state.busy) store.loadHistory() }
+        }
+        if (items.isEmpty() && !more) item("intro") { IntroCard(bot, state) }
+        items(items, key = { it.id }) { item ->
+            when (item) {
+                is ChatItem.Separator -> TimeSeparator(item.at)
+                is ChatItem.Message -> ChatRow(item.entry, item.groupStart, bot, state, store, openTrace = { store.showTrace(true) },
+                    reply = { store.openBot(bot.id, item.entry.id) }, connect = connect)
+                is ChatItem.Pending -> PendingBubble(item.send, item.groupStart, state, store)
+            }
+        }
+        if (working) item("working") { WorkingIndicator(bot, currentThinking(state.entries, bot.id, null)) }
+    }
+}
+
+/** Stays on the newest message until the reader scrolls away; scrolling back down follows again. */
+@Composable private fun Follow(list: LazyListState, last: String?, rev: Long?, working: Boolean) {
+    var following by remember { mutableStateOf(true) }
+    LaunchedEffect(list) {
+        snapshotFlow { list.isScrollInProgress to list.canScrollForward }.distinctUntilChanged().collect { (scrolling, more) ->
+            if (!scrolling) following = !more
+        }
+    }
+    LaunchedEffect(Unit) {
+        val count = snapshotFlow { list.layoutInfo.totalItemsCount }.first { it > 0 }
+        list.scrollToItem(count - 1, Int.MAX_VALUE)
+    }
+    LaunchedEffect(last, rev, working) {
+        val count = list.layoutInfo.totalItemsCount
+        if (!following || count == 0) return@LaunchedEffect
+        list.animateScrollToItem(count - 1)
+        list.scrollToItem(count - 1, Int.MAX_VALUE)
+    }
+}
+
+/** A thread: the message it started on, its replies, and a box to continue there. */
+@Composable private fun RepliesView(bot: Bot, rootId: String, state: AppState, store: AppStore, connect: ConnectionRequestActions) {
+    val root = state.entries.firstOrNull { it.botId == bot.id && it.id == rootId }
+    val replies = state.entries.filter { it.botId == bot.id && it.threadId == rootId && it.isChat }
+    val pending = state.pending.filter { it.botId == bot.id && it.threadId == rootId }
+    val working = bot.status in listOf("working", "needsInput") && bot.workingThread == rootId && state.connection is LinkState.Ready
+    var composerHeight by remember { mutableIntStateOf(0) }
+    val density = LocalDensity.current
+    val dismiss = LocalDismissModal.current
+    Box(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize()) {
+            Row(Modifier.fillMaxWidth().height(56.dp).padding(start = 20.dp, end = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Thread", style = Type.body.semibold, color = Palette.text)
+                    Text(bot.name, style = Type.caption, color = Palette.tertiary, maxLines = 1)
+                }
+                IconButton("Close thread", "xmark", action = dismiss)
+            }
+            Box(Modifier.fillMaxWidth().height(0.5.dp).background(Palette.border))
+            val list = rememberLazyListState()
+            val items = chatItems(replies, pending)
+            Follow(list, items.lastOrNull()?.id, replies.lastOrNull()?.rev, working)
+            LazyColumn(Modifier.weight(1f), state = list, contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp,
+                bottom = with(density) { composerHeight.toDp() } + 8.dp)) {
+                if (root != null) {
+                    item("root") { ChatRow(root, true, bot, state, store, openTrace = { store.showTrace(true) }, reply = null, connect = connect) }
+                    item("count") {
+                        val count = (root.data["thread"] as? kotlinx.serialization.json.JsonObject)?.get("count")
+                            ?.let { (it as? kotlinx.serialization.json.JsonPrimitive)?.content?.toIntOrNull() } ?: 0
+                        Row(Modifier.padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Text(if (count == 0) "No replies yet" else if (count == 1) "1 reply" else "$count replies", style = Type.caption, color = Palette.tertiary)
+                            Box(Modifier.weight(1f).height(1.dp).background(Palette.border))
+                        }
                     }
                 }
+                items(items.filter { it !is ChatItem.Separator }, key = { it.id }) { item ->
+                    when (item) {
+                        is ChatItem.Message -> ChatRow(item.entry, item.groupStart, bot, state, store, openTrace = { store.showTrace(true) }, reply = null, connect = connect)
+                        is ChatItem.Pending -> PendingBubble(item.send, item.groupStart, state, store)
+                        is ChatItem.Separator -> {}
+                    }
+                }
+                if (working) item("working") { WorkingIndicator(bot, currentThinking(state.entries, bot.id, rootId)) }
             }
-            }
+        }
+        Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().onSizeChanged { composerHeight = it.height }) {
+            MessageComposer(bot, rootId, state, store, onCall = null)
         }
     }
-}
-
-@Composable private fun BotMessageRow(entry: Entry, message: BotMessage, showReply: Boolean = true) {
-    Column(Modifier.fillMaxWidth().padding(end = 24.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        BotMessageBubble(message.label, message.body)
-        if (message.detail.isNotEmpty()) SelectionContainer {
-            Text(message.detail, Modifier.padding(start = 14.dp), style = MaterialTheme.typography.bodySmall,
-                color = if (entry.data["style"]?.jsonPrimitive?.contentOrNull == "error") MaterialTheme.colorScheme.error
-                    else MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        if (showReply) message.reply?.let { reply -> BotMessageBubble(reply.label, reply.body) }
-    }
-}
-
-@Composable private fun BotMessageBubble(label: String, text: String) {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(label, Modifier.padding(start = 14.dp), style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Column(Modifier.widthIn(max = 680.dp)
-            .background(botMessageBackground, androidx.compose.foundation.shape.RoundedCornerShape(22.dp))
-            .padding(14.dp)) { MarkdownText(text) }
-    }
-}
-
-@Composable private fun PermissionRow(entry: Entry, state: AppState, store: AppStore) {
-    var expanded by remember { mutableStateOf(false) }
-    val data = entry.data
-    Text(data["title"]?.jsonPrimitive?.contentOrNull ?: "Wants to use a tool", style = MaterialTheme.typography.titleMedium)
-    Text("Runs on " + state.computers.firstOrNull()?.name.orEmpty(), style = MaterialTheme.typography.bodySmall)
-    TextButton(onClick = { expanded = !expanded }) { Text("Details") }
-    AnimatedContent(expanded, label = "permission details") { show -> if (show) SelectionContainer {
-        CodeText(listOfNotNull(data["command"]?.jsonPrimitive?.contentOrNull, data["detail"]?.jsonPrimitive?.contentOrNull,
-            data["diffs"]?.toString()).joinToString("\n"))
-    } }
-    if (entry.status == "pending") {
-        val busy = "permission:" + entry.id in state.busy
-        val rank = mapOf("allow_once" to 0, "allow_always" to 1, "reject_once" to 2, "reject_always" to 3)
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        for (option in data["options"]?.jsonArray.orEmpty().sortedBy { rank[it.jsonObject["kind"]?.jsonPrimitive?.content] ?: 9 }) {
-            val value = option.jsonObject
-            val id = value.getValue("optionId").jsonPrimitive.content
-            val label = when (value["kind"]?.jsonPrimitive?.content) {
-                "allow_once" -> "Allow once"
-                "allow_always" -> "Always allow"
-                "reject_once" -> "Deny"
-                "reject_always" -> "Never"
-                else -> value["name"]?.jsonPrimitive?.content ?: "Respond"
-            }
-            Button(enabled = !busy, onClick = { store.respond(entry, id) }) { Text(if (busy) "Answering…" else label) }
-        }
-        }
-    } else Text(when (entry.status) { "answered" -> "Answered"; "cancelled" -> "Cancelled"; else -> "Expired — the agent moved on" })
-}
-
-@Composable private fun PendingRow(send: PendingSend, state: AppState, store: AppStore) {
-    Box(Modifier.fillMaxWidth().padding(start = 48.dp), contentAlignment = Alignment.CenterEnd) {
-    Column(Modifier.widthIn(max = 680.dp).background(MaterialTheme.colorScheme.surfaceContainerHighest,
-        androidx.compose.foundation.shape.RoundedCornerShape(18.dp)).padding(14.dp)) {
-        SelectionContainer { Text(send.text) }
-        send.files.forEach { Text(it.name + " · " + formatBytes(it.size)) }
-        Text(when (send.status) {
-            SendStatus.Sending -> state.uploadProgress[send.nonce]?.let { "Uploading files · $it%" } ?: "Sending…"
-            SendStatus.Waiting -> "Waiting for the computer"
-            SendStatus.Delivering -> "Delivery in progress"
-            SendStatus.Failed -> send.error ?: "Failed to send"
-        }, style = MaterialTheme.typography.bodySmall)
-        Row {
-            if (send.status == SendStatus.Failed) {
-                TextButton(enabled = "send:" + send.nonce !in state.busy, onClick = { store.retry(send) }) { Text("Resend") }
-                TextButton(onClick = { store.discard(send) }) { Text("Discard") }
-            } else if (send.status == SendStatus.Waiting) TextButton(enabled = "cancel:" + send.nonce !in state.busy,
-                onClick = { store.cancelQueued(send) }) { Text("Take back") }
-        }
-    }
-    }
-}
-
-private fun conversationDate(milliseconds: Long): String {
-    val date = Instant.ofEpochMilli(milliseconds).atZone(ZoneId.systemDefault()).toLocalDate()
-    val today = LocalDate.now()
-    val day = when (date) {
-        today -> "Today"
-        today.minusDays(1) -> "Yesterday"
-        else -> DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(milliseconds))
-    }
-    return day + " " + DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(milliseconds))
 }
