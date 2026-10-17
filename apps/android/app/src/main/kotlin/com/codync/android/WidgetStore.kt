@@ -59,6 +59,13 @@ internal object WidgetStore {
     }
     fun provider(context: Context, widget: Int): String = context.getSharedPreferences("codync-widgets", Context.MODE_PRIVATE)
         .getString("provider:$widget", "claude") ?: "claude"
+    /** Usage shows each provider as a character, or as its own logo ("Choose the look"), in the app and its widgets. */
+    fun originalIcons(context: Context): Boolean = context.getSharedPreferences("codync-widgets", Context.MODE_PRIVATE).getBoolean("originalIcons", false)
+    @Synchronized fun setOriginalIcons(context: Context, on: Boolean) {
+        check(context.getSharedPreferences("codync-widgets", Context.MODE_PRIVATE).edit().putBoolean("originalIcons", on).commit())
+        changed()
+    }
+
     /** The Team widget's chosen bot per spot; empty spots fill themselves. */
     @Synchronized fun selectTeam(context: Context, widget: Int, picks: List<String?>) {
         require(picks.size == 4 && picks.all { it == null || it.length <= 128 && it.none(Char::isISOControl) })

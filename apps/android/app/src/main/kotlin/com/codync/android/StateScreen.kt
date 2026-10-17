@@ -33,6 +33,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -186,6 +187,14 @@ internal fun openNotificationSettings(context: Context) = context.startActivity(
                 }, style = Type.caption, color = Palette.secondary)
             }
         }
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        SectionLabel("Choose the look")
+        val revision by WidgetStore.changes.collectAsState()
+        val original = remember(revision) { WidgetStore.originalIcons(context) }
+        SegmentedChoice(original, listOf(false to "Character", true to "Original icon"), { WidgetStore.setOriginalIcons(context, it) })
+        Text("Applies to Usage in the app and in widgets.", style = Type.caption, color = Palette.secondary)
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {

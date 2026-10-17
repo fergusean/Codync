@@ -17,6 +17,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -43,6 +46,9 @@ import kotlin.math.roundToInt
 enum class ProviderLayout { Small, Medium, Large }
 
 /** Claude keeps its orange; everyone else is ink, like the rest of the app. */
+/** ACP registry id of the provider's agent, for its logo: Claude and Codex run through ACP adapters. */
+internal val UsageProvider.registry: String get() = if (id in listOf("claude", "codex")) "$id-acp" else id
+
 @Composable internal fun UsageProvider.tint(): Color = if (id == "claude") Color(0xFFD97757) else Palette.accent
 
 /** Gauges add Codex's blue so two providers' bars tell apart (CodyncKit `widgetTint`). */
@@ -72,8 +78,14 @@ internal fun until(at: Long, now: Long): String {
 /** A provider's character, with a red "!" once any of its limits is nearly used up. */
 @Composable internal fun ProviderMascot(provider: UsageProvider, size: Dp) {
     val full = (provider.tightest?.percent ?: 0.0) >= 90
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val revision by WidgetStore.changes.collectAsState()
+    val original = remember(revision) { WidgetStore.originalIcons(context) }
+    val logo = agentIconRes(provider.registry)
     Box(Modifier.size(size)) {
-        CharacterAvatar(if (provider.id == "codex") "hex" else "blob", "gray", size, if (full) "needsInput" else "idle", highlight = provider.tint())
+        if (original && logo != null) androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(logo), null,
+            Modifier.fillMaxSize().padding(size * 0.08f), colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(provider.tint()))
+        else CharacterAvatar(if (provider.id == "codex") "hex" else "blob", "gray", size, if (full) "needsInput" else "idle", highlight = provider.tint())
         if (full) Box(Modifier.align(Alignment.TopEnd).offset(x = size * 0.12f, y = -size * 0.12f).size(size * 0.34f).clip(Capsule())
             .background(Palette.danger), contentAlignment = Alignment.Center) {
             Text("!", style = Type.system(size.value * 0.24f, FontWeight.Black), color = Color.White)
