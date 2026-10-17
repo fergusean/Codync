@@ -166,7 +166,7 @@ private val JsonObject.curated get() = this["curated"]?.jsonPrimitive?.booleanOr
             draft.connectors ?: plugins?.connectors.orEmpty().map { it.id }, { change(draft.copy(connectors = it)) })
         PluginToggles("Skills", "No skills yet. Get some from Extensions, or write your own.",
             plugins?.skills.orEmpty().map { Triple(it.id, it.name, it.description) }, draft.skills, { change(draft.copy(skills = it)) })
-        draft.id?.let { MemoryCard(it, state, store) }
+        draft.id?.let { MemoryCard(it, store) }
         state.error?.let { Text(it, style = Type.footnote, color = Palette.danger) }
     }
 }

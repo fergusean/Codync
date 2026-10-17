@@ -46,7 +46,6 @@ data class AppState(
     val trace: Boolean = false,
     val busy: Set<String> = emptySet(),
     val historyComplete: Set<String> = emptySet(),
-    val memories: Map<String, MemoryListing> = emptyMap(),
     val routines: Map<String, RoutineListing> = emptyMap(),
     val plugins: PluginListing? = null,
     val voice: VoiceCallViewState? = null,
@@ -868,26 +867,15 @@ class AppStore(application: Application) : AndroidViewModel(application) {
     fun deleteBot(bot: Bot, onDeleted: () -> Unit) = action("delete:" + bot.id) {
         val active = ready()
         active.call("deleteBot", body("botId" to bot.id))
-        mutableState.update { it.copy(selectedBot = it.selectedBot.takeUnless { id -> id == bot.id }, memories = it.memories - bot.id,
+        mutableState.update { it.copy(selectedBot = it.selectedBot.takeUnless { id -> id == bot.id },
             drafts = it.drafts.filterValues { draft -> draft.botId != bot.id }) }
         persistDrafts()
         onDeleted()
     }
 
-    fun loadMemory(botId: String) = action("memory:" + botId) { receiveMemory(botId) }
-    fun forgetMemory(botId: String, factId: String? = null) = action("memory:" + botId) {
-        val active = ready()
-        active.call(if (factId == null) "clearMemory" else "forgetMemory", buildJsonObject {
-            put("botId", botId); factId?.let { put("id", it) }
-        })
-        receiveMemory(botId)
-    }
-    private suspend fun receiveMemory(botId: String) {
-        val active = ready()
-        val response = active.call("memory", body("botId" to botId))
-        val memory = MemoryListing.decode(response)
-        mutableState.update { it.copy(memories = it.memories + (botId to memory)) }
-    }
+    /** A host call for the screens that keep their own state (memory): waits for the connection first. */
+    internal suspend fun hostCall(method: String, body: JsonObject, timeoutMillis: Long = 240_000): JsonElement = ready().call(method, body, timeoutMillis)
+    internal suspend fun hostFiles(): HostFiles = HostFiles(ready())
 
     fun loadRoutines(botId: String) = action("routines:$botId") { receiveRoutines(botId) }
     fun refreshUsage(force: Boolean = true) = action("usage") {

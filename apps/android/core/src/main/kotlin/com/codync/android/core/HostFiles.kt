@@ -62,5 +62,37 @@ class HostFiles(private val call: suspend (String, JsonObject, Long) -> JsonElem
         } finally { partial.delete() }
     }
 
+    /** A small text file the host prepared (a memory export), read chunk by chunk. */
+    suspend fun readText(botId: String, id: String): String {
+        val bytes = java.io.ByteArrayOutputStream()
+        var offset = 0L
+        do {
+            val result = call("readUpload", buildJsonObject { put("botId", botId); put("uploadId", id); put("offset", offset) }, 60_000).jsonObject
+            val size = result.getValue("size").jsonPrimitive.long
+            val chunk = Base64.getDecoder().decode(result.getValue("data").jsonPrimitive.content)
+            require(size in 0..MAX_FILE_BYTES && chunk.size <= CHUNK_BYTES && offset + chunk.size <= size && (chunk.isNotEmpty() || size == 0L)) {
+                "The computer returned an invalid file chunk."
+            }
+            bytes.write(chunk)
+            offset += chunk.size
+        } while (offset < size)
+        return bytes.toString(Charsets.UTF_8)
+    }
+
+    /** Text too big for one call (a memory backup), sent as an upload. */
+    suspend fun uploadText(botId: String, id: String, name: String, text: String) {
+        val data = text.toByteArray()
+        require(data.size <= MAX_FILE_BYTES) { "This backup is too large." }
+        var offset = 0
+        do {
+            val end = minOf(offset + CHUNK_BYTES, data.size)
+            call("upload", buildJsonObject {
+                put("botId", botId); put("uploadId", id); put("name", name); put("offset", offset)
+                put("data", Base64.getEncoder().encodeToString(data.copyOfRange(offset, end))); put("done", end == data.size)
+            }, 60_000)
+            offset = end
+        } while (offset < data.size)
+    }
+
     companion object { const val CHUNK_BYTES = 384 * 1024 }
 }
