@@ -16,8 +16,8 @@ use std::sync::{Arc, Mutex};
 #[derive(Clone, Debug)]
 pub(super) struct Turn {
     bot: String,
-    /// When it began, Unix ms; also its id.
-    start: i64,
+    /// A turn's identity is independent of the clock and other turns starting in the same millisecond.
+    id: String,
     /// The session it runs in: what of its changes was put back is told there.
     pub(super) session: String,
     /// As in `Runtime::message`: only then may the bot change or take out what memory says.
@@ -37,7 +37,7 @@ pub fn begin_turn(bot: &str, session: &str, message: Option<String>) {
     turns.retain(|t| t.bot != bot || t.ended.is_some());
     turns.push(Turn {
         bot: bot.to_owned(),
-        start: crate::store::now_ms(),
+        id: uuid::Uuid::new_v4().to_string(),
         session: session.to_owned(),
         message,
         ended: None,
@@ -50,21 +50,21 @@ pub fn drop_turn(bot: &str) {
     TURNS.locked().retain(|t| t.bot != bot || t.ended.is_some());
 }
 
-/// Notes that the bot's running turn ran a tool that can write files; the turn's start.
-fn wrote(bot: &str) -> Option<i64> {
+/// Notes that the bot's running turn ran a tool that can write files; its unique id.
+fn wrote(bot: &str) -> Option<String> {
     let mut turns = TURNS.locked();
     let turn = turns.iter_mut().find(|t| t.bot == bot && t.ended.is_none())?;
     turn.wrote = true;
-    Some(turn.start)
+    Some(turn.id.clone())
 }
 
 /// The tool call of a bot that last touched a memory file, and in which turn, so the scan credits the change to it.
 #[derive(Serialize, Deserialize)]
 struct Touch {
     bot: String,
-    /// The [`Turn::start`] of the turn it was made in.
+    /// The [`Turn::id`] of the turn it was made in. Old numeric tokens cannot name a live turn after restart.
     #[serde(default)]
-    turn: i64,
+    turn: String,
 }
 
 /// Notes the memory files a tool call names (its `locations` and diffs), so the scan knows which bot changed them,
@@ -93,7 +93,7 @@ pub fn touched(hub: &Hub, cfg: &BotConfig, tool: &serde_json::Value) {
             Some((layer, parts?.join("/"))).filter(|(_, name)| mf::valid_name(name))
         });
         let Some((layer, name)) = named else { continue };
-        let touch = Touch { bot: cfg.id.clone(), turn };
+        let touch = Touch { bot: cfg.id.clone(), turn: turn.clone() };
         let value = serde_json::to_string(&touch).expect("a touch is plain data");
         if let Err(error) = hub.store.kv_set(&touch_key(layer.as_deref(), &name), &value) {
             tracing::warn!(error = format!("{error:#}"), "couldn't note a memory file edit");
@@ -108,11 +108,7 @@ fn touch_key(layer: Option<&str>, name: &str) -> String {
 /// At the end of a turn: the bot's edits usually come right before its reply, so a file still settling is taken
 /// once it has. The turn stays the bot's until then.
 pub fn scan_after_turn(hub: Arc<Hub>, cfg: BotConfig) {
-    let mut start = None;
-    for turn in TURNS.locked().iter_mut().filter(|t| t.bot == cfg.id && t.ended.is_none()) {
-        turn.ended = Some(crate::store::now_ms());
-        start = Some(turn.start);
-    }
+    let id = end_turn(&cfg.id);
     tokio::spawn(async move {
         let (h, c) = (hub.clone(), cfg.clone());
         if tokio::task::spawn_blocking(move || files::scan(&h, &c)).await.unwrap_or(false) {
@@ -120,8 +116,21 @@ pub fn scan_after_turn(hub: Arc<Hub>, cfg: BotConfig) {
             let c = cfg.clone();
             let _ = tokio::task::spawn_blocking(move || files::scan(&hub, &c)).await;
         }
-        TURNS.locked().retain(|t| t.bot != cfg.id || Some(t.start) != start);
+        forget_turn(&cfg.id, id.as_deref());
     });
+}
+
+fn end_turn(bot: &str) -> Option<String> {
+    let mut id = None;
+    for turn in TURNS.locked().iter_mut().filter(|t| t.bot == bot && t.ended.is_none()) {
+        turn.ended = Some(crate::store::now_ms());
+        id = Some(turn.id.clone());
+    }
+    id
+}
+
+fn forget_turn(bot: &str, id: Option<&str>) {
+    TURNS.locked().retain(|t| t.bot != bot || Some(t.id.as_str()) != id);
 }
 
 /// The bot's turn a change found in a layer's folder is credited to: the one whose tool call named the file, else
@@ -148,7 +157,7 @@ pub(super) fn turn_of(
         .cloned()
         .collect();
     let config = |bot: &str| hub.store.bot(bot).ok().flatten().filter(|row| !row.deleted).map(|row| row.config);
-    let named = touch.and_then(|touch| turns.iter().find(|t| t.bot == touch.bot && t.start == touch.turn).cloned());
+    let named = touch.and_then(|touch| turns.iter().find(|t| t.bot == touch.bot && t.id == touch.turn).cloned());
     if let Some(turn) = named
         && let Some(cfg) = config(&turn.bot)
     {
@@ -160,4 +169,26 @@ pub(super) fn turn_of(
         .filter_map(|turn| Some((config(&turn.bot)?, turn)))
         .filter(|(cfg, _)| files::layers(cfg).iter().any(|l| l.as_deref() == layer))
         .min_by_key(|(_, turn)| turn.message.is_some()))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn an_older_scan_keeps_the_next_turns_write_attribution() {
+        let bot = uuid::Uuid::new_v4().to_string();
+        for _ in 0..64 {
+            begin_turn(&bot, "earlier", None);
+            let earlier = end_turn(&bot);
+            begin_turn(&bot, "current", Some("user message".into()));
+            let current = wrote(&bot);
+            forget_turn(&bot, earlier.as_deref());
+            let retained = wrote(&bot);
+            // A late scan must leave the current turn available to attribute its edits.
+            TURNS.locked().retain(|turn| turn.bot != bot);
+            assert!(retained.is_some(), "lost current turn {current:?} after scan {earlier:?}");
+            assert_eq!(retained, current);
+        }
+    }
 }
