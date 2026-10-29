@@ -7,12 +7,15 @@ extension BotStore {
     public func retire() {
         let calls = Array(voiceCalls.values)
         voiceCalls.removeAll()
+        let ending = Array(holds.values)
+        holds.removeAll()
         isActive = false
         stopTransport()
         saveCache()
         retired = true
         fileDownloads.retire()
         for call in calls { call.end() }
+        for hold in ending { hold.end() }
         saveTask?.cancel()
         dropTimer?.cancel()
         onConnected = nil
@@ -32,7 +35,7 @@ extension BotStore {
         isActive = active
         if active {
             // Returning to the foreground must not interrupt a live call's sends.
-            if !hasBackgroundWork || streamTask == nil { restartStream() }
+            if !hasBackgroundWork || streamTask == nil { restartStream() } else { syncEventsClient() }
         } else {
             stopIfIdle()
         }
@@ -49,7 +52,7 @@ extension BotStore {
     func beginVoiceCall(_ id: UUID, hear: @escaping @MainActor (CallCue) -> Void, end: @escaping @MainActor () -> Void) {
         guard !retired, voiceCalls[id] == nil else { return }
         voiceCalls[id] = VoiceCall(hear: hear, end: end)
-        if streamTask == nil { restartStream() }
+        if streamTask == nil { restartStream() } else { syncEventsClient() }
     }
 
     func endVoiceCall(_ id: UUID) {
@@ -81,28 +84,39 @@ extension BotStore {
         if !retired { stopIfIdle() }
     }
 
-    private var hasBackgroundWork: Bool { !voiceCalls.isEmpty || shortcutSends > 0 || callEnds > 0 }
+    var hasBackgroundWork: Bool { !voiceCalls.isEmpty || !holds.isEmpty || shortcutSends > 0 || callEnds > 0 }
 
-    private func stopIfIdle() {
+    func stopIfIdle() {
         if !isActive && !hasBackgroundWork {
             // Disconnect so the host knows we're gone and sends pushes instead.
             stopTransport()
             saveCache()
+        } else {
+            syncEventsClient()
         }
     }
 
-    private func stopTransport() {
+    /// Returns the task that closes a remote transport, for callers that must await it.
+    @discardableResult
+    func stopTransport() -> Task<Void, Never>? {
         streamTask?.cancel()
         streamTask = nil
         eventsTask?.cancel()
         eventsTask = nil
+        linkCaughtUp = false
+        stateFromThisTransport = false
+        catchUpIdleTask?.cancel()
+        catchUpIdleTask = nil
+        catchUpRev = .max
+        reconnecting = true
         dropTimer?.cancel()
         dropTimer = nil
         heldDrop = nil
-        if let remote = transport as? any RemoteTransport {
-            Task { await remote.shutdown() }
-        }
-        transport = nil
+        defer { transport = nil }
+        guard let remote = transport as? any RemoteTransport else { return nil }
+        let task = Task { await remote.shutdown() }
+        closing = task
+        return task
     }
 
     private func runStream() async {
@@ -173,7 +187,7 @@ extension BotStore {
         case .connecting, .offline, .computerOffline: true
         default: false
         }
-        let recovering = new == .online && (connection != .online || heldDrop != nil)
+        let recovering = new == .online && (connection != .online || heldDrop != nil || reconnecting)
         let initialFailure = connection == .connecting && transient && new != .connecting
         if transient && (connection == .online || initialFailure) {
             let grace = connection == .online ? Self.dropGrace : Self.initialConnectionGrace
@@ -193,6 +207,7 @@ extension BotStore {
         dropTimer = nil
         heldDrop = nil
         if new != connection { Motion.animate { connection = new } }
+        if new == .online { reconnecting = false }
         if recovering {
             for botId in Set(readingViews.values) { markRead(botId) }
         }

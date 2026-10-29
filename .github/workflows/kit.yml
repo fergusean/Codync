@@ -39,3 +39,6 @@ jobs:
           name: ios-kit-test-results
           path: ${{ runner.temp }}/CodyncKit.xcresult
           retention-days: 7
+
+      - name: Build CodyncKit for watchOS
+        run: xcodebuild build -scheme CodyncKit -destination 'generic/platform=watchOS Simulator' -quiet

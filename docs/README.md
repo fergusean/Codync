@@ -43,6 +43,7 @@ Source review, a passing build, local integration tests and production acceptanc
 - [Routines](features/routines.md)
 - [Voice calls](features/voice-call.md)
 - [iOS Shortcuts](features/ios-shortcuts.md)
+- [Apple Watch app](features/watch-app.md)
 - [File attachments](features/file-attachments.md)
 - [Artifacts and the Library](features/artifacts.md)
 - [Remote screen](features/remote-screen.md) and [computer use](features/computer-use.md)

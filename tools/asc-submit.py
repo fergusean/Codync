@@ -49,7 +49,7 @@ WORKFLOW_ID = "44342080-ce08-4dc1-be35-34ce6cbb41b5"  # Xcode Cloud "Release": A
 # What the iPhone app is built from; apps/project.yml counts except its version lines.
 # The App Store notes and the Kit tests never reach the binary.
 # ponytail: project.yml's macOS Screen targets count too; diff only its iOS targets if that misfires.
-IOS_PATHS = ["apps/ios", "apps/shared", "apps/Codync.xcodeproj/project.xcworkspace",
+IOS_PATHS = ["apps/ios", "apps/watch", "apps/shared", "apps/Codync.xcodeproj/project.xcworkspace",
              ":(exclude)apps/ios/WhatsNew.md", ":(exclude)apps/ios/Kit/Tests"]
 
 

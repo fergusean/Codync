@@ -9,6 +9,11 @@ extension BotStore {
     func runEvents(_ client: HostClient) async {
         var backoff: Double = 1
         while !Task.isCancelled {
+            // Every pass subscribes again and catches up again.
+            linkCaughtUp = false
+            catchUpIdleTask?.cancel()
+            catchUpRev = .max
+            subscribedClient = eventsClient
             do {
                 try await refreshHello(client)
                 guard !Task.isCancelled, !retired else { return }
@@ -21,11 +26,12 @@ extension BotStore {
                 }
                 requestedSince = rev
                 windowFloors = [:]
-                for try await event in client.events(since: requestedSince, client: "ios") {
+                for try await event in client.events(since: requestedSince, client: subscribedClient) {
                     guard !Task.isCancelled, !retired else { return }
                     setConnection(.online)
                     backoff = 1
                     apply(event)
+                    armCatchUpIdle()
                 }
             } catch is CancellationError {
                 return
@@ -94,11 +100,21 @@ extension BotStore {
             catchUpRev = hostRev
             bump(rev)
         case let .bot(bot):
+            let neededInput = bots[bot.id]?.needsInput == true
+            let wasBusy = bots[bot.id]?.isWorking == true
+            // A transition inside the catch-up may be old news (a cached "working" turned idle).
+            let caughtUpBefore = isPastCatchUp(bot.rev)
             bots[bot.id] = bot
             bump(bot.rev)
             onBotUpdated?(bot)
             onRosterChanged?()
             if bot.unread > 0 { acknowledgeVisibleConversations(bot.id) }
+            if bot.needsInput && !neededInput {
+                for hold in Array(holds.values) where hold.botId == bot.id { hold.needsInput(bot) }
+            }
+            if wasBusy && !bot.isWorking && caughtUpBefore {
+                for hold in Array(holds.values) where hold.botId == bot.id { hold.settled(bot.id) }
+            }
         case let .botDeleted(id, r):
             removeComposerDrafts(for: id)
             bots[id] = nil
@@ -112,10 +128,16 @@ extension BotStore {
                 bump(e.rev)
                 break
             }
+            let known = entries[e.botId]?.first { $0.id == e.id }
             upsert(e)
             if let card = e.data.artifact { artifacts.announce(card) }
             bump(e.rev)
             acknowledgeVisibleConversations(e.botId, entry: e)
+            let calls = Array(holds.values).filter { $0.botId == e.botId && e.rev > $0.startRev }
+            if e.kind == "agent", e.data.final == true, known?.data.final != true, e.data.text != nil {
+                calls.forEach { $0.reply(e) }
+            }
+
         case let .call(cue):
             // The computer decides what the voice hears; this device hands each cue over once.
             guard let id = UUID(uuidString: cue.call), let call = voiceCalls[id], cue.seq > heardCues[id, default: 0] else { break }
@@ -173,15 +195,40 @@ extension BotStore {
     }
 
     /// Resubscribes from the current `rev` on the same link.
-    private func restartEvents() {
+    func restartEvents() {
         guard let client, eventsTask != nil else { return }
         eventsTask?.cancel()
         eventsTask = Task { [weak self] in await self?.runEvents(client) }
     }
 
+    /// The event happened after this link's hello (it isn't part of the catch-up).
+    func isPastCatchUp(_ eventRev: Int64) -> Bool {
+        linkCaughtUp || eventRev > catchUpRev || stateFromThisTransport
+    }
+
     private func bump(_ r: Int64) {
         rev = max(rev, r)
-        if !caughtUp && rev >= catchUpRev { caughtUp = true }
+        if rev >= catchUpRev { finishCatchUp() }
+    }
+
+    func finishCatchUp() {
+        catchUpIdleTask?.cancel()
+        catchUpIdleTask = nil
+        linkCaughtUp = true
+        stateFromThisTransport = true
+        caughtUp = true
+    }
+
+    /// While the catch-up is pending, every event restarts the idle wait that ends it.
+    func armCatchUpIdle() {
+        catchUpIdleTask?.cancel()
+        catchUpIdleTask = nil
+        guard !linkCaughtUp, catchUpRev != .max else { return }
+        catchUpIdleTask = Task { [weak self, wait = catchUpIdle] in
+            try? await Task.sleep(for: wait)
+            guard !Task.isCancelled, let self, !retired else { return }
+            finishCatchUp()
+        }
     }
 
     /// Per bot, the lowest synced `seq` in the mirror (optimistic entries don't count).

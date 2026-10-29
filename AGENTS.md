@@ -1,98 +1,58 @@
 # Repository Guidelines
 
-## Project Structure & Module Organization
+## Structure and ownership
 
-- `host/`: Rust daemon, ACP integration, SQLite storage, HTTP/SSE API, and terminal UI; unit tests live alongside modules in `src/`.
-- `apps/ios/`: iPhone app (SwiftUI); widgets live in `apps/ios/Widgets/`. `apps/ios/Kit/` is its Swift package: `CodyncKit` (models, clients, design primitives) and `CodyncUI` (screens and stores); tests in `apps/ios/Kit/Tests/CodyncKitTests/`.
-- `apps/desktop/`: desktop app for macOS, Linux and Windows (Electron, React, TypeScript): [docs/architecture/desktop-app.md](docs/architecture/desktop-app.md); how its views are styled: [docs/guides/desktop-styles.md](docs/guides/desktop-styles.md).
-- `apps/android/`: Android phone app (Kotlin, Jetpack Compose), ported from the iPhone app: `core` (models, crypto, transport), `design` (Codync's components), `app` (screens, store, widgets): [apps/android/README.md](apps/android/README.md).
-- `apps/screen-macos` and `apps/screen-linux`: Remote screen helpers.
-- `cloud/`: Cloudflare accounts, encrypted relay, Durable Objects and D1; tests live in `cloud/test/`. `private-relay/`: a single-process subset of that relay a person runs for their own computers (Node, `node:sqlite`), tests in `private-relay/test/`.
-- `relay/`: Cloudflare push worker and `test/`; `web/`: website (Next.js); `packaging/`: distribution templates; `docs/`: architecture and naming guidance.
+- `host/` owns bot/session/process logic, validation, routing, routines and memory. Clients render host state and send intents; device-only work stays on the device.
+- iOS lives in `apps/ios/`, with shared Swift packages in `apps/ios/Kit/`; Android lives in `apps/android/`; the Electron desktop app lives in `apps/desktop/`; the terminal UI lives in `host/src/tui/`.
+- Screen helpers live in `apps/screen-macos/` and `apps/screen-linux/`. Cloud and push Workers live in `cloud/` and `relay/`; `private-relay/` is the self-hosted relay. The website is `web/`.
+- Detailed commands, naming and contribution conventions: [repository conventions](docs/reference/repository-conventions.md), [file structure](docs/architecture/file-structure.md), [development](docs/guides/development.md).
 
-## Host owns the logic
+## Worktrees and shared edits
 
-- Bot management, sessions, agent processes, MCP servers/connectors, routing, routines, memory, validation and anything heavy or needed by more than one client run in the Rust host (`host/`). The iPhone app, desktop app and terminal UI render host state and send intents through the host API; they keep only UI state and device-only work (mic/speech, Keychain, push decryption; desktop main process: host service, SSH, updates). A client that needs something the host lacks gets a new host method, never its own copy: [ownership rules](docs/architecture/overview.md#host-owns-the-logic).
+- Use a separate existing task worktree and branch for features and fixes; never implement in the shared checkout. Show `pwd` and the current branch after selecting the worktree.
+- Several agents share this checkout. Before touching another agent's hunks or performing tree-wide changes, coordinate with them; if unavailable, ask the user. Preserve unrelated changes and never discard another agent's work.
+- Before starting, sync with `git pull --rebase --autostash origin dev`, then push finished local commits to `origin/dev`. Preserve both sides if autostash conflicts.
+- Stage only owned hunks. Inspect every worktree and archive refs, index, diffs and original file/deletion states before refresh rewrites or retirement.
 
-## Build, Test, and Development Commands
+## Builds, validation and deployment
 
-Run from the repository root unless a command changes directories:
+- Stop the old app, host and iPhone process for the variant being rebuilt first. Follow [development](docs/guides/development.md) and [dev app isolation](docs/guides/dev-app.md).
+- Apple build output belongs only in this checkout's `build/dd`; a worktree may have its own single `build/dd`. Remove obsolete Codync builds promptly.
+- Edit `apps/project.yml`, then regenerate with `xcodegen generate --spec apps/project.yml`. Never edit `project.pbxproj` directly.
+- Run the affected component checks from [repository conventions](docs/reference/repository-conventions.md#build-test-and-development-commands).
+- After a code change, use [after-change](.agents/skills/after-change/SKILL.md): tests, three read-only reviews, verification, one editor, cleanup and real-app E2E. Reviews do not run tests unless they wrote code needing validation first.
+- Drive desktop E2E through Computer Use; iPhone E2E uses an iOS Simulator through Device Hub. Android uses its emulator. Builds and tests do not replace actual-app checks.
+- Full E2E applies to platform, packaging and desktop main-process changes: macOS, installed Lima `codync-linux`, and installed UTM Windows. Report unavailable VMs instead of creating them.
+- After validated host/cloud/push work reaches `fergusean/consolidated`, deploy to Sean's infrastructure using [local upgrades](docs/guides/local-upgrades.md) and preserving [deployment memory](docs/reference/sean-deployment.md), except planning, investigation or review tasks.
+- Preserve private configuration, account state, device keys, history and disabled automatic updates. Rehearse data migrations before cutover; binary rollback cannot undo them.
 
-- `xcodegen generate --spec apps/project.yml`: regenerate `apps/Codync.xcodeproj` after editing `apps/project.yml`; never edit `project.pbxproj` directly.
-- Use Xcode’s `iOS Dev` scheme for development and `iOS` for production; see [Dev app isolation](docs/guides/dev-app.md).
-- `cd apps/desktop && npm ci && npm run dev`: run the desktop app while developing and for its e2e check (renderer reloads on save, restart after `src/main` or preload changes; unpackaged, unsigned). In a linked worktree it runs a [sandbox](docs/guides/dev-app.md#worktree-sandboxes) beside the main checkout's Codync Dev; `--sandbox` does the same from the main checkout. In the main checkout, after a host change run `node tools/native-host.mjs dev` there first: `npm run dev` prefers that build over `host/target/debug`. Package `npm run dist:mac:dev` (about 45 s) only for what an unpackaged run lacks (bundled host install, Codync Screen / computer use, system permissions); `dist:*:main` only to check the production app. `npm run typecheck && npm test` for its CI checks.
-- `cd host && cargo build`: build the host; `cargo run -- serve` starts it in the foreground.
-- `cd host && cargo fmt --check && cargo clippy --all-targets -- -D warnings && cargo test`: run host CI checks.
-- `cd apps/android && ./gradlew :core:test :app:testDebugUnitTest :app:assembleDebug :app:lintDebug` (JDK 21, Android SDK 37): Android checks; `adb install -r -d app/build/outputs/apk/debug/app-debug.apk` installs Codync Dev.
-- `cd apps/ios/Kit && xcodebuild test -scheme CodyncKit-Package -destination 'platform=iOS Simulator,name=<any iPhone>'`: run the iPhone package tests.
-- `cd cloud && npm ci && npm test && npm run typecheck`: validate the cloud service; see `docs/guides/cloudflare-testing.md` for integration checks.
-- `cd relay && npm ci && npm test && npm run typecheck`: install dependencies and validate the relay.
+## Code and UI
 
-## Installing a new build: kill the old one first
+- Use four spaces for Swift/Rust and two for TypeScript. Follow Swift 6 concurrency and structured async/await; avoid unchecked sendability.
+- Assign an awaited result to a named local before further operations; do not chain operations from awaited expressions.
+- Reuse existing code, then proven components. Keep one responsibility per file/type, short functions, enums over flags, no dead code or swallowed errors, and no new code appended past roughly 500 lines: [clean code](docs/guides/clean-code.md).
+- Views/components perform no I/O or business logic. Follow [host ownership](docs/architecture/overview.md#host-owns-the-logic).
+- Default to shared custom controls and animate every show/hide interaction. Filled backgrounds have no border. Native navigation, system tabs/authentication, widgets and tray menus are the documented exceptions: [UI conventions](docs/design/ui-conventions.md).
+- Desktop platform differences use `window.codync.platform` or the main process; never fork a renderer view by OS.
 
-Always stop the old desktop app, host and iPhone process for the variant being rebuilt before running a new build (old host = old protocol, old app = old UI); commands in [development: desktop app](docs/guides/development.md#desktop-app) and [iOS app](docs/guides/development.md#ios-app).
+## Client parity
 
-Keep only the latest build: in this checkout, Apple builds go to `build/dd` only (no other `-derivedDataPath`, no copies in scratchpads, `/tmp` or Xcode's DerivedData); delete any older Codync build right away, so macOS never launches a stale copy. A git worktree may keep its own single build inside that worktree.
-
-## End-to-end test every change
-
-After every change, test it end to end on the real apps, not just builds and unit tests: install the new build (old one stopped first) and walk through the changed flow. Drive the desktop app with Computer Use, and the iPhone app on an iOS Simulator through Device Hub (Xcode's `DeviceHub.app`). Report any check that could not run and why.
-- **Minimal e2e** (default): only the platform of the computer you test on (on the Mac: macOS).
-- **Full e2e** (large changes: platform code, packaging, the desktop main process; or when asked): macOS, Linux (Lima `codync-linux`) and Windows (UTM, [Windows testing](docs/guides/windows-testing.md)). A platform whose VM isn't installed is skipped and reported, not set up.
+- Shared UI behavior, actions, terminology and loading/empty/error/permission states change together in iOS, Android, desktop and terminal UI.
+- Every iPhone or Android change also lands and is checked in the other app, including behavior, tests and docs; Apple-only/Android-only capabilities are the exception.
+- Inspect every corresponding implementation. Adapt controls and keyboard input while preserving behavior; document concrete reasons for unaffected clients.
+- Validate affected clients with builds/tests and UI checks, reporting checks that could not run and why.
 
 ## Versioning & releases
 
-- **Every source change ships as a release.** A version bump on `main` is the only release trigger (Auto Tag → desktop app for macOS, Linux and Windows, host, Homebrew, in-app update), so any change to shipped code (`apps/`, `host/`, `packaging/`) bumps the version before it reaches `main`, without being asked. Docs, `web/`, `cloud/`, `relay/` and CI-only changes don't bump.
-- Phone ↔ host compatibility: each side names the oldest version of the other it works with (`minApp` in the host's `hello`, `minHost` in each client). Additive changes need nothing; a rename/removal raises `minApp` in the same release, and the release gate holds that release until the App Store has the iPhone app: [docs/reference/compatibility.md](docs/reference/compatibility.md)
-- Pick the bump yourself: patch for fixes and small tweaks, minor for new features or protocol additions. Never bump major (stay on 2.x). One bump per merge into `main`: if `MARKETING_VERSION` is already ahead of the latest `v*` tag, leave it. A change to `host/crates/memory` also raises `codync-mem`'s own 0.x version once per release (leave it if it's already ahead of `main`'s); CI blocks a PR into `main` that forgets, and the merge publishes it to crates.io ([codync-mem releases](docs/guides/development.md#codync-mem-releases)).
-- How: set `MARKETING_VERSION` in `apps/project.yml` and `version` in `host/Cargo.toml` (+ its `Cargo.lock` entry) and `apps/desktop/package.json` (+ `package-lock.json`) to the same value, run `xcodegen generate --spec apps/project.yml`, commit as `build: bump version to X.Y.Z`. Never touch `CURRENT_PROJECT_VERSION` (Xcode Cloud sets the iOS build number). When a phone app changes, also write that version's section in its notes (zh-Hant + en-US, what that app's users notice): `apps/ios/WhatsNew.md` becomes the App Store "What's New", `apps/android/WhatsNew.md` the Google Play release notes.
-
-## Coding Style & Naming Conventions
-
-Use four-space indentation for Swift and Rust, two spaces for TypeScript. Follow Swift 6 strict concurrency, SwiftUI, and structured `async/await`; avoid unchecked sendability. Rust uses edition 2024, rustfmt, and Clippy; avoid `unwrap()` outside tests.
-
-Name Swift files after their main `UpperCamelCase` type; use `snake_case.rs` and `kebab-case.ts`. Follow role suffixes such as `View`, `Row`, and `Store`. See `docs/architecture/file-structure.md` and `CLAUDE.md` for architectural conventions.
-
-- UI controls default to the shared custom components. Explicit exception: iOS BotListView and ThreadView use native navigation/toolbar items and automatic back navigation, and the iPhone root uses the system `TabView`, for system Liquid Glass, as specified in `docs/design/ui-conventions.md`. The desktop app's menu bar/tray menu is the system menu. Keep system authentication and widget containers native. On iOS `.codyncSheet` presents the system sheet (grabber, swipe down). Outside these exceptions, avoid: no `Menu`/`Picker`, `.switch` toggles, `Form`/`List` styling, `confirmationDialog`/`alert`, `ProgressView`, `.sheet`/`.popover`/`.fullScreenCover`, `.toolbar`/navigation bars, `ContentUnavailableView`. Use `apps/ios/Kit/Sources/CodyncUI/Controls.swift` + `Chrome.swift` (`.codyncSheet`, `ModalHeader`, `ScreenHeader`, `.codyncDialog`, `ToggleStyle.codync`); on the desktop, `apps/desktop/src/renderer/components/` (`Sheet`, `Dialog`, `AnchoredMenu`, `ModalHeader`, `Controls.tsx`, `Icon` for SF Symbols); on Android, the `apps/android/design/` module (`CodyncSheet`, `ModalHeader`, `CodyncDialog`, `DropdownMenu`, `contextActions`, `Controls.kt`, `Symbol` for SF Symbols). Every tap that shows/hides something animates (`Motion`). Anything with a background fill gets no border line.
-
-## Clean code
-
-- Keep code modular and clean on every change: reuse before writing (existing code first, then a proven component/framework that already fits, see [prefer ready-made](docs/guides/clean-code.md#modules)), one responsibility per file/type, no new code appended to files past ~500 lines (split first), views/components hold no I/O or logic, short single-purpose functions, enums over flags, no dead code, no swallowed errors. Full rules: [docs/guides/clean-code.md](docs/guides/clean-code.md).
-- After every code change (tests green, before commit): review → fix, refactor and cleanup → end-to-end test. In Codex, use the [after-change skill](.agents/skills/after-change/SKILL.md); in Claude Code, use the `after-change` workflow: [after every change](docs/guides/clean-code.md#after-every-change-review-e2e-cleanup).
-
-## Cross-platform UI changes
-
-- Any UI change in any client must include the corresponding updates to the other clients in the same change: iOS (`apps/ios/`, `apps/ios/Kit/Sources/CodyncUI/`), Android (`apps/android/app/`), desktop (`apps/desktop/src/renderer/`, macOS, Linux and Windows), and terminal UI (`host/src/tui/`). This applies in every direction. The iPhone and Android apps go further: every change to either one, not only UI (behavior, flows, copy, tests, docs), lands in the other in the same change and is checked on both (iOS Simulator and Android emulator) before it merges, contributor PRs included; only Apple-only or Android-only capabilities stay on one side.
-- Keep shared features, actions, terminology, displayed information, and loading, empty, error, and permission states consistent. Adapt layout, controls, and input to each platform, including terminal keyboard interaction, while preserving the same user-facing behavior.
-- Inspect every client's corresponding implementation before finishing a UI task. Implement applicable changes together; do not silently defer another client. For a platform-only change or an unsupported capability, document which clients are unaffected and the concrete reason in the change summary.
-- Validate each affected client with its relevant build/tests and UI checks. Report any checks that could not run and why.
-- The desktop app is one codebase for macOS, Linux and Windows: platform differences go through `window.codync.platform` checks or the main process, never a fork of a view.
-
-## Testing Guidelines
-
-Use Swift Testing (`@Test`, `#expect`), Rust unit tests, `node --test` in the desktop app, and the relay’s Node assertion tests. Name tests after observable behavior. Add regression coverage for changed logic; no numeric coverage threshold is configured.
-
-## Several agents share `dev`
-
-- Every large feature and every bug fix must use its own branch in a separate git worktree, including implementation, builds, tests and app E2E; never do that work in the shared checkout. Use the [worktree sandbox](docs/guides/dev-app.md#worktree-sandboxes) and follow the [handoff and cleanup workflow](docs/guides/clean-code.md#after-every-change-review-e2e-cleanup).
-- After creating or selecting a task worktree, `cd` into it and show `pwd` and `git branch --show-current` so the user can see where the work is happening. Run subsequent task commands from that worktree; tools without a persistent working directory must explicitly set it on every call.
-- Several agents often work in this checkout on `dev` at once. Before touching files with someone else's uncommitted changes, or anything tree-wide (renames, `xcodegen`, version bump, `git stash`/`reset`/`checkout`), tell the other agents what you'll change if your tool can message them; otherwise ask the user first. Never discard, revert or reformat hunks that aren't yours.
-- Before starting any task, sync with origin: `git pull --rebase --autostash origin dev`, then push any finished local commits that aren't on `origin/dev` yet (`git push origin dev`). The pull is tree-wide, so the rule above applies; if the autostash conflicts, keep both sides' intent and never drop another agent's hunk.
+- Feature PRs and refresh integrations inherit upstream versions. Do not add version-only changes; separate release work on `main` owns bumps.
+- Follow [compatibility](docs/reference/compatibility.md): additive changes need no floor change; removals/renames raise `minApp` and wait for the phone release.
 
 ## Commit & Pull Request Guidelines
 
-- Conventional Commits: `type(scope): subject`. Types: `feat`, `fix`, `refactor`, `perf`, `docs`, `test`, `build`, `ci`, `chore`. Scope is the area touched: `ios`, `desktop`, `host`, `cloud`, `relay`, `web`, `docs`.
-- Subject: imperative mood ("add", not "added"), lowercase after the colon, no trailing period, at most 72 characters (aim for 50). Say what changes for the user, not which files moved.
-- Body (after a blank line, wrapped at 72 columns) when the change isn't obvious from the subject: what and why, not how. Bullets are fine.
-- One logical change per commit. Don't mix unrelated work, and stage only your own hunks when others have uncommitted changes in the tree.
-- Breaking changes: `!` after the type/scope, or a `BREAKING CHANGE:` footer.
-- English only.
-- Thank external contributors when responding to their PRs. After merging an external PR, leave a brief thank-you comment acknowledging their contribution and confirming the merge.
+- Use Conventional Commits with an imperative lowercase subject, no trailing period and at most 72 characters. Always add `Co-authored-by: Codex <codex@openai.com>`.
+- One logical change per commit. PRs explain behavior, link issues and list validation; include UI screenshots and the template's zh-Hant/en-US What's New bullets for visible phone changes.
 
-PRs should explain behavior changes, link relevant issues, list validation performed, and include screenshots for UI changes. Fill the template's *What's New* bullets (zh-Hant + en-US, one section per phone app) for changes that app's users can see; they become the App Store or Google Play notes when that app's `WhatsNew.md` has no section for the release. Update affected documentation in the same change.
+## Documentation
 
-## Keeping this file short
-
-- CLAUDE.md and AGENTS.md hold only rules an agent needs on every task. Reference material (file structure, naming tables, API details, audits, how-tos) goes in `docs/` as its own file, with a one-line pointer here.
-- Whenever you edit either file, check its length: past ~100 lines, or a section past a few lines of reference detail, refactor that detail into `docs/` and leave the pointer, without being asked.
-- Keep `docs/` current: update the doc in the same change that makes it stale. A change users can see also updates its page of the user manual (`web/content/docs/`): [user docs](docs/guides/user-docs.md).
+- Update affected documentation and its [user manual](docs/guides/user-docs.md) in the same change. Validate docs nonvisually; do not use mdxserve for validation or launch a browser for docs unless explicitly asked.
+- Keep `AGENTS.md` and `CLAUDE.md` near 100 lines. Put reference detail in `docs/` with a pointer here; refactor excessive detail when editing either instruction file.

@@ -1,19 +1,24 @@
 import Foundation
+#if canImport(MetricKit)
 import MetricKit
+#endif
 
 /// Crashes as `$exception` events for PostHog Error Tracking. MetricKit hands the app its own
 /// crash reports on the next launch; each becomes one event with the exception and signal names
 /// and code addresses, never a message, reason or memory detail.
-public final class CrashReports: NSObject, MXMetricManagerSubscriber, Sendable {
+public final class CrashReports: NSObject, Sendable {
     public static let shared = CrashReports()
     /// A SwiftUI update alone runs dozens of frames deep: fewer would cut off the app's own.
     private static let maxFrames = 200
 
-    /// Subscribes once, at app launch (widgets and the notification extension never do).
+    /// Subscribes once where MetricKit is available; extensions never subscribe.
     public func start() {
+        #if canImport(MetricKit)
         MXMetricManager.shared.add(self)
+        #endif
     }
 
+    #if canImport(MetricKit)
     public func didReceive(_ payloads: [MXDiagnosticPayload]) {
         let events = payloads.flatMap { $0.crashDiagnostics ?? [] }.map {
             Self.properties(callStack: $0.callStackTree.jsonRepresentation(), exceptionType: $0.exceptionType?.intValue,
@@ -25,6 +30,7 @@ public final class CrashReports: NSObject, MXMetricManagerSubscriber, Sendable {
             Analytics.shared.flush()
         }
     }
+    #endif
 
     /// The `$exception` properties for one crash.
     static func properties(callStack: Data, exceptionType: Int?, signal: Int?, appVersion: String) -> [String: Analytics.Value] {
@@ -120,3 +126,7 @@ public final class CrashReports: NSObject, MXMetricManagerSubscriber, Sendable {
         8: "SIGFPE", 9: "SIGKILL", 10: "SIGBUS", 11: "SIGSEGV", 12: "SIGSYS", 13: "SIGPIPE", 14: "SIGALRM", 15: "SIGTERM",
     ]
 }
+
+#if canImport(MetricKit)
+extension CrashReports: MXMetricManagerSubscriber {}
+#endif
