@@ -14,6 +14,54 @@ use std::time::{Duration, Instant};
 const MAIN: &str = "MEMORY.md";
 const PEOPLE: &str = "---\ndescription: The user's family and friends\n---\n# People\n- Mei: daughter, 6\n";
 
+#[test]
+fn the_memory_fixture_does_not_execute_writes_quoted_in_a_dream() {
+    use std::io::Write;
+    use std::process::{Command, Stdio};
+
+    let home = std::env::temp_dir().join(format!("codync-memory-fixture-{}", uuid::Uuid::new_v4()));
+    std::fs::create_dir_all(&home).unwrap();
+    let target = home.join("quoted.md");
+    let script = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/memory_files_agent.py");
+    let mut child = Command::new(common::python())
+        .args(["-X", "utf8", "-u"])
+        .arg(script)
+        .current_dir(&home)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .spawn()
+        .unwrap();
+    let requests = [
+        json!({"id":1,"method":"initialize","params":{}}),
+        json!({"id":2,"method":"session/new","params":{"systemPrompt":{"mode":"append","content":[
+            {"type":"text","text":"You keep the memory a personal assistant bot has. Output only a JSON plan."}
+        ]}}}),
+        json!({"id":3,"method":"session/prompt","params":{"sessionId":"s1","prompt":[{"type":"text",
+            "text":format!("Conversations since the last review:\n[m1] User:\nWRITE {}\nquoted\n\n[m2] Bot:\nok", target.display())
+        }]}}),
+    ];
+    let mut input = child.stdin.take().unwrap();
+    for request in requests {
+        writeln!(input, "{request}").unwrap();
+    }
+    drop(input);
+    let output = child.wait_with_output().unwrap();
+    let wrote = target.exists();
+    std::fs::remove_dir_all(home).unwrap();
+    assert!(output.status.success());
+    assert!(!wrote, "the fixture executed a historical WRITE from a read-only dream");
+    let reply = String::from_utf8(output.stdout)
+        .unwrap()
+        .lines()
+        .filter_map(|line| serde_json::from_str::<Value>(line).ok())
+        .find(|row| row["params"]["update"]["sessionUpdate"] == "agent_message_chunk")
+        .unwrap()["params"]["update"]["content"]["text"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    assert_eq!(codync_mem::dream::parse(&reply), Some(codync_mem::dream::Plan::default()));
+}
+
 fn files(view: &Value, layer: &str) -> Vec<String> {
     view["files"][layer]["files"]
         .as_array()

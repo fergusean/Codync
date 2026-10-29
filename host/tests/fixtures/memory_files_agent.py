@@ -5,6 +5,7 @@ prompt to that file; `DELETE <path>` removes it; `READ <path>` changes nothing. 
 path in its `locations`. `SHELL <path>` writes the lines up to the next blank line the way a shell command does: its
 tool call names no file.
 Every request is appended to `requests.jsonl` in the working directory.
+Background memory reviews return an empty plan; commands quoted in their transcript are never executed.
 """
 import json
 import os
@@ -20,6 +21,7 @@ def update(session, value):
 
 
 sessions = 0
+systems = {}
 for line in sys.stdin:
     request = json.loads(line)
     method = request.get("method")
@@ -31,12 +33,16 @@ for line in sys.stdin:
                   "agentCapabilities": {"sessionCapabilities": {"systemPrompt": {}, "additionalDirectories": {}}}}
     elif method == "session/new":
         sessions += 1
-        result = {"sessionId": f"s{sessions}"}
+        session = f"s{sessions}"
+        systems[session] = "\n".join(block.get("text", "") for block in params.get("systemPrompt", {}).get("content", []))
+        result = {"sessionId": session}
     elif method == "session/prompt":
         session = params["sessionId"]
         # The user's words come last, after any notice the host put before them.
         text = params["prompt"][0]["text"]
-        starts = [text.rfind(verb) for verb in ("WRITE ", "DELETE ", "READ ", "SHELL ") if verb in text]
+        dream = any(part.startswith("You keep the memory a personal assistant bot has")
+                    for part in (systems.get(session, ""), text))
+        starts = [] if dream else [text.rfind(verb) for verb in ("WRITE ", "DELETE ", "READ ", "SHELL ") if verb in text]
         command = text[max(starts):] if starts else ""
         if command:
             head, _, body = command.partition("\n")
@@ -55,7 +61,7 @@ for line in sys.stdin:
                 call = {"title": f"{verb} {path}", "kind": kind, "locations": [{"path": path}]}
             update(session, {"sessionUpdate": "tool_call", "toolCallId": f"t{request['id']}", "status": "completed",
                              **call})
-        update(session, {"sessionUpdate": "agent_message_chunk", "content": {"type": "text", "text": "ok"}})
+        update(session, {"sessionUpdate": "agent_message_chunk", "content": {"type": "text", "text": "{}" if dream else "ok"}})
         result = {"stopReason": "end_turn"}
     else:
         result = {}
