@@ -60,17 +60,19 @@ public final class AccountStore {
     private var cloudListVersion = 0
     /// Access requests still waiting for their code, joined by a second ask.
     private var asks: [ComputerID: Task<AccessTicket, any Error>] = [:]
-    private var isActive = true
+    private var isActive: Bool
     private var retired = false
 
-    public convenience init(storage: SharedStore.Context, cloud: CloudClient?) {
-        self.init(storage: storage, cloud: cloud) { computer in
+    public convenience init(storage: SharedStore.Context, cloud: CloudClient?, active: Bool = true) {
+        self.init(storage: storage, cloud: cloud, active: active) { computer in
             BotStore(computer: computer, storage: storage)
         }
     }
 
-    init(storage: SharedStore.Context, cloud: CloudClient?,
+    /// `active: false` starts every store disconnected, for a launch without a foreground scene.
+    init(storage: SharedStore.Context, cloud: CloudClient?, active: Bool = true,
          makeStore: @escaping @MainActor (Computer) -> BotStore) {
+        isActive = active
         self.storage = storage
         self.cloud = cloud
         computerOrder = ComputerOrderStore(storage: storage)
@@ -82,6 +84,11 @@ public final class AccountStore {
     }
 
     // MARK: derived
+
+    /// The computer the Usage tab, widgets and "open screen" links act on: the last active one.
+    public var currentStore: BotStore? {
+        storage.lastComputerId.flatMap(store(for:)) ?? computers.first.flatMap { store(for: $0.id) }
+    }
 
     /// Every computer's visible bots, computer by computer, each in its roster order.
     public var roster: [RosterItem] {
@@ -371,7 +378,7 @@ public final class AccountStore {
         store.onComputerChanged = { [weak self] computer in self?.computerChanged(computer) }
         store.onRosterChanged = { [weak self] in self?.rosterChanged() }
         stores[id] = store
-        if isActive { store.setActive(true) }
+        store.setActive(isActive)
     }
 
     private func close(_ id: ComputerID) {

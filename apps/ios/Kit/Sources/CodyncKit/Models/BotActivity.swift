@@ -1,10 +1,6 @@
+#if canImport(ActivityKit)
 import ActivityKit
 import Foundation
-
-/// A voice call with the bot this phone is on, as its Live Activity shows it.
-public enum CallState: String, Codable, Hashable, Sendable {
-    case connecting, listening, speaking, paused
-}
 
 public extension BotActivityAttributes {
     /// The in-app switch for Live Activities (State tab › Live Activity).
@@ -67,3 +63,4 @@ public struct BotActivityAttributes: ActivityAttributes {
         avatarColor = bot.avatarColor
     }
 }
+#endif

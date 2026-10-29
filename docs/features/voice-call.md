@@ -42,10 +42,15 @@ way open with a sentence or two, read aloud like any reply and part of the call 
   Codync does not forward microphone audio to the host. Speech recognition may use Apple services
   when on-device recognition is unavailable. `UIBackgroundModes: audio` permits
   background microphone capture and speech playback during an active call.
-- While a call is listening or speaking, it retains the computer's transport across
-  foreground/background transitions. Ending or failing the last call releases that
-  connection when backgrounded, restoring normal push delivery. Removing the computer
-  or switching accounts ends its calls and closes the transport.
+- While a call is listening or speaking, its `voiceCalls` subscription retains the
+  computer's transport across foreground/background transitions. Watch requests keep
+  independent holds on the same connection. Ending a call keeps its `callEnds`
+  ownership until the end reaches the computer. Once that finishes, a remaining
+  Watch hold keeps the connection open with an events subscription that no longer
+  counts as an iPhone, restoring normal push delivery. The connection closes when
+  backgrounded only after the last call, Watch hold, Shortcuts send and call end
+  releases it. Removing the computer or switching accounts ends its calls and closes
+  the transport.
 - What to say arrives from the computer as the call's `call` events (see "How the voice talks"), delivered from
   the store's incoming events directly to the audio session, rather than waiting for a SwiftUI view update.
 

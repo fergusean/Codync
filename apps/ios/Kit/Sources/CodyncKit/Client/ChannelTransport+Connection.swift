@@ -5,6 +5,7 @@ private let log = Logger(subsystem: "com.pokai.Codync", category: "Channel")
 
 // MARK: connection loop (§7.5, §7.6)
 
+@available(watchOS, unavailable, message: "The watch reaches the host through the iPhone")
 extension ChannelTransport {
     func run() async {
         var backoff = Backoff()

@@ -92,3 +92,7 @@ assert asc.archive_ref("v2.20.4", refs) is None  # main moved on: wait for the t
 asc.git = lambda *args: ""
 assert asc.archive_ref("v2.20.4", refs) is None  # tag or main unknown: never guess main
 print("ok")
+
+# The watch app ships inside the iPhone app, so its sources count as iPhone changes.
+assert "apps/watch" in asc.IOS_PATHS
+print("ok")

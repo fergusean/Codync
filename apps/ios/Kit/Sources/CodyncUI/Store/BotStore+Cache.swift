@@ -47,7 +47,7 @@ extension BotStore {
             list.filter { !$0.id.hasPrefix("local-") }.suffix(200)
                 + list.filter { $0.id.hasPrefix("local-") && ["waiting", "delivering", "failed"].contains($0.data.status) }
         }
-        let cache = Cache(stamp: "\(Self.appBuild)/\(hello?.version ?? "")", hostId: hostId, rev: rev, bots: Array(bots.values), entries: kept)
+        let cache = Cache(stamp: hello.map { "\(Self.appBuild)/\($0.version)" } ?? cacheStamp, hostId: hostId, rev: rev, bots: Array(bots.values), entries: kept)
         if let data = try? JSONEncoder().encode(cache) {
             try? data.write(to: cacheURL, options: .atomic)
         }
